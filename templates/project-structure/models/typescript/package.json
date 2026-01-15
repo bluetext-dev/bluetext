@@ -1,0 +1,10 @@
+{
+  "name": "models",
+  "version": "0.1.0",
+  "description": "Shared models",
+  "type": "module",
+  "main": "index.ts",
+  "dependencies": {
+    "clients": "file:../../clients/typescript"
+  }
+}

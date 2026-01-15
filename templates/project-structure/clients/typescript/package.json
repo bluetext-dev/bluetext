@@ -1,0 +1,8 @@
+{
+  "name": "clients",
+  "version": "0.1.0",
+  "description": "Internal shared clients",
+  "type": "module",
+  "main": "index.ts",
+  "dependencies": {}
+}
