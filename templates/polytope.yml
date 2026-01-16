@@ -127,7 +127,7 @@ tools:
       This scaffolds to "services/my-api", adds it to stack, and runs it.
     params:
       - id: template
-        info: Template to scaffold (api, frontend, couchbase, temporal, postgres)
+        info: Template to scaffold
         type: [enum, api, frontend, couchbase, temporal, postgres]
       - id: name
         info: Service name (e.g., "my-api"). Will be scaffolded to "services/<name>"
@@ -142,60 +142,66 @@ tools:
         info: What to do if files already exist
         type: [default, [enum, skip, overwrite], skip]
     run:
-      - id: scaffold-and-add-services
-        code: |-
-          #pt-js
-          // Define dependency map: template -> list of dependent services
-          const dependencies = {
-            "couchbase": [{template: "/templates/config-manager", name: "config-manager"}]
-          };
+      - id: scaffold-services
+        tool: polytope/scaffold
+        args:
+          container-id: scaffold-services
+          actions: |-
+            #pt-js
+            // Define dependency map: template -> list of dependent services
+            const dependencies = {
+              "couchbase": [{path: "config-manager", name: "config-manager"}]
+            };
 
-          const template = params.template;
-          const name = params.name;
-          const onConflict = params["on-conflict"];
-          const target = params.target;
-          const shouldRun = params.run;
+            const template = params.template;
+            // Normalize name to lowercase and replace invalid characters
+            const name = params.name.toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+            const onConflict = params["on-conflict"];
+            const target = params.target;
 
-          // Get dependencies for this template
-          const deps = dependencies[template] || [];
+            // Get dependencies for this template
+            const deps = dependencies[template] || [];
 
-          // Build scaffold actions
-          const actions = [
-            // Main service
-            {
-              template: {type: "repo", path: template},
-              path: "services/" + name,
-              "on-conflict": onConflict,
-              "add-to-tools": [{tool: target, call: {tool: name, args: {}}}]
-            },
-            // Dependencies
-            ...deps.map(dep => ({
-              template: {type: "repo", path: dep.template},
-              path: "services/" + dep.name,
-              "on-conflict": "skip",
-              "add-to-tools": [{tool: target, call: {tool: dep.name, args: {}}}]
-            })),
-            // Readme
-            {
-              template: {type: "repo", path: "/templates/lib/py/readme"},
-              path: "lib/py/readme",
-              "on-conflict": "skip",
-              "auto-include": false
-            }
-          ];
+            // Build and return scaffold actions
+            [
+              // Main service
+              {
+                template: {type: "repo", repo: "#pt-clj pt/module-repo-ref", path: template},
+                path: "services/" + name,
+                "on-conflict": onConflict,
+                "add-to-tools": [{tool: target, call: name}]
+              },
+              // Dependencies
+              ...deps.map(dep => ({
+                template: {type: "repo", repo: "#pt-clj pt/module-repo-ref", path: dep.path},
+                path: "services/" + dep.name,
+                "on-conflict": "skip",
+                "add-to-tools": [{tool: target, call: dep.name}]
+              })),
+            ];
 
-          // Scaffold all services
-          pt.callModule("polytope/scaffold", {actions});
+      - id: run-dependencies
+        after: {step: scaffold-services}
+        code: |
+          #pt-clj
+          (when (:run params)
+            (let [template (:template params)
+                  dependencies {"couchbase" [{:name "config-manager"}]}
+                  deps (get dependencies template [])]
+              ;; Run dependencies first
+              (doseq [dep deps]
+                (pt/call-module (:name dep) {}))))
 
-          // Run services if requested
-          if (shouldRun) {
-            // Run dependencies first
-            for (const dep of deps) {
-              pt.callModule(dep.name, {});
-            }
-            // Run main service
-            pt.callModule(name, {});
-          }
+      - id: run-main-service
+        after: {step: scaffold-services}
+        code: |
+          #pt-clj
+          (when (:run params)
+            (let [name (-> (:name params)
+                           clojure.string/lower-case
+                           (clojure.string/replace #"[^a-z0-9_-]" "-"))]
+              ;; Run main service
+              (pt/call-module name {})))
 
   add-to-run-graph:
     info: |
@@ -378,38 +384,34 @@ tools:
     info: |
       Sets up the base directory structure for a Bluetext project.
       Projects are organised by models, services, and clients.
-
-      This creates:
-      - clients/ directory with README
-      - models/ directory with README
-      - services/ directory with README
-
-      Use add-project-language after this to add language-specific libraries.
+    params:
+      - id: language
+        info: Language to scaffold (python).
+        type: [enum, python]
+      - id: skip-language
+        info: Skip scaffolding language-specific structure even if language is provided
+        type: [default, bool, false]
     run:
-      - id: structure
+      - id: scaffold-base-structure
         tool: polytope/scaffold
-        args:
-          actions:
-            - id: scaffold-clients-readme
-              template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: templates/project-structure/clients/README.md}
-              path: clients/README.md
-              on-conflict: skip
-            - id: scaffold-models-readme
-              template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: templates/project-structure/models/README.md}
-              path: models/README.md
-              on-conflict: skip
-            - id: scaffold-services-readme
-              template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: templates/project-structure/services/README.md}
-              path: services/README.md
-              on-conflict: skip
-  test:
-    run:
-      - tool: polytope/scaffold
         args:
           container-id: scaffold-readme
           actions:
-            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: templates/project-structure/clients/README.md}
-              path: clients/README.md
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: project-structure-base/clients}
+              path: clients
+              on-conflict: skip
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: project-structure-base/models}
+              path: models
+              on-conflict: skip
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: project-structure-base/services}
+              path: services
+              on-conflict: skip
+      - id: scaffold-language
+        after: {step: scaffold-base-structure}
+        code: |
+          #pt-clj
+          (when (and (:language params) (not (:skip-language params)))
+            (pt/call-module "add-project-language" {:language (:language params)}))
 
   add-project-language:
     info: |
@@ -421,16 +423,17 @@ tools:
       - models/<language>/
     params:
       - id: language
-        info: Language to add (python or typescript)
-        type: [enum, python, typescript]
+        info: Language to add (currently only supports python)
+        type: [enum, python]
     run:
       - tool: polytope/scaffold
         args:
+          container-id: scaffold-readme
           actions:
-            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "#pt-clj (str \"templates/project-structure/clients/\" (:language params))"}
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "#pt-clj (str \"project-structure/clients/\" (:language params))"}
               path: "#pt-clj (str \"clients/\" (:language params))"
               on-conflict: skip
-            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "#pt-clj (str \"templates/project-structure/models/\" (:language params))"}
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "#pt-clj (str \"project-structure/models/\" (:language params))"}
               path: "#pt-clj (str \"models/\" (:language params))"
               on-conflict: skip 
 
