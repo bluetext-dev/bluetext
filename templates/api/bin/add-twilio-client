@@ -42,7 +42,7 @@ echo ""
 echo "📝 Creating Twilio configuration file..."
 
 # Create the twilio.py configuration file
-cat > src/backend/conf/twilio.py << 'EOF'
+cat > src/conf/twilio.py << 'EOF'
 from pydantic import BaseModel
 
 from ..utils import env
@@ -84,13 +84,13 @@ def get_twilio_conf():
     )
 EOF
 
-echo "✅ Created src/backend/conf/twilio.py"
+echo "✅ Created src/conf/twilio.py"
 
 # Create the init/twilio.py file with initialization logic
 echo ""
 echo "📝 Creating init/twilio.py with initialization logic..."
 
-cat > src/backend/init/twilio.py << 'EOF'
+cat > src/init/twilio.py << 'EOF'
 """Twilio client initialization and deinitialization."""
 
 from fastapi import FastAPI
@@ -120,21 +120,21 @@ async def deinit_twilio(app: FastAPI) -> None:
     logger.info("Twilio client closed")
 EOF
 
-echo "✅ Created src/backend/init/twilio.py"
+echo "✅ Created src/init/twilio.py"
 
 # Inject Twilio initialization calls into init/__init__.py
 echo ""
 echo "📝 Injecting Twilio initialization calls into init/__init__.py..."
 
 # Check if twilio initialization is already present
-if grep -q "init_twilio" src/backend/init/__init__.py; then
+if grep -q "init_twilio" src/init/__init__.py; then
     echo "ℹ️  Twilio initialization already present in init/__init__.py"
 else
     # Add import at the top of the file (after FastAPI import)
     "${SED_INPLACE[@]}" '/^from fastapi import FastAPI$/a\
 \
 from .twilio import init_twilio, deinit_twilio
-' src/backend/init/__init__.py
+' src/init/__init__.py
 
     # Inject init call - insert after docstring line (single or multi-line)
     "${SED_INPLACE[@]}" '/async def init(app: FastAPI) -> None:/,/^async def deinit/{
@@ -142,7 +142,7 @@ from .twilio import init_twilio, deinit_twilio
             a\
     await init_twilio(app)
         }
-    }' src/backend/init/__init__.py
+    }' src/init/__init__.py
 
     # Inject deinit call - insert after docstring line (single or multi-line)
     "${SED_INPLACE[@]}" '/async def deinit(app: FastAPI) -> None:/,${
@@ -150,43 +150,43 @@ from .twilio import init_twilio, deinit_twilio
             a\
     await deinit_twilio(app)
         }
-    }' src/backend/init/__init__.py
+    }' src/init/__init__.py
 
     echo "✅ Injected Twilio initialization calls into init/__init__.py"
 fi
 
 # Update the main conf/__init__.py file to import twilio configuration
 echo ""
-echo "📝 Updating src/backend/conf/__init__.py to include Twilio configuration..."
+echo "📝 Updating src/conf/__init__.py to include Twilio configuration..."
 
 # Add import at the top of the file (after the existing imports)
-if ! grep -q "from . import twilio" src/backend/conf/__init__.py; then
+if ! grep -q "from . import twilio" src/conf/__init__.py; then
     # Add the import after the line with "from ..utils.env import EnvVarSpec"
     "${SED_INPLACE[@]}" '/from \.\.utils\.env import EnvVarSpec/a\
 from . import twilio\
 from .twilio import get_twilio_conf
-' src/backend/conf/__init__.py
+' src/conf/__init__.py
     echo "✅ Added twilio import to conf/__init__.py"
 else
     echo "ℹ️  Twilio import already exists in conf/__init__.py"
 fi
 
 # Add getter function export if not already present
-if ! grep -q "from .twilio import get_twilio_conf" src/backend/conf/__init__.py; then
+if ! grep -q "from .twilio import get_twilio_conf" src/conf/__init__.py; then
     "${SED_INPLACE[@]}" '/from \. import twilio/a\
 from .twilio import get_twilio_conf
-' src/backend/conf/__init__.py
+' src/conf/__init__.py
     echo "✅ Added get_twilio_conf export to conf/__init__.py"
 fi
 
 # Add VALIDATED_ENV_VARS.extend(twilio.VALIDATED_ENV_VARS) after the initial VALIDATED_ENV_VARS definition
-if ! grep -q "VALIDATED_ENV_VARS.extend(twilio.VALIDATED_ENV_VARS)" src/backend/conf/__init__.py; then
+if ! grep -q "VALIDATED_ENV_VARS.extend(twilio.VALIDATED_ENV_VARS)" src/conf/__init__.py; then
     # Find the closing bracket of VALIDATED_ENV_VARS and add the extend statement after it
     "${SED_INPLACE[@]}" '/^VALIDATED_ENV_VARS = \[/,/^\]/{
         /^\]/a\
 \
 VALIDATED_ENV_VARS.extend(twilio.VALIDATED_ENV_VARS)
-    }' src/backend/conf/__init__.py
+    }' src/conf/__init__.py
     echo "✅ Added VALIDATED_ENV_VARS.extend(twilio.VALIDATED_ENV_VARS) to conf/__init__.py"
 else
     echo "ℹ️  VALIDATED_ENV_VARS extension already exists in conf/__init__.py"
@@ -197,8 +197,8 @@ echo ""
 echo "📝 Updating routes/utils.py with Twilio client helper..."
 
 # Check if get_twilio_client is already defined
-if ! grep -q "def get_twilio_client" src/backend/routes/utils.py; then
-    cat >> src/backend/routes/utils.py << 'EOF'
+if ! grep -q "def get_twilio_client" src/routes/utils.py; then
+    cat >> src/routes/utils.py << 'EOF'
 
 
 #### Twilio ####
@@ -236,7 +236,7 @@ fi
 echo ""
 echo "📝 Creating example SMS routes file..."
 
-cat > src/backend/routes/sms.py << 'EOF'
+cat > src/routes/sms.py << 'EOF'
 """
 API routes for SMS operations using Twilio.
 """
@@ -307,7 +307,7 @@ async def sms_health(twilio: TwilioSMS):
     }
 EOF
 
-echo "✅ Created src/backend/routes/sms.py"
+echo "✅ Created src/routes/sms.py"
 
 echo ""
 echo "✅ Twilio SMS client setup complete!"

@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
-from ..utils import auth, env, log
-from ..utils.env import EnvVarSpec
+from utils import auth, env, log
+from utils.env import EnvVarSpec
 
 logger = log.get_logger(__name__)
 

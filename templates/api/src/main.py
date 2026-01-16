@@ -2,10 +2,10 @@ import uvicorn
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
-from .utils import log
-from .routes.base import router
-from . import conf
-from .init import init, deinit
+from utils import log
+from routes.base import router
+import conf
+from init import init, deinit
 
 log.init(conf.get_log_level())
 logger = log.get_logger(__name__)
@@ -14,7 +14,7 @@ logger = log.get_logger(__name__)
 async def lifespan(app: FastAPI):
     # Initialize auth client if enabled
     if conf.USE_AUTH:
-        from .utils import auth
+        from utils import auth
         app.state.auth_client = auth.AuthClient(conf.get_auth_config())
     else:
         logger.warning("Authentication is disabled (set USE_AUTH to enable)")
@@ -52,7 +52,7 @@ def main() -> None:
     http_conf = conf.get_http_conf()
     logger.info(f"Starting API on port {http_conf.port}")
     uvicorn.run(
-        "backend.main:app",
+        "main:app",
         host=http_conf.host,
         port=http_conf.port,
         reload=http_conf.autoreload,

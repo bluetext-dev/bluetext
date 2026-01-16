@@ -435,6 +435,86 @@ tools:
               on-conflict: skip
             - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "#pt-clj (str \"project-structure/models/\" (:language params))"}
               path: "#pt-clj (str \"models/\" (:language params))"
-              on-conflict: skip 
+              on-conflict: skip
+
+  add-client:
+    info: |
+      Adds a client to the project's clients directory.
+      Scaffolds the client code and updates pyproject.toml with dependencies.
+
+      Example: add-client(name: "couchbase", language: "python")
+    params:
+      - id: name
+        info: Client name (e.g., "couchbase", "temporal")
+        type: str
+      - id: language
+        info: Language for the client
+        type: [default, [enum, python], python]
+    run:
+      - id: scaffold-client
+        tool: polytope/scaffold
+        args:
+          actions:
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "#pt-clj (str \"clients/\" (:language params) \"/\" (:name params))"}
+              path: "#pt-clj (str \"clients/\" (:language params) \"/\" (:name params))"
+              on-conflict: skip
+      - id: update-pyproject
+        after: {step: scaffold-client}
+        tool: run-script
+        args:
+          language: python
+          script: |
+            import re
+            from pathlib import Path
+
+            name = "{pt.param name}"
+            language = "{pt.param language}"
+
+            # Define dependency mapping
+            dependencies_map = {
+                "couchbase": "couchbase>=4.4.0",
+                "temporal": "temporalio>=1.6.0",
+            }
+
+            # Get the dependency to add
+            dependency = dependencies_map.get(name)
+            if not dependency:
+                print(f"No dependency mapping found for {name}")
+                exit(0)
+
+            # Path to pyproject.toml (scaffolded by the template)
+            pyproject_path = Path(f"/repo/clients/{language}/pyproject.toml")
+
+            # The pyproject.toml should have been scaffolded from the template
+            if not pyproject_path.exists():
+                print(f"✅ pyproject.toml was scaffolded with the client template")
+                exit(0)
+
+            # Read the file
+            content = pyproject_path.read_text()
+
+            # Check if dependency already exists
+            if dependency.split(">=")[0] in content:
+                print(f"✅ Dependency {dependency} already exists in pyproject.toml")
+                exit(0)
+
+            # Add dependency to the dependencies array
+            # Find the dependencies section and add the new dependency
+            pattern = r'(dependencies\s*=\s*\[)(.*?)(\])'
+
+            def add_dependency(match):
+                deps_start = match.group(1)
+                deps_content = match.group(2)
+                deps_end = match.group(3)
+
+                # Add the new dependency
+                new_dep = f'\n    "{dependency}",'
+                return deps_start + deps_content + new_dep + '\n' + deps_end
+
+            new_content = re.sub(pattern, add_dependency, content, flags=re.DOTALL)
+
+            # Write back
+            pyproject_path.write_text(new_content)
+            print(f"✅ Added {dependency} to pyproject.toml")
 
 

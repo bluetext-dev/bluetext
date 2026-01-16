@@ -6,7 +6,7 @@ set -e
 # Change to the api directory
 cd "$(dirname "$0")/.."
 
-workflows_dir=src/backend/workflows
+workflows_dir=src/workflows
 
 # Function to echo (can be silenced)
 echoh() {
@@ -116,7 +116,7 @@ class ${pascal_name}Response(BaseModel):
     placeholder: str
 
 #### Activities ####
-# NOTE: Register all activities in the ACTIVITIES array in src/backend/workflows/__init__.py
+# NOTE: Register all activities in the ACTIVITIES array in src/workflows/__init__.py
 
 @activity.defn
 def ${snake_name}_activity(input: ${pascal_name}Input) -> ${pascal_name}Response:
@@ -300,7 +300,7 @@ main() {
     echoh ""
     echoh "3. Use the workflow in your routes:"
     echoh "   from temporalio.client import Client"
-    echoh "   from backend.workflows.${snake_name} import ${pascal_name}Workflow"
+    echoh "   from src.workflows.${snake_name} import ${pascal_name}Workflow"
     echoh ""
     echoh "   # Get client from FastAPI app state"
     echoh "   temporal_client = request.app.state.temporal_client"

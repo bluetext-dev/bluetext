@@ -6,7 +6,7 @@ set -e
 # Change to the api directory
 cd "$(dirname "$0")/.."
 
-models_file=src/backend/db/models.py
+models_file=src/db/models.py
 
 # Function to echo (can be silenced)
 echoh() {
@@ -193,7 +193,7 @@ create_example_route() {
     local pascal_name=$(kebab_to_pascal "$model_name")
     local lower_name=$(to_lower "$snake_name")
     local table_name="${lower_name}s"  # Pluralize for table name
-    local routes_dir="src/backend/routes"
+    local routes_dir="src/routes"
     local route_file="${routes_dir}/${table_name}.py"
 
     # Skip if file already exists

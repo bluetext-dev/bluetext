@@ -6,7 +6,7 @@ set -e
 # Change to the api directory
 cd "$(dirname "$0")/.."
 
-models_dir=src/backend/couchbase/models
+models_dir=src/couchbase/models
 
 # Function to echo (can be silenced)
 echoh() {
@@ -241,9 +241,9 @@ main() {
     echoh ""
     echoh "🔄 How it works:"
     echoh "   1. Model is exported from ${models_dir}/__init__.py via MODELS list"
-    echoh "   2. Client reads MODELS in src/backend/init/couchbase.py"
+    echoh "   2. Client reads MODELS in src/init/couchbase.py"
     echoh "   3. Each model's initialize() method is called to create collections"
-    echoh "   4. Initialization runs in lifespan (src/backend/main.py)"
+    echoh "   4. Initialization runs in lifespan (src/main.py)"
     echoh "   5. Hot reload triggers re-initialization = auto-migration!"
     echoh ""
     echoh "💡 To create more models, use the MCP tool:"
@@ -254,8 +254,8 @@ main() {
     echoh "   ${models_dir}/${snake_name}.py"
     echoh ""
     echoh "2. Use the model in your routes:"
-    echoh "   from backend.couchbase.models import ${pascal_name}Model"
-    echoh "   from backend.routes.utils import CouchbaseDB"
+    echoh "   from src.couchbase.models import ${pascal_name}Model"
+    echoh "   from src.routes.utils import CouchbaseDB"
     echoh ""
     echoh "   @router.get('/${snake_name}/{id}')"
     echoh "   async def get_${snake_name}(id: UUID, db: CouchbaseDB):"

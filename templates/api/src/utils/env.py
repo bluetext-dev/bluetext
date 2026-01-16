@@ -8,7 +8,7 @@ from pydantic import (
     validate_call,
 )
 
-from . import log
+from utils import log
 
 logger = log.get_logger(__name__)
 

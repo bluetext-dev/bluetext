@@ -1,7 +1,7 @@
 import jwt
 from pydantic import BaseModel
 
-from . import log
+from utils import log
 
 logger = log.get_logger(__name__)
 

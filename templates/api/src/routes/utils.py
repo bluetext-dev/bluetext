@@ -4,8 +4,8 @@ from typing import Annotated, AsyncGenerator
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..utils import auth, log
-from .. import conf
+from utils import auth, log
+import conf
 
 logger = log.get_logger(__name__)
 
@@ -68,7 +68,7 @@ async def get_db_session(request: Request) -> AsyncGenerator[AsyncSession, None]
     FastAPI dependency that provides an AsyncSession for database operations.
 
     Usage in routes:
-        from .utils import DBSession
+        from routes.utils import DBSession
 
         @router.post("/users")
         async def create_user(user: User, session: DBSession):
@@ -94,7 +94,7 @@ def get_couchbase_client(request: Request):
     FastAPI dependency that provides the Couchbase client.
 
     Usage in routes:
-        from .utils import CouchbaseDB
+        from routes.utils import CouchbaseDB
 
         @router.post("/users")
         async def create_user(user: User, cb: CouchbaseDB):

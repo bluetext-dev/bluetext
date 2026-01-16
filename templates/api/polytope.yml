@@ -48,7 +48,8 @@ tools:
             - { name: TEMPORAL_TASK_QUEUE, value: main-task-queue }
           mounts:
             - { path: /root/.cache/, source: { type: volume, scope: project, id: {{ project-name | kebab_case}}-dependency-cache } }
-            - { path: /lib/py, source: { type: repo, path: /lib/py, repo: "#pt-clj pt/module-project-ref" } }
+            - { path: /clients/python, source: { type: repo, path: /clients/python, repo: "#pt-clj pt/module-project-ref" } }
+            - { path: /models/python, source: { type: repo, path: /models/python, repo: "#pt-clj pt/module-project-ref" } }
 
   {{ project-name }}-add-client:
     info: Adds a client library (couchbase, temporal, postgres, or twilio) to the API service with all integration functions.
@@ -63,20 +64,20 @@ tools:
           actions: |-
             #pt-clj
             (let [client (:client params)
-                  lib-path (str "/templates/lib/py/" client "-client")
+                  client-dir (str "/templates/clients/python/" client)
                   bin-path (case client
                             "couchbase" "/templates/api/bin/add-couchbase-model"
                             "temporal" "/templates/api/bin/add-temporal-workflow"
                             nil)]
               (cond-> [{:template {:type "repo"
                                    :repo "bluetext-io/bluetext"
-                                   :path lib-path}
-                        :path (str "/lib/py/" client "-client")
+                                   :path client-dir}
+                        :path "/clients/python/"
                         :on-conflict "skip"}]
                 bin-path (conj {:template {:type "repo"
                                           :repo "bluetext-io/bluetext"
                                           :path bin-path}
-                               :path (str "/modules/api/bin/add-"
+                               :path (str "/services/{{ project-name }}/bin/add-"
                                          (case client
                                            "couchbase" "couchbase-model"
                                            "temporal" "temporal-workflow"))
@@ -99,11 +100,11 @@ tools:
         id: add-couchbase-client
         args:
           actions:
-            - template: {type: repo, repo: "bluetext-io/bluetext", path: /templates/lib/py/couchbase-client}
-              path: /lib/py/couchbase-client
+            - template: {type: repo, repo: "bluetext-io/bluetext", path: /templates/clients/python/couchbase}
+              path: /clients/python/
               on-conflict: skip
             - template: {type: repo, repo: "bluetext-io/bluetext", path: /templates/api/bin/add-couchbase-model}
-              path: /modules/api/bin/add-couchbase-model
+              path: /services/{{ project-name }}/bin/add-couchbase-model
               on-conflict: skip
 
       - tool: {{ project-name }}
@@ -123,11 +124,11 @@ tools:
         id: add-temporal-client
         args:
           actions:
-            - template: {type: repo, repo: "bluetext-io/bluetext", path: /templates/lib/py/temporal-client}
-              path: /lib/py/temporal-client
+            - template: {type: repo, repo: "bluetext-io/bluetext", path: /templates/clients/python/temporal}
+              path: /clients/python/
               on-conflict: skip
             - template: {type: repo, repo: "bluetext-io/bluetext", path: /templates/api/bin/add-temporal-workflow}
-              path: /modules/api/bin/add-temporal-workflow
+              path: /services/{{ project-name }}/bin/add-temporal-workflow
               on-conflict: skip
 
       - tool: {{ project-name }}

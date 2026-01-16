@@ -73,7 +73,7 @@ echo ""
 echo "📝 Creating Couchbase configuration file..."
 
 # Create the couchbase.py configuration file
-cat > src/backend/conf/couchbase.py << 'EOF'
+cat > src/conf/couchbase.py << 'EOF'
 from pydantic import BaseModel
 
 from ..utils import auth, env, log
@@ -131,13 +131,13 @@ def get_couchbase_conf():
     )
 EOF
 
-echo "✅ Created src/backend/conf/couchbase.py"
+echo "✅ Created src/conf/couchbase.py"
 
 # Create the init/couchbase.py file with initialization logic
 echo ""
 echo "📝 Creating init/couchbase.py with initialization logic..."
 
-cat > src/backend/init/couchbase.py << 'EOF'
+cat > src/init/couchbase.py << 'EOF'
 """Couchbase client initialization and deinitialization."""
 
 from fastapi import FastAPI
@@ -174,21 +174,21 @@ async def deinit_couchbase(app: FastAPI) -> None:
     logger.info("Couchbase client connection closed")
 EOF
 
-echo "✅ Created src/backend/init/couchbase.py"
+echo "✅ Created src/init/couchbase.py"
 
 # Inject Couchbase initialization calls into init/__init__.py
 echo ""
 echo "📝 Injecting Couchbase initialization calls into init/__init__.py..."
 
 # Check if couchbase initialization is already present
-if grep -q "init_couchbase" src/backend/init/__init__.py; then
+if grep -q "init_couchbase" src/init/__init__.py; then
     echo "ℹ️  Couchbase initialization already present in init/__init__.py"
 else
     # Add import at the top of the file (after FastAPI import)
     "${SED_INPLACE[@]}" '/^from fastapi import FastAPI$/a\
 \
 from .couchbase import init_couchbase, deinit_couchbase
-' src/backend/init/__init__.py
+' src/init/__init__.py
 
     # Inject init call - insert after docstring line (single or multi-line)
     "${SED_INPLACE[@]}" '/async def init(app: FastAPI) -> None:/,/^async def deinit/{
@@ -196,7 +196,7 @@ from .couchbase import init_couchbase, deinit_couchbase
             a\
     await init_couchbase(app)
         }
-    }' src/backend/init/__init__.py
+    }' src/init/__init__.py
 
     # Inject deinit call - insert after docstring line (single or multi-line)
     "${SED_INPLACE[@]}" '/async def deinit(app: FastAPI) -> None:/,${
@@ -204,62 +204,62 @@ from .couchbase import init_couchbase, deinit_couchbase
             a\
     await deinit_couchbase(app)
         }
-    }' src/backend/init/__init__.py
+    }' src/init/__init__.py
 
     echo "✅ Injected Couchbase initialization calls into init/__init__.py"
 fi
 
 # Update the main conf/__init__.py file to import couchbase configuration
 echo ""
-echo "📝 Updating src/backend/conf/__init__.py to include Couchbase configuration..."
+echo "📝 Updating src/conf/__init__.py to include Couchbase configuration..."
 
 # Add import at the top of the file (after the existing imports)
-if ! grep -q "from . import couchbase" src/backend/conf/__init__.py; then
+if ! grep -q "from . import couchbase" src/conf/__init__.py; then
     # Add the import after the line with "from ..utils.env import EnvVarSpec"
     "${SED_INPLACE[@]}" '/from \.\.utils\.env import EnvVarSpec/a\
 from . import couchbase\
 from .couchbase import get_couchbase_conf
-' src/backend/conf/__init__.py
+' src/conf/__init__.py
     echo "✅ Added couchbase import to conf/__init__.py"
 else
     echo "ℹ️  Couchbase import already exists in conf/__init__.py"
 fi
 
 # Add getter function export if not already present
-if ! grep -q "from .couchbase import get_couchbase_conf" src/backend/conf/__init__.py; then
+if ! grep -q "from .couchbase import get_couchbase_conf" src/conf/__init__.py; then
     "${SED_INPLACE[@]}" '/from \. import couchbase/a\
 from .couchbase import get_couchbase_conf
-' src/backend/conf/__init__.py
+' src/conf/__init__.py
     echo "✅ Added get_couchbase_conf export to conf/__init__.py"
 fi
 
 # Add VALIDATED_ENV_VARS.extend(couchbase.VALIDATED_ENV_VARS) after the initial VALIDATED_ENV_VARS definition
-if ! grep -q "VALIDATED_ENV_VARS.extend(couchbase.VALIDATED_ENV_VARS)" src/backend/conf/__init__.py; then
+if ! grep -q "VALIDATED_ENV_VARS.extend(couchbase.VALIDATED_ENV_VARS)" src/conf/__init__.py; then
     # Find the closing bracket of VALIDATED_ENV_VARS and add the extend statement after it
     "${SED_INPLACE[@]}" '/^VALIDATED_ENV_VARS = \[/,/^\]/{
         /^\]/a\
 \
 VALIDATED_ENV_VARS.extend(couchbase.VALIDATED_ENV_VARS)
-    }' src/backend/conf/__init__.py
+    }' src/conf/__init__.py
     echo "✅ Added VALIDATED_ENV_VARS.extend(couchbase.VALIDATED_ENV_VARS) to conf/__init__.py"
 else
     echo "ℹ️  VALIDATED_ENV_VARS extension already exists in conf/__init__.py"
 fi
 
 # Create the couchbase/models directory if it doesn't exist
-mkdir -p src/backend/couchbase/models
+mkdir -p src/couchbase/models
 
 # Create the __init__.py file for the couchbase module if it doesn't exist
-if [ ! -f src/backend/couchbase/__init__.py ]; then
-    touch src/backend/couchbase/__init__.py
-    echo "✅ Created src/backend/couchbase/__init__.py"
+if [ ! -f src/couchbase/__init__.py ]; then
+    touch src/couchbase/__init__.py
+    echo "✅ Created src/couchbase/__init__.py"
 fi
 
 # Create the __init__.py file for the models module if it doesn't exist
-if [ ! -f src/backend/couchbase/models/__init__.py ]; then
+if [ ! -f src/couchbase/models/__init__.py ]; then
     echo ""
     echo "📝 Creating models registry..."
-    cat > src/backend/couchbase/models/__init__.py << 'EOF'
+    cat > src/couchbase/models/__init__.py << 'EOF'
 """
 Couchbase models registry.
 
@@ -276,7 +276,7 @@ MODELS = [
     # Example: UserModel
 ]
 EOF
-    echo "✅ Created src/backend/couchbase/models/__init__.py"
+    echo "✅ Created src/couchbase/models/__init__.py"
 fi
 
 echo ""
@@ -285,5 +285,5 @@ echo ""
 echo "You can now:"
 echo "  1. Import and use the Couchbase client in your code:"
 echo "     from couchbase_client import CouchbaseClient"
-echo "  2. Initialization is handled automatically in src/backend/init/couchbase.py"
+echo "  2. Initialization is handled automatically in src/init/couchbase.py"
 echo "  3. Call `__polytope__run(tool: {{ project-name }}-add-couchbase-model, name: placeholder)` to add couchbase models."

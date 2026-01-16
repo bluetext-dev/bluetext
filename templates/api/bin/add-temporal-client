@@ -69,7 +69,7 @@ echo ""
 echo "📝 Creating Temporal configuration file..."
 
 # Create the temporal.py configuration file
-cat > src/backend/conf/temporal.py << 'EOF'
+cat > src/conf/temporal.py << 'EOF'
 from pydantic import BaseModel
 
 from ..utils import auth, env, log
@@ -119,13 +119,13 @@ def get_temporal_conf():
     )
 EOF
 
-echo "✅ Created src/backend/conf/temporal.py"
+echo "✅ Created src/conf/temporal.py"
 
 # Create the init/temporal.py file with initialization logic
 echo ""
 echo "📝 Creating init/temporal.py with initialization logic..."
 
-cat > src/backend/init/temporal.py << 'EOF'
+cat > src/init/temporal.py << 'EOF'
 """Temporal client initialization and deinitialization."""
 
 from fastapi import FastAPI
@@ -162,21 +162,21 @@ async def deinit_temporal(app: FastAPI) -> None:
     logger.info("Temporal client connection closed")
 EOF
 
-echo "✅ Created src/backend/init/temporal.py"
+echo "✅ Created src/init/temporal.py"
 
 # Inject Temporal initialization calls into init/__init__.py
 echo ""
 echo "📝 Injecting Temporal initialization calls into init/__init__.py..."
 
 # Check if temporal initialization is already present
-if grep -q "init_temporal" src/backend/init/__init__.py; then
+if grep -q "init_temporal" src/init/__init__.py; then
     echo "ℹ️  Temporal initialization already present in init/__init__.py"
 else
     # Add import at the top of the file (after FastAPI import)
     "${SED_INPLACE[@]}" '/^from fastapi import FastAPI$/a\
 \
 from .temporal import init_temporal, deinit_temporal
-' src/backend/init/__init__.py
+' src/init/__init__.py
 
     # Inject init call - insert after docstring line (single or multi-line)
     "${SED_INPLACE[@]}" '/async def init(app: FastAPI) -> None:/,/^async def deinit/{
@@ -184,7 +184,7 @@ from .temporal import init_temporal, deinit_temporal
             a\
     await init_temporal(app)
         }
-    }' src/backend/init/__init__.py
+    }' src/init/__init__.py
 
     # Inject deinit call - insert after docstring line (single or multi-line)
     "${SED_INPLACE[@]}" '/async def deinit(app: FastAPI) -> None:/,${
@@ -192,56 +192,56 @@ from .temporal import init_temporal, deinit_temporal
             a\
     await deinit_temporal(app)
         }
-    }' src/backend/init/__init__.py
+    }' src/init/__init__.py
 
     echo "✅ Injected Temporal initialization calls into init/__init__.py"
 fi
 
 # Update the main conf/__init__.py file to import temporal configuration
 echo ""
-echo "📝 Updating src/backend/conf/__init__.py to include Temporal configuration..."
+echo "📝 Updating src/conf/__init__.py to include Temporal configuration..."
 
 # Add import at the top of the file (after the existing imports)
-if ! grep -q "from . import temporal" src/backend/conf/__init__.py; then
+if ! grep -q "from . import temporal" src/conf/__init__.py; then
     # Add the import after the line with "from ..utils.env import EnvVarSpec"
     "${SED_INPLACE[@]}" '/from \.\.utils\.env import EnvVarSpec/a\
 from . import temporal\
 from .temporal import get_temporal_conf
-' src/backend/conf/__init__.py
+' src/conf/__init__.py
     echo "✅ Added temporal import to conf/__init__.py"
 else
     echo "ℹ️  Temporal import already exists in conf/__init__.py"
 fi
 
 # Add getter function export if not already present
-if ! grep -q "from .temporal import get_temporal_conf" src/backend/conf/__init__.py; then
+if ! grep -q "from .temporal import get_temporal_conf" src/conf/__init__.py; then
     "${SED_INPLACE[@]}" '/from \. import temporal/a\
 from .temporal import get_temporal_conf
-' src/backend/conf/__init__.py
+' src/conf/__init__.py
     echo "✅ Added get_temporal_conf export to conf/__init__.py"
 fi
 
 # Add VALIDATED_ENV_VARS.extend(temporal.VALIDATED_ENV_VARS) after the initial VALIDATED_ENV_VARS definition
-if ! grep -q "VALIDATED_ENV_VARS.extend(temporal.VALIDATED_ENV_VARS)" src/backend/conf/__init__.py; then
+if ! grep -q "VALIDATED_ENV_VARS.extend(temporal.VALIDATED_ENV_VARS)" src/conf/__init__.py; then
     # Find the closing bracket of VALIDATED_ENV_VARS and add the extend statement after it
     "${SED_INPLACE[@]}" '/^VALIDATED_ENV_VARS = \[/,/^\]/{
         /^\]/a\
 \
 VALIDATED_ENV_VARS.extend(temporal.VALIDATED_ENV_VARS)
-    }' src/backend/conf/__init__.py
+    }' src/conf/__init__.py
     echo "✅ Added VALIDATED_ENV_VARS.extend(temporal.VALIDATED_ENV_VARS) to conf/__init__.py"
 else
     echo "ℹ️  VALIDATED_ENV_VARS extension already exists in conf/__init__.py"
 fi
 
 # Create the workflows directory if it doesn't exist
-mkdir -p src/backend/workflows
+mkdir -p src/workflows
 
 # Create the __init__.py file for the workflows module if it doesn't exist
-if [ ! -f src/backend/workflows/__init__.py ]; then
+if [ ! -f src/workflows/__init__.py ]; then
     echo ""
     echo "📝 Creating workflows registry..."
-    cat > src/backend/workflows/__init__.py << 'EOF'
+    cat > src/workflows/__init__.py << 'EOF'
 """
 Temporal workflows registry.
 
@@ -259,7 +259,7 @@ WORKFLOWS = [
 ACTIVITIES = [
 ]
 EOF
-    echo "✅ Created src/backend/workflows/__init__.py"
+    echo "✅ Created src/workflows/__init__.py"
 fi
 
 echo ""

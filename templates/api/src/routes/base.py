@@ -6,11 +6,11 @@ from pathlib import Path
 from typing import Optional, List
 from fastapi import APIRouter, Request, HTTPException, Query
 
-from ..utils import log
-from .. import conf
-# from .utils import RequestPrincipal # NOTE: uncomment to use auth
-# from .utils import DBSession # NOTE: uncomment to use postgres
-# from .utils import CouchbaseDB
+from utils import log
+import conf
+# from routes.utils import RequestPrincipal # NOTE: uncomment to use auth
+# from routes.utils import DBSession # NOTE: uncomment to use postgres
+# from routes.utils import CouchbaseDB
 
 logger = log.get_logger(__name__)
 router = APIRouter()
@@ -187,8 +187,8 @@ async def _check_all_services(request: Request, health_status: dict, services_fi
 
 # PostgreSQL route example using SQLModel (uncomment when using PostgreSQL)
 #
-# from .utils import DBSession
-# from ..db.models import User, create_user, get_user, get_users
+# from routes.utils import DBSession
+# from db.models import User, create_user, get_user, get_users
 #
 # @router.post("/users", response_model=User)
 # async def create_user_route(user: User, session: DBSession):
@@ -211,8 +211,8 @@ async def _check_all_services(request: Request, health_status: dict, services_fi
 
 # Couchbase route example (uncomment when using Couchbase)
 #
-# from .utils import CouchbaseDB
-# from ..clients.couchbase_models import CouchbaseUser, create_user, get_user, list_users
+# from routes.utils import CouchbaseDB
+# from clients.couchbase_models import CouchbaseUser, create_user, get_user, list_users
 #
 # @router.post("/cb/users", response_model=CouchbaseUser)
 # async def create_user_cb(user: CouchbaseUser, cb: CouchbaseDB):
@@ -238,7 +238,7 @@ async def _check_all_services(request: Request, health_status: dict, services_fi
 # Temporal route examples (uncomment when using Temporal)
 #
 # import uuid
-# from ..workflows.examples import GreetingWorkflow
+# from workflows.examples import GreetingWorkflow
 #
 # @router.post("/workflows/greeting")
 # async def start_greeting_workflow(request: Request, name: str, greeting: str = "Hello"):

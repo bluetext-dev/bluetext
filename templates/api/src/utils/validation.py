@@ -120,7 +120,7 @@ def check_database_types() -> List[str]:
 
     try:
         # Check if pk_field returns string type
-        from ..db.utils import pk_field
+        from db.utils import pk_field
         field = pk_field()
 
         # This is a basic check - in practice you'd want more sophisticated validation
