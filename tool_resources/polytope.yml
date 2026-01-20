@@ -261,7 +261,7 @@ tools:
         tool: polytope/scaffold
         args:
           actions:
-            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "#pt-clj (str \"services/\" (:template params) \"/template\")"}
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "#pt-clj (str \"add-and-run-service/\" (:template params) \"/template\")"}
               path: pt.param path
               on-conflict: pt.param on-conflict
             - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: lib/py/readme}
@@ -317,14 +317,14 @@ tools:
             [
               // Main service
               {
-                template: {type: "repo", repo: "#pt-clj pt/module-repo-ref", path: "services/" + template + "/template"},
+                template: {type: "repo", repo: "#pt-clj pt/module-repo-ref", path: "add-and-run-service/" + template + "/template"},
                 path: "services/" + name,
                 "on-conflict": onConflict,
                 "add-to-tools": [{tool: target, call: name}]
               },
               // Dependencies
               ...deps.map(dep => ({
-                template: {type: "repo", repo: "#pt-clj pt/module-repo-ref", path: "services/" + dep.path + "/template"},
+                template: {type: "repo", repo: "#pt-clj pt/module-repo-ref", path: "add-and-run-service/" + dep.path + "/template"},
                 path: "services/" + dep.name,
                 "on-conflict": "skip",
                 "add-to-tools": [{tool: target, call: dep.name}]
@@ -510,6 +510,68 @@ tools:
                                    :restart-policy "never"
                                    :create "always"}))
 
+  run-script-multi-mount:
+    info: |
+      Runs a script in a container with support for multiple mounts.
+      Use this when you need to mount multiple directories/files.
+      Exactly one of script (inline string) or path-to-script must be provided.
+    params:
+      - id: language
+        info: The scripting language to use
+        type: [enum, bash, javascript, python]
+      - id: script
+        info: Inline script content (alternative to path-to-script)
+        type: [maybe, str]
+      - id: path-to-script
+        info: Path to a script file in the repo (alternative to script)
+        type: [maybe, str]
+      - id: dependencies
+        info: Dependencies to install (pip packages for Python, npm packages for JS)
+        type: [maybe, [str]]
+      - id: workdir
+        info: Working directory in the container
+        type: [default, str, /repo]
+      - id: mounts
+        info: "List of mounts with path and source (e.g., [{path: /container/path, source: {type: host/repo, path: ...}}])"
+        type: [maybe, [any]]
+    run:
+      - id: run-script-container
+        tool: polytope/container
+        args:
+          image: |-
+            #pt-clj
+            (case (:language params)
+              "bash" "ubuntu:24.04"
+              "javascript" "node:21-slim"
+              "python" "python:3.12-slim")
+          workdir: pt.param workdir
+          mounts: |-
+            #pt-clj
+            (let [script-mount (if (:script params)
+                                 {:path "/script"
+                                  :source {:type "string"
+                                          :data (:script params)}}
+                                 {:path "/script"
+                                  :source {:type "repo"
+                                          :path (:path-to-script params)}})
+                  user-mounts (or (:mounts params) [])]
+              (vec (concat [script-mount] user-mounts)))
+          cmd: |-
+            #pt-clj
+            (let [check "[ -f /script ] || { echo \"Error: The mounted script is not a file\"; exit 1; }"
+                  deps (:dependencies params)]
+              (case (:language params)
+                "bash"
+                (str "sh -c '" check "; bash /script'")
+                "javascript"
+                (if (seq deps)
+                  (str "sh -c '" check "; npm install " (clojure.string/join " " deps) " && NODE_PATH=/node_modules node /script'")
+                  (str "sh -c '" check "; node /script'"))
+                "python"
+                (if (seq deps)
+                  (str "sh -c '" check "; pip install " (clojure.string/join " " deps) " && python /script'")
+                  (str "sh -c '" check "; python /script'"))))
+
   run-script:
     info: |
       Runs a custom script inside a service container.
@@ -677,7 +739,7 @@ tools:
         tool: polytope/scaffold
         args:
           actions:
-            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "#pt-clj (str \"clients/\" (:language params) \"/\" (:name params) \"/template\")"}
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "#pt-clj (str \"add-client/\" (:language params) \"/\" (:name params) \"/template\")"}
               path: "#pt-clj (str \"clients/\" (:language params) \"/\" (:name params))"
               on-conflict: skip
       - id: update-pyproject
@@ -742,130 +804,69 @@ tools:
   set-client-config-values-and-secrets:
     info: |
       Sets values and secrets for a client using pt.setValue and pt.setSecret.
-      Also writes to config/values.yml and config/secrets.yml files.
-      Reads the client's config.yml and calls the appropriate bindings.
+      Reads from pre-existing values.yml and secrets.yml files.
       This must be called before add-client-env-vars.
     params:
       - id: client
         info: Client to configure (couchbase, temporal)
         type: [enum, couchbase, temporal]
+      - id: language
+        info: Language for the client
+        type: [default, [enum, python], python]
     run:
-      - id: write-to-config-files
+      - id: read-and-set-bindings
         tool: polytope/run-script
         args:
-          dependencies:
-            - PyYAML
           language: python
-          repo:
-            type: host
-            path: .
+          dependencies: [PyYAML]
+          repo: {type: host, path: .}
           script:
             type: string
             data: |
               import yaml
               from pathlib import Path
-              import os
+              import subprocess
+              import json
 
-              client = "{pt.param client}"
+              # Read the YAML files that are mounted
+              values = yaml.safe_load(Path("/values.yml").read_text()) or {}
+              secrets = yaml.safe_load(Path("/secrets.yml").read_text()) or {}
 
+              print(f"📦 Setting {len(values)} values and {len(secrets)} secrets")
 
-              # Print only mounted paths
-              print("📂 Mounted paths in container:")
-              mount_points = ["/repo"]
-              for mount in mount_points:
-                  path = Path(mount)
-                  if path.exists():
-                      if path.is_file():
-                          print(f"  ✓ {mount} (file)")
-                      else:
-                          print(f"  ✓ {mount}/ (directory)")
-                          # Show first level of directory contents
-                          try:
-                              for item in sorted(path.iterdir())[:10]:
-                                  print(f"      - {item.name}")
-                          except PermissionError:
-                              print(f"      (permission denied)")
-                  else:
-                      print(f"  ✗ {mount} (not found)")
-              print()
+              # Write to a JSON file that Clojure can read
+              config = {"values": values, "secrets": secrets}
+              Path("/repo/.polytope-config.json").write_text(json.dumps(config))
 
-              # Read client config from blueprints (which is in the mounted repo)
-              config_path = Path(f"/repo/blueprints/clients/python/{client}/config.yml")
+              print("✅ Configuration prepared for Clojure step")
+          mounts: |-
+            #pt-clj
+            [{:path "/values.yml"
+              :source {:type "repo"
+                       :path (str "set-client-config-values-and-secrets/" (:language params) "/" (:client params) "/values.yml")}}
+             {:path "/secrets.yml"
+              :source {:type "repo"
+                       :path (str "set-client-config-values-and-secrets/" (:language params) "/" (:client params) "/secrets.yml")}}]
 
-              if not config_path.exists():
-                  print(f"❌ Config file not found: {config_path}")
-                  exit(1)
-
-              with open(config_path) as f:
-                  config = yaml.safe_load(f)
-
-              env_vars = config.get('env_vars', [])
-
-              # Paths to values and secrets files - write to host repo
-              values_path = Path("/repo/config/values.yml")
-              secrets_path = Path("/repo/config/secrets.yml")
-
-              # Ensure config directory exists
-              values_path.parent.mkdir(parents=True, exist_ok=True)
-
-              # Load existing values and secrets (if they exist)
-              if values_path.exists():
-                  with open(values_path) as f:
-                      values_data = yaml.safe_load(f) or {}
-              else:
-                  values_data = {}
-
-              if secrets_path.exists():
-                  with open(secrets_path) as f:
-                      secrets_data = yaml.safe_load(f) or {}
-              else:
-                  secrets_data = {}
-
-              # Add/update values and secrets
-              for var in env_vars:
-                  key = var['key']
-                  default = var['default']
-                  is_secret = var['secret']
-
-                  if is_secret:
-                      # Add to secrets file if not already present
-                      if key not in secrets_data:
-                          secrets_data[key] = default
-                          print(f"Adding secret to config/secrets.yml: {key} = {default}")
-                      else:
-                          print(f"Secret already exists in config/secrets.yml: {key}")
-                  else:
-                      # Add to values file if not already present
-                      if key not in values_data:
-                          values_data[key] = default
-                          print(f"Adding value to config/values.yml: {key} = {default}")
-                      else:
-                          print(f"Value already exists in config/values.yml: {key}")
-
-              # Write back to files
-              with open(values_path, 'w') as f:
-                  yaml.dump(values_data, f, default_flow_style=False, sort_keys=True)
-
-              with open(secrets_path, 'w') as f:
-                  yaml.dump(secrets_data, f, default_flow_style=False, sort_keys=True)
-
-              print(f"✅ Updated config/values.yml and config/secrets.yml for {client}")
-
-      - id: call-set-bindings
-        after: {step: write-to-config-files}
+      - id: set-polytope-bindings
+        after: {step: read-and-set-bindings}
         code: |
           #pt-clj
-          (let [client (:client params)
-                config-path (str (pt/module-repo-path) "/clients/python/" client "/config.yml")
-                config (yaml/parse-string (slurp config-path))
-                env-vars (get config "env_vars" [])]
-            (doseq [var env-vars]
-              (let [key (get var "key")
-                    default (get var "default")
-                    is-secret (get var "secret")]
-                (if is-secret
-                  (pt/set-secret key (str default))
-                  (pt/set-value key (str default))))))
+          (let [config-file (with-open [rdr (clojure.java.io/reader ".polytope-config.json")]
+                              (clojure.string/join "\n" (line-seq rdr)))
+                config (cheshire.core/parse-string config-file true)
+                values (:values config)
+                secrets (:secrets config)]
+            (println (str "🔧 Setting " (count values) " values and " (count secrets) " secrets"))
+            (doseq [[k v] values]
+              (println (str "  Setting value: " k " = " v))
+              (pt/set-project-value (name k) (str v)))
+            (doseq [[k v] secrets]
+              (println (str "  Setting secret: " k " = ***"))
+              (pt/set-secret (name k) (str v)))
+            (println "✅ Successfully set all bindings")
+            ;; Clean up temp file
+            (clojure.java.io/delete-file ".polytope-config.json" true))
 
   add-client-env-vars:
     info: |
@@ -892,7 +893,7 @@ tools:
             service = "{pt.param service}"
 
             # Read client config to get env var definitions
-            client_config_path = Path(f"/repo/blueprints/clients/python/{client}/config.yml")
+            client_config_path = Path(f"/repo/tool_resources/add-client/python/{client}/config.yml")
 
             if not client_config_path.exists():
                 print(f"❌ Client config not found: {client_config_path}")
@@ -948,24 +949,63 @@ tools:
             print(env_block)
             print(f"\n✅ Generated {len(env_vars)} env var entries for {client} -> {service}")
 
-  test-mount:
+  add-entities:
+    info: |
+      Scaffolds entity models for data store clients.
+      Creates entity files in models/python/entities/ with proper structure.
+    params:
+      - id: client
+        info: Data store client type
+        type: [enum, couchbase]
+      - id: entity-singular
+        info: Entity name in singular form (e.g., "project")
+        type: str
+      - id: entity-plural
+        info: Entity name in plural form (e.g., "projects")
+        type: str
     run:
-      - tool: polytope/run-script
+      - tool: polytope/scaffold
         args:
-          language: bash
-          repo:
-            type: host
-            path: .
-          script:
-            type: string
-            data: |
-              echo "=== Testing repo mount ==="
-              echo ""
-              echo "Contents of /repo (host repo mounted):"
-              ls -la /repo
-              echo ""
-              echo "Contents of /repo/clients/python/couchbase:"
-              ls -la /repo/clients/python/couchbase || echo "Path not found"
-              echo ""
-              echo "Reading config.yml from repo root:"
-              cat /repo/config/values.yml || echo "File not found"
+          actions:
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "#pt-clj (str \"add-entities/\" (:client params) \"/template\")"}
+              path: "#pt-clj (str \"models/python/entities/\" (:entity-singular params) \".py\")"
+              on-conflict: skip
+              template-values:
+                entity_singular: pt.param entity-singular
+                entity_plural: pt.param entity-plural
+
+  test-mount:
+    info: Test mounting the couchbase client config.yml from the blueprints repo
+    run:
+      - tool: run-script-multi-mount
+        args:
+          language: python
+          dependencies: [PyYAML]
+          script: |
+            import yaml
+            from pathlib import Path
+
+            print("=== Testing Multi-Mount ===\n")
+
+            # Check what's mounted
+            print("📂 Mounted files:")
+            config_path = Path("/config.yml")
+
+            if config_path.exists():
+                print(f"  ✓ {config_path} (file)")
+
+                # Read the couchbase client config
+                print(f"\n📄 Reading: {config_path}")
+                with open(config_path) as f:
+                    config = yaml.safe_load(f)
+                print(f"✅ Successfully read config.yml")
+                print(f"\nConfig contents:")
+                print(yaml.dump(config, default_flow_style=False))
+            else:
+                print(f"  ✗ {config_path} (not found)")
+          mounts:
+            - path: /config.yml
+              source:
+                type: repo
+                repo: "#pt-clj pt/module-repo-ref"
+                path: add-client/python/couchbase/config.yml

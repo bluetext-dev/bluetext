@@ -64,10 +64,10 @@ tools:
           actions: |-
             #pt-clj
             (let [client (:client params)
-                  client-dir (str "/blueprints/clients/python/" client)
+                  client-dir (str "/tool_resources/add-client/python/" client)
                   bin-path (case client
-                            "couchbase" "/blueprints/services/api/bin/add-couchbase-model"
-                            "temporal" "/blueprints/services/api/bin/add-temporal-workflow"
+                            "couchbase" "/tool_resources/add-and-run-service/api/bin/add-couchbase-model"
+                            "temporal" "/tool_resources/add-and-run-service/api/bin/add-temporal-workflow"
                             nil)]
               (cond-> [{:template {:type "repo"
                                    :repo "bluetext-io/bluetext"
@@ -100,10 +100,10 @@ tools:
         id: add-couchbase-client
         args:
           actions:
-            - template: {type: repo, repo: "bluetext-io/bluetext", path: /blueprints/clients/python/couchbase}
+            - template: {type: repo, repo: "bluetext-io/bluetext", path: /tool_resources/add-client/python/couchbase}
               path: /clients/python/
               on-conflict: skip
-            - template: {type: repo, repo: "bluetext-io/bluetext", path: /blueprints/services/api/bin/add-couchbase-model}
+            - template: {type: repo, repo: "bluetext-io/bluetext", path: /tool_resources/add-and-run-service/api/bin/add-couchbase-model}
               path: /services/{{ project-name }}/bin/add-couchbase-model
               on-conflict: skip
 
@@ -124,10 +124,10 @@ tools:
         id: add-temporal-client
         args:
           actions:
-            - template: {type: repo, repo: "bluetext-io/bluetext", path: /blueprints/clients/python/temporal}
+            - template: {type: repo, repo: "bluetext-io/bluetext", path: /tool_resources/add-client/python/temporal}
               path: /clients/python/
               on-conflict: skip
-            - template: {type: repo, repo: "bluetext-io/bluetext", path: /blueprints/services/api/bin/add-temporal-workflow}
+            - template: {type: repo, repo: "bluetext-io/bluetext", path: /tool_resources/add-and-run-service/api/bin/add-temporal-workflow}
               path: /services/{{ project-name }}/bin/add-temporal-workflow
               on-conflict: skip
 

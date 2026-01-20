@@ -2,11 +2,11 @@ env_vars:
   - name: COUCHBASE_USERNAME
     key: couchbase-username
     secret: true
-    default: Administrator
+    default: asdf
   - name: COUCHBASE_PASSWORD
     key: couchbase-password
     secret: true
-    default: password
+    default: asdfasdf
   - name: COUCHBASE_BUCKET
     key: couchbase-bucket
     secret: false

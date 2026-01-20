@@ -1,0 +1,4 @@
+temporal-host: temporal
+temporal-port: 7233
+temporal-namespace: default
+temporal-task-queue: main-task-queue
