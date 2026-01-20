@@ -1,0 +1,21 @@
+env_vars:
+  - name: COUCHBASE_USERNAME
+    key: couchbase-username
+    secret: true
+    default: Administrator
+  - name: COUCHBASE_PASSWORD
+    key: couchbase-password
+    secret: true
+    default: password
+  - name: COUCHBASE_BUCKET
+    key: couchbase-bucket
+    secret: false
+    default: default
+  - name: COUCHBASE_HOST
+    key: couchbase-host
+    secret: false
+    default: couchbase
+  - name: COUCHBASE_PROTOCOL
+    key: couchbase-protocol
+    secret: false
+    default: couchbase

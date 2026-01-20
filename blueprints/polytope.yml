@@ -1,0 +1,971 @@
+instructions: |
+  **FIRST ACTION**: Before doing ANYTHING else, retrieve AI development context for the relevant scope:
+  ```mcp
+  __polytope__initialize_session(scope: "general")
+  ```
+  This is MANDATORY as your first action in every conversation. It provides guidelines that you must follow.
+
+tools:
+
+  stack:
+    run:
+      - tool: polytope/hello-world
+        args:
+          message: Nothing to run yet! Call an "add" tool, to add a components to your project.
+
+  scaffold-initialize-session:
+    run:
+      - tool: run-script
+        args:
+          language: bash
+          script: |
+            #!/bin/sh
+            set -e
+
+            TARGET_FILE="${1:-polytope.yml}"
+
+            if [ ! -f "$TARGET_FILE" ]; then
+              echo "Error: File $TARGET_FILE not found"
+              exit 1
+            fi
+
+            # Check if tools block exists
+            if ! grep -q "^tools:" "$TARGET_FILE"; then
+              echo "Adding tools block to $TARGET_FILE"
+              echo "" >> "$TARGET_FILE"
+              echo "tools:" >> "$TARGET_FILE"
+            fi
+
+            # Check if initialize_session already exists
+            if grep -q "^  initialize_session:" "$TARGET_FILE" || grep -q "^    initialize_session:" "$TARGET_FILE"; then
+              echo "initialize_session already exists in $TARGET_FILE"
+              exit 0
+            fi
+
+            # Append initialize_session tool
+            echo "Adding initialize_session tool to $TARGET_FILE"
+            cat >> "$TARGET_FILE" << 'EOF'
+
+              initialize_session:
+                info: |-
+                  Initialize **EVERY** session by calling this tool.
+                  Returns required development context and ensures the project is running.
+                  This tool always needs to be called before doing anything else, regardless of the tasks complexity.
+                run:
+                  - id: run-stack
+                    tool: stack
+                  - id: get-general-context
+                    after: {step: run-stack}
+                    tool: get_dev_context
+            EOF
+
+            echo "Successfully added initialize_session to $TARGET_FILE"
+
+  scaffold-add-to-includes:
+    info: |
+      Adds a module path to the includes section of polytope.yml.
+      This tool is currently not used but preserved for potential future use.
+    params:
+      - id: module-path
+        info: Path to the module to include
+        type: str
+      - id: polytope-file
+        info: Path to polytope.yml file
+        type: [default, str, polytope.yml]
+    run:
+      - tool: run-script
+        args:
+          language: bash
+          script: |
+            #!/bin/sh
+            set -e
+
+            MODULE_PATH="{pt.param module-path}"
+            POLYTOPE_FILE="{pt.param polytope-file}"
+
+            if [ -z "$MODULE_PATH" ]; then
+              echo "Error: Missing required argument 'module_path'"
+              exit 1
+            fi
+
+            if [ ! -f "$POLYTOPE_FILE" ]; then
+              echo "Error: File $POLYTOPE_FILE not found"
+              exit 1
+            fi
+
+            # Check if include block exists
+            if ! grep -q "^include:" "$POLYTOPE_FILE"; then
+              echo "Adding include block to $POLYTOPE_FILE"
+              sed -i '1i include:' "$POLYTOPE_FILE"
+            fi
+
+            # Check if module is already included
+            if grep -q "^  - ${MODULE_PATH}$" "$POLYTOPE_FILE"; then
+              echo "Module '${MODULE_PATH}' is already in includes"
+              exit 0
+            fi
+
+            # Add the module to includes
+            echo "Adding '${MODULE_PATH}' to includes in $POLYTOPE_FILE"
+            awk -v path="$MODULE_PATH" '
+            /^include:/ { print; print "  - " path; next }
+            { print }
+            ' "$POLYTOPE_FILE" > "${POLYTOPE_FILE}.tmp" && mv "${POLYTOPE_FILE}.tmp" "$POLYTOPE_FILE"
+
+            echo "Successfully added '${MODULE_PATH}' to includes"
+
+  scaffold-add-dependencies:
+    info: |
+      Adds packages to a service's dependency file using the appropriate package manager.
+      This tool is currently not used but preserved for potential future use.
+      The add-dependencies tool provides a more integrated approach for adding dependencies.
+    params:
+      - id: target
+        info: The service to add dependencies to (e.g., api, frontend)
+        type: str
+      - id: packages
+        info: Packages to add (space separated)
+        type: str
+    run:
+      - tool: run-script
+        args:
+          language: bash
+          script: |
+            #!/bin/sh
+            set -e
+
+            TARGET="{pt.param target}"
+            PACKAGES="{pt.param packages}"
+
+            if [ -z "$TARGET" ] || [ -z "$PACKAGES" ]; then
+              echo "Error: Missing required arguments"
+              echo "Usage: add-dependencies.sh <target> <packages>"
+              exit 1
+            fi
+
+            echo "Adding packages to ${TARGET}: ${PACKAGES}"
+
+            cd /target/modules/${TARGET}
+
+            # Run the appropriate package manager based on target
+            case "$TARGET" in
+              api)
+                echo "Installing uv..."
+                apk add --no-cache curl python3
+                curl -LsSf https://astral.sh/uv/install.sh | sh
+                export PATH="/root/.local/bin:$PATH"
+                echo "Running: uv add ${PACKAGES}"
+                uv add ${PACKAGES}
+                ;;
+              frontend)
+                echo "Installing bun..."
+                apk add --no-cache curl unzip
+                curl -fsSL https://bun.sh/install | sh
+                export PATH="/root/.bun/bin:$PATH"
+                echo "Running: bun add ${PACKAGES}"
+                bun add ${PACKAGES}
+                ;;
+              *)
+                echo "Error: Unknown target '${TARGET}'"
+                echo "Supported targets: api, frontend"
+                exit 1
+                ;;
+            esac
+
+            echo "Successfully added packages to ${TARGET}"
+
+  initialize_session:
+    info: |-
+      Initialize **EVERY** session by calling this tool.
+      Returns required development context and ensures the project is running.
+      This tool always needs to be called before doing anything else, regardless of the tasks complexity.
+    await: [scaffold-local-overwrite]
+    run:
+      - id: scaffold-local-overwrite
+        tool: scaffold-initialize-session
+      - id: attempt-run-local-stack
+        after:
+          - step: scaffold-local-overwrite
+        code: |-
+          #pt-clj
+          (pt/call-module "stack" {})
+      - id: echo-context
+        tool: get_dev_context
+
+  get_dev_context:
+    info: |
+      Outputs essential AI development guidelines for this project.
+      Call this tool before making changes to a service.
+    await: [initialize-session]
+    params:
+      - id: scope
+        info: "The scope to fetch (default: general)"
+        type: [default, [enum, general, api, frontend], general]
+    run:
+      - id: get_dev_context
+        tool: polytope/container
+        args:
+          image: alpine:3.21.2
+          cmd: cat /scopes/{pt.param scope}.md
+          mounts:
+            - { path: /scopes, source: { type: repo, path: scopes } }
+
+  add-dependencies:
+    info: |
+      Adds packages to a service's dependency file.
+      Automatically detects the package manager for the target service.
+    params:
+      - id: target
+        info: The service to add dependencies to (e.g., api, frontend)
+        type: str
+      - id: packages
+        info: Packages to add (comma or space separated)
+        type: str
+    run:
+      - id: run-add-deps
+        code: |
+          #pt-clj
+          (let [target (:target params)
+                packages (clojure.string/replace (:packages params) #"[\s,]+" " ")
+                [cmd restart-policy] (case target
+                                       "api" [(str "./bin/add-dependencies " packages) "never"]
+                                       "frontend" [(str "bun add " packages) "on-failure"]
+                                       (throw (Exception. (str "Unknown target: " target))))]
+            (pt/call-module target {:id (str target "-add-deps")
+                                   :cmd cmd
+                                   :restart-policy restart-policy
+                                   :create "always"}))
+
+  scaffold:
+    info: |
+      Scaffolds a template to a specified path and adds it to project includes.
+      Also scaffolds basic bluetext project structure if not already present, e.g. `lib/` folder.
+      Use this for creating services, libraries, or any other template-based code.
+
+      E.g. for an API:
+        1. call `scaffold(template: "api", path: "services/my-api")`
+        2. call `add-to-run-graph(target: "stack", tool: "my-api")`
+
+    params:
+      - id: template
+        info: Template to scaffold into users directory.
+        type: [enum, api, frontend, couchbase, temporal, postgres]
+      - id: path
+        info: Where to scaffold. For services use "services/<service-name>".
+        type: [default, str, "services/api"]
+      - id: on-conflict
+        info: What to do if files already exist
+        type: [default, [enum, skip, overwrite], skip]
+    run:
+      - id: scaffold-template
+        tool: polytope/scaffold
+        args:
+          actions:
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "#pt-clj (str \"services/\" (:template params) \"/template\")"}
+              path: pt.param path
+              on-conflict: pt.param on-conflict
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: lib/py/readme}
+              path: lib/py/readme
+              on-conflict: skip
+              auto-include: false
+
+  add-and-run-service:
+    info: |
+      Scaffolds a service, adds it to includes, adds it to a run graph, and optionally runs it.
+      This is a convenience tool that combines scaffold and add-to-run-graph.
+
+      Example: add-and-run-service(template: "api", name: "my-api", run: true)
+      This scaffolds to "services/my-api", adds it to stack, and runs it.
+    params:
+      - id: template
+        info: Template to scaffold
+        type: [enum, api, frontend, couchbase, temporal, postgres]
+      - id: name
+        info: Service name (e.g., "my-api"). Will be scaffolded to "services/<name>"
+        type: str
+      - id: target
+        info: Which graph/tool to add to
+        type: [default, str, stack]
+      - id: run
+        info: Whether to run the service after adding
+        type: [default, bool, true]
+      - id: on-conflict
+        info: What to do if files already exist
+        type: [default, [enum, skip, overwrite], skip]
+    run:
+      - id: scaffold-services
+        tool: polytope/scaffold
+        args:
+          container-id: scaffold-services
+          actions: |-
+            #pt-js
+            // Define dependency map: template -> list of dependent services
+            const dependencies = {
+              "couchbase": [{path: "config-manager", name: "config-manager"}]
+            };
+
+            const template = params.template;
+            // Normalize name to lowercase and replace invalid characters
+            const name = params.name.toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+            const onConflict = params["on-conflict"];
+            const target = params.target;
+
+            // Get dependencies for this template
+            const deps = dependencies[template] || [];
+
+            // Build and return scaffold actions
+            [
+              // Main service
+              {
+                template: {type: "repo", repo: "#pt-clj pt/module-repo-ref", path: "services/" + template + "/template"},
+                path: "services/" + name,
+                "on-conflict": onConflict,
+                "add-to-tools": [{tool: target, call: name}]
+              },
+              // Dependencies
+              ...deps.map(dep => ({
+                template: {type: "repo", repo: "#pt-clj pt/module-repo-ref", path: "services/" + dep.path + "/template"},
+                path: "services/" + dep.name,
+                "on-conflict": "skip",
+                "add-to-tools": [{tool: target, call: dep.name}]
+              })),
+            ];
+
+      - id: run-dependencies
+        after: {step: scaffold-services}
+        code: |
+          #pt-clj
+          (when (:run params)
+            (let [template (:template params)
+                  dependencies {"couchbase" [{:name "config-manager"}]}
+                  deps (get dependencies template [])]
+              ;; Run dependencies first
+              (doseq [dep deps]
+                (pt/call-module (:name dep) {}))))
+
+      - id: run-main-service
+        after: {step: scaffold-services}
+        code: |
+          #pt-clj
+          (when (:run params)
+            (let [name (-> (:name params)
+                           clojure.string/lower-case
+                           (clojure.string/replace #"[^a-z0-9_-]" "-"))]
+              ;; Run main service
+              (pt/call-module name {})))
+
+  add-to-run-graph:
+    info: |
+      Adds a tool to a run graph (like stack) and optionally runs it.
+      Use this after scaffolding a service to make it part of your stack.
+
+      IMPORTANT: Use the service name (NOT the full path).
+      Example: After scaffolding to "services/api", use tool="api" (not "services/api")
+    params:
+      - id: tool
+        info: Service/tool name to add (e.g., "api", "frontend", "postgres"). This is the name only, NOT the path.
+        type: str
+      - id: target
+        info: Which graph/tool to add to
+        type: [default, str, stack]
+      - id: run
+        info: Whether to run the tool after adding
+        type: [default, bool, true]
+    run:
+      - id: add-to-target
+        tool: run-script
+        args:
+          language: bash
+          script: |
+            #!/bin/sh
+            set -e
+
+            TARGET="{pt.param tool}"
+            GRAPH="{pt.param target}"
+            POLYTOPE_FILE="polytope.yml"
+
+            if [ -z "$TARGET" ]; then
+              echo "Error: Missing required argument 'target'"
+              exit 1
+            fi
+
+            if [ ! -f "$POLYTOPE_FILE" ]; then
+              echo "Error: File $POLYTOPE_FILE not found"
+              exit 1
+            fi
+
+            # Check if tools block exists
+            if ! grep -q "^tools:" "$POLYTOPE_FILE"; then
+              echo "Adding tools block to $POLYTOPE_FILE"
+              echo "" >> "$POLYTOPE_FILE"
+              echo "tools:" >> "$POLYTOPE_FILE"
+            fi
+
+            # Check if the graph tool exists, if not create it
+            if ! grep -q "^  ${GRAPH}:" "$POLYTOPE_FILE"; then
+              echo "Creating '${GRAPH}' tool in $POLYTOPE_FILE"
+              cat >> "$POLYTOPE_FILE" << EOF
+
+              ${GRAPH}:
+                run:
+                  - tool: ${TARGET}
+            EOF
+              echo "Successfully created '${GRAPH}' and added '${TARGET}'"
+              exit 0
+            fi
+
+            # Check if target is already in the graph
+            if grep -A 20 "^  ${GRAPH}:" "$POLYTOPE_FILE" | grep -q "tool: ${TARGET}"; then
+              echo "Tool '${TARGET}' is already in the '${GRAPH}' graph"
+              exit 0
+            fi
+
+            # Add the target to the graph's run section
+            echo "Adding '${TARGET}' to '${GRAPH}' run graph in $POLYTOPE_FILE"
+
+            # Find the run: section under the graph and add the tool
+            awk -v target="$TARGET" -v graph="$GRAPH" '
+            BEGIN { in_graph=0; in_run=0; added=0 }
+            /^  '"$GRAPH"':/ { in_graph=1; print; next }
+            in_graph && /^    run:/ { in_run=1; print; next }
+            in_graph && in_run && /^      - tool:/ && !added {
+              print
+              print "      - tool: " target
+              added=1
+              next
+            }
+            in_graph && /^  [a-zA-Z]/ && !/^    / { in_graph=0; in_run=0 }
+            { print }
+            END {
+              if (in_graph && in_run && !added) {
+                print "      - tool: " target
+              }
+            }
+            ' "$POLYTOPE_FILE" > "${POLYTOPE_FILE}.tmp" && mv "${POLYTOPE_FILE}.tmp" "$POLYTOPE_FILE"
+
+            echo "Successfully added '${TARGET}' to '${GRAPH}' graph"
+      - id: run-tool
+        after: {step: add-to-target}
+        code: |
+          #pt-clj
+          (when (:run params)
+            (pt/call-module (:tool params) {}))
+
+  integrate:
+    info: |
+      Integrates a library into a service.
+      Runs the service's integration script.
+    params:
+      - id: target-path
+        info: Path to services integrations directory (e.g., api/src, frontend/app)
+        type: str
+      - id: language
+        info: Language of the target service
+        type: [enum, py, ts]
+      - id: integration
+        info: Integration/library to add (e.g., postgres-client, couchbase, twilio-client, temporal-client)
+        type: str
+    run:
+
+      - id: scaffold-integration
+        tool: scaffold
+        args:
+          template: "integrations/{pt.params language}/{pt.params integration}"
+          path: "{pt.params target-path}/{pt.params integration}"
+          on-conflict: skip
+
+      - id: add-env-vars-to-polytope-yaml
+        tool: run-script
+        args:
+          language: js
+          script: |
+            const targetPath="{pt.param target-path}";
+            const integration="{pt.param integration}";
+
+            const{execSync}=require('child_process'),fs=require('fs');
+            execSync('npm install yaml dotenv --prefix /tmp/d',{stdio:'pipe'});
+            const Y=require('/tmp/d/node_modules/yaml');
+            const D=require('/tmp/d/node_modules/dotenv');
+
+            const dotenvPath='/repo/targetPath/integration/.env';
+            const ymlPath="/repo/"+targetPath/.split('/')[0]+"/polytope.yml";
+
+            const env=D.parse(fs.readFileSync(dotenvPath,'utf8'));
+            const doc=Y.parseDocument(fs.readFileSync(ymlPath,'utf8'));
+            const arr=doc.get('tools').get('api').get('run').get(0).get('args').get('env');
+            const exist=new Set(arr.items.filter(i=>i.get).map(i=>i.get('name')));
+            Object.entries(env).filter(([k])=>!exist.has(k)).forEach(([k,v])=>arr.add({name:k,value:v}));
+            fs.writeFileSync(ymlPath,doc.toString());
+            console.log('Added env vars');
+
+      - id: run-integration-script
+        after: {step: scaffold-lib}
+        code: |
+          #pt-clj
+          (let [target (:target params)
+                integration (:integration params)
+                script (str "./bin/add-" integration)]
+            (pt/call-module target {:id (str target "-add-" integration)
+                                   :cmd script
+                                   :restart-policy "never"
+                                   :create "always"}))
+
+  run-script:
+    info: |
+      Runs a custom script inside a service container.
+      Useful for executing one-off commands or setup scripts.
+      Exactly one of  script and path-to-script must be provided.
+    params:
+      - id: dependencies
+        info: Service to run the script in (e.g., api, frontend)
+        type: [maybe, [str]]
+      - id: script
+        info: Script/command to run
+        type: [maybe, str]
+      - id: path-to-script
+        info: Path to a script file to run (alternative to 'script' param)
+        type: [maybe, str]
+      - id: language
+        info: Language of the script (e.g., bash, python)
+        type: [enum, bash, python, js]
+      - id: repo
+        info: Repository context to run the script in
+        type: [default, str, .]
+      - id: mounts
+        info: Additional mounts for the script container
+        type: [maybe, [any]]
+    run:
+      - id: run-custom-script
+        tool: polytope/run-script
+        args:
+          dependencies: pt.param dependencies
+          script: |
+            #pt-clj
+            (cond
+              (:script params)
+                {:type "string", :data (:script params)}
+              (:path-to-script params)
+                {:type "repo", :path (:path-to-script params)
+              })
+          language: pt.param language
+          repo: {type: host, path: pt.param repo}
+          mounts: pt.param mounts
+
+  api-add-postgres-client:
+    info: |
+      Adds PostgreSQL client library with database support to an API service.
+      Run this after add-postgres to enable database operations in your API.
+    params:
+      - id: service-name
+        info: Name of the API service to add the client to
+        type: [default, str, api]
+    run:
+      - tool: polytope/scaffold
+        args:
+          actions:
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: lib/py/postgres-client}
+              path: lib/py/postgres-client
+              on-conflict: skip
+      - id: run-script
+        code: |
+          #pt-clj
+          (let [service-name (-> (:service-name params)
+                                 (clojure.string/replace #"[^A-Za-z0-9-]*$" "")
+                                 (clojure.string/replace #".*/" ""))
+                tool-name (str service-name "-add-postgres-client")]
+            (pt/call-tool tool-name {}))
+
+  api-add-twilio-client:
+    info: |
+      Adds Twilio SMS client library to an API service.
+      Enables SMS sending capabilities via Twilio's API.
+    params:
+      - id: service-name
+        info: Name of the API service to add the client to
+        type: [default, str, api]
+    run:
+      - tool: polytope/scaffold
+        args:
+          actions:
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: lib/py/twilio-client}
+              path: lib/py/twilio-client
+              on-conflict: skip
+      - id: run-script
+        code: |
+          #pt-clj
+          (let [service-name (-> (:service-name params)
+                                 (clojure.string/replace #"[^A-Za-z0-9-]*$" "")
+                                 (clojure.string/replace #".*/" ""))
+                tool-name (str service-name "-add-twilio-client")]
+            (pt/call-tool tool-name {}))
+
+  setup-project-structure:
+    info: |
+      Sets up the base directory structure for a Bluetext project.
+      Projects are organised by models, services, and clients.
+    params:
+      - id: language
+        info: Language to scaffold (python).
+        type: [enum, python]
+      - id: skip-language
+        info: Skip scaffolding language-specific structure even if language is provided
+        type: [default, bool, false]
+    run:
+      - id: scaffold-base-structure
+        tool: polytope/scaffold
+        args:
+          container-id: scaffold-readme
+          actions:
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: project-structure/base/clients}
+              path: clients
+              on-conflict: skip
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: project-structure/base/models}
+              path: models
+              on-conflict: skip
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: project-structure/base/services}
+              path: services
+              on-conflict: skip
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: project-structure/base/config}
+              path: config
+              on-conflict: skip
+      - id: scaffold-language
+        after: {step: scaffold-base-structure}
+        code: |
+          #pt-clj
+          (when (and (:language params) (not (:skip-language params)))
+            (pt/call-module "add-project-language" {:language (:language params)}))
+
+  add-project-language:
+    info: |
+      Adds language-specific client and model libraries to the project.
+      Run setup-project-structure first if you haven't already.
+
+      This creates language-specific library structures in:
+      - clients/<language>/
+      - models/<language>/
+    params:
+      - id: language
+        info: Language to add (currently only supports python)
+        type: [enum, python]
+    run:
+      - tool: polytope/scaffold
+        args:
+          container-id: scaffold-readme
+          actions:
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "#pt-clj (str \"project-structure/languages/clients/\" (:language params))"}
+              path: "#pt-clj (str \"clients/\" (:language params))"
+              on-conflict: skip
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "#pt-clj (str \"project-structure/languages/models/\" (:language params))"}
+              path: "#pt-clj (str \"models/\" (:language params))"
+              on-conflict: skip
+
+  add-client:
+    info: |
+      Adds a client to the project's clients directory.
+      Scaffolds the client code and updates pyproject.toml with dependencies.
+
+      Example: add-client(name: "couchbase", language: "python")
+    params:
+      - id: name
+        info: Client name (e.g., "couchbase", "temporal")
+        type: str
+      - id: language
+        info: Language for the client
+        type: [default, [enum, python], python]
+    run:
+      - id: scaffold-client
+        tool: polytope/scaffold
+        args:
+          actions:
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "#pt-clj (str \"clients/\" (:language params) \"/\" (:name params) \"/template\")"}
+              path: "#pt-clj (str \"clients/\" (:language params) \"/\" (:name params))"
+              on-conflict: skip
+      - id: update-pyproject
+        after: {step: scaffold-client}
+        tool: run-script
+        args:
+          language: python
+          script: |
+            import re
+            from pathlib import Path
+
+            name = "{pt.param name}"
+            language = "{pt.param language}"
+
+            # Define dependency mapping
+            dependencies_map = {
+                "couchbase": "couchbase>=4.4.0",
+                "temporal": "temporalio>=1.6.0",
+            }
+
+            # Get the dependency to add
+            dependency = dependencies_map.get(name)
+            if not dependency:
+                print(f"No dependency mapping found for {name}")
+                exit(0)
+
+            # Path to pyproject.toml (scaffolded by the template)
+            pyproject_path = Path(f"/repo/clients/{language}/pyproject.toml")
+
+            # The pyproject.toml should have been scaffolded from the template
+            if not pyproject_path.exists():
+                print(f"✅ pyproject.toml was scaffolded with the client template")
+                exit(0)
+
+            # Read the file
+            content = pyproject_path.read_text()
+
+            # Check if dependency already exists
+            if dependency.split(">=")[0] in content:
+                print(f"✅ Dependency {dependency} already exists in pyproject.toml")
+                exit(0)
+
+            # Add dependency to the dependencies array
+            # Find the dependencies section and add the new dependency
+            pattern = r'(dependencies\s*=\s*\[)(.*?)(\])'
+
+            def add_dependency(match):
+                deps_start = match.group(1)
+                deps_content = match.group(2)
+                deps_end = match.group(3)
+
+                # Add the new dependency
+                new_dep = f'\n    "{dependency}",'
+                return deps_start + deps_content + new_dep + '\n' + deps_end
+
+            new_content = re.sub(pattern, add_dependency, content, flags=re.DOTALL)
+
+            # Write back
+            pyproject_path.write_text(new_content)
+            print(f"✅ Added {dependency} to pyproject.toml")
+
+  set-client-config-values-and-secrets:
+    info: |
+      Sets values and secrets for a client using pt.setValue and pt.setSecret.
+      Also writes to config/values.yml and config/secrets.yml files.
+      Reads the client's config.yml and calls the appropriate bindings.
+      This must be called before add-client-env-vars.
+    params:
+      - id: client
+        info: Client to configure (couchbase, temporal)
+        type: [enum, couchbase, temporal]
+    run:
+      - id: write-to-config-files
+        tool: polytope/run-script
+        args:
+          dependencies:
+            - PyYAML
+          language: python
+          repo:
+            type: host
+            path: .
+          script:
+            type: string
+            data: |
+              import yaml
+              from pathlib import Path
+              import os
+
+              client = "{pt.param client}"
+
+
+              # Print only mounted paths
+              print("📂 Mounted paths in container:")
+              mount_points = ["/repo"]
+              for mount in mount_points:
+                  path = Path(mount)
+                  if path.exists():
+                      if path.is_file():
+                          print(f"  ✓ {mount} (file)")
+                      else:
+                          print(f"  ✓ {mount}/ (directory)")
+                          # Show first level of directory contents
+                          try:
+                              for item in sorted(path.iterdir())[:10]:
+                                  print(f"      - {item.name}")
+                          except PermissionError:
+                              print(f"      (permission denied)")
+                  else:
+                      print(f"  ✗ {mount} (not found)")
+              print()
+
+              # Read client config from blueprints (which is in the mounted repo)
+              config_path = Path(f"/repo/blueprints/clients/python/{client}/config.yml")
+
+              if not config_path.exists():
+                  print(f"❌ Config file not found: {config_path}")
+                  exit(1)
+
+              with open(config_path) as f:
+                  config = yaml.safe_load(f)
+
+              env_vars = config.get('env_vars', [])
+
+              # Paths to values and secrets files - write to host repo
+              values_path = Path("/repo/config/values.yml")
+              secrets_path = Path("/repo/config/secrets.yml")
+
+              # Ensure config directory exists
+              values_path.parent.mkdir(parents=True, exist_ok=True)
+
+              # Load existing values and secrets (if they exist)
+              if values_path.exists():
+                  with open(values_path) as f:
+                      values_data = yaml.safe_load(f) or {}
+              else:
+                  values_data = {}
+
+              if secrets_path.exists():
+                  with open(secrets_path) as f:
+                      secrets_data = yaml.safe_load(f) or {}
+              else:
+                  secrets_data = {}
+
+              # Add/update values and secrets
+              for var in env_vars:
+                  key = var['key']
+                  default = var['default']
+                  is_secret = var['secret']
+
+                  if is_secret:
+                      # Add to secrets file if not already present
+                      if key not in secrets_data:
+                          secrets_data[key] = default
+                          print(f"Adding secret to config/secrets.yml: {key} = {default}")
+                      else:
+                          print(f"Secret already exists in config/secrets.yml: {key}")
+                  else:
+                      # Add to values file if not already present
+                      if key not in values_data:
+                          values_data[key] = default
+                          print(f"Adding value to config/values.yml: {key} = {default}")
+                      else:
+                          print(f"Value already exists in config/values.yml: {key}")
+
+              # Write back to files
+              with open(values_path, 'w') as f:
+                  yaml.dump(values_data, f, default_flow_style=False, sort_keys=True)
+
+              with open(secrets_path, 'w') as f:
+                  yaml.dump(secrets_data, f, default_flow_style=False, sort_keys=True)
+
+              print(f"✅ Updated config/values.yml and config/secrets.yml for {client}")
+
+      - id: call-set-bindings
+        after: {step: write-to-config-files}
+        code: |
+          #pt-clj
+          (let [client (:client params)
+                config-path (str (pt/module-repo-path) "/clients/python/" client "/config.yml")
+                config (yaml/parse-string (slurp config-path))
+                env-vars (get config "env_vars" [])]
+            (doseq [var env-vars]
+              (let [key (get var "key")
+                    default (get var "default")
+                    is-secret (get var "secret")]
+                (if is-secret
+                  (pt/set-secret key (str default))
+                  (pt/set-value key (str default))))))
+
+  add-client-env-vars:
+    info: |
+      Adds client environment variables to a service's polytope.yml.
+      Environment variables reference the values/secrets set by set-client-config-values-and-secrets.
+      Call set-client-config-values-and-secrets first.
+    params:
+      - id: client
+        info: Client providing the env vars (couchbase, temporal)
+        type: [enum, couchbase, temporal]
+      - id: service
+        info: Service to add env vars to (api, frontend, config-manager, etc.)
+        type: str
+    run:
+      - id: add-env-to-polytope
+        tool: run-script
+        args:
+          language: python
+          script: |
+            import yaml
+            from pathlib import Path
+
+            client = "{pt.param client}"
+            service = "{pt.param service}"
+
+            # Read client config to get env var definitions
+            client_config_path = Path(f"/repo/blueprints/clients/python/{client}/config.yml")
+
+            if not client_config_path.exists():
+                print(f"❌ Client config not found: {client_config_path}")
+                exit(1)
+
+            with open(client_config_path) as f:
+                client_config = yaml.safe_load(f)
+
+            env_vars = client_config.get('env_vars', [])
+
+            # Read service's polytope.yml
+            service_polytope_path = Path(f"/repo/services/{service}/polytope.yml")
+
+            if not service_polytope_path.exists():
+                print(f"❌ Service polytope.yml not found: {service_polytope_path}")
+                exit(1)
+
+            with open(service_polytope_path) as f:
+                content = f.read()
+
+            # Parse YAML while preserving structure
+            # We need to add env vars to the service's tool definition
+            # This is a simplified version - in production, use proper YAML manipulation
+
+            import re
+
+            # Find the env section
+            env_section_pattern = r'(env:.*?)(\n          mounts:|\n        - )'
+
+            # Build env var entries
+            env_entries = []
+            for var in env_vars:
+                name = var['name']
+                key = var['key']
+                is_secret = var['secret']
+
+                # Reference the value/secret using pt.value or pt.secret
+                if is_secret:
+                    env_entries.append(f'            - {{ name: {name}, value: "#pt-clj (pt/secret \\"{key}\\")" }}')
+                else:
+                    env_entries.append(f'            - {{ name: {name}, value: "#pt-clj (pt/value \\"{key}\\")" }}')
+
+            # Check if env vars already exist
+            for var in env_vars:
+                if var['name'] in content:
+                    print(f"⚠️  {var['name']} already exists in {service_polytope_path}")
+
+            # Add env vars to the file (append to env section)
+            # This is a simple append - in production, use proper YAML manipulation
+            env_block = '\n'.join(env_entries)
+
+            print(f"Add these env vars to {service_polytope_path}:")
+            print(env_block)
+            print(f"\n✅ Generated {len(env_vars)} env var entries for {client} -> {service}")
+
+  test-mount:
+    run:
+      - tool: polytope/run-script
+        args:
+          language: bash
+          repo:
+            type: host
+            path: .
+          script:
+            type: string
+            data: |
+              echo "=== Testing repo mount ==="
+              echo ""
+              echo "Contents of /repo (host repo mounted):"
+              ls -la /repo
+              echo ""
+              echo "Contents of /repo/clients/python/couchbase:"
+              ls -la /repo/clients/python/couchbase || echo "Path not found"
+              echo ""
+              echo "Reading config.yml from repo root:"
+              cat /repo/config/values.yml || echo "File not found"

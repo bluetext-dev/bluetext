@@ -1,0 +1,141 @@
+tools:
+  {{ project-name }}:
+    info: "'Base' module for other modules in this file to build on."
+    params:
+      - id: cmd
+        info: The command to run
+        type: [default, str, ./bin/run]
+      - id: dev-mode
+        info: Whether to run in dev mode (with hot reload, debugging)
+        type: [default, bool, true]
+      - id: port
+        info: The port the API will run on
+        type: [default, int, 3030]
+      - id: restart-policy
+        info: Restart policy for the container.
+        type: [default, [enum, always, never, on-failure], always]
+      - id: id
+        info: The container ID to use.
+        type: [default, str, {{ project-name }}]
+      - id: create
+        info: Whether to create the container.
+        type: [default, [enum, never, always, when-missing], when-missing]
+    run:
+      - tool: polytope/python
+        args:
+          id: pt.param id
+          image: astral/uv:python3.13-bookworm-slim
+          code: { type: repo, path: . }
+          cmd: pt.param cmd
+          restart:
+            policy: pt.param restart-policy
+          services: |-
+            #pt-js
+            params.cmd === "./bin/run"
+              ? [{ id: "{{ project-name }}", ports: [{ protocol: "http", port: params.port, 'expose-as': params.port }] }]
+              : null;
+          env:
+            - { name: HTTP_EXPOSE_ERRORS, value: pt.param dev-mode }
+            - { name: HTTP_AUTORELOAD, value: pt.param dev-mode }
+            - { name: HTTP_PORT, value: pt.param port }
+            - { name: LOG_LEVEL, value: INFO }
+
+            - { name: POSTGRES_HOST, value: postgres }
+
+            - { name: TEMPORAL_HOST, value: temporal }
+            - { name: TEMPORAL_PORT, value: 7233 }
+            - { name: TEMPORAL_NAMESPACE, value: default }
+            - { name: TEMPORAL_TASK_QUEUE, value: main-task-queue }
+          mounts:
+            - { path: /root/.cache/, source: { type: volume, scope: project, id: {{ project-name | kebab_case}}-dependency-cache } }
+            - { path: /clients/python, source: { type: repo, path: /clients/python, repo: "#pt-clj pt/module-project-ref" } }
+            - { path: /models/python, source: { type: repo, path: /models/python, repo: "#pt-clj pt/module-project-ref" } }
+
+  {{ project-name }}-add-client:
+    info: Adds a client library (couchbase, temporal, postgres, or twilio) to the API service with all integration functions.
+    params:
+      - id: client
+        info: Client library to add (couchbase, temporal, postgres, twilio)
+        type: [enum, couchbase, temporal, postgres, twilio]
+    run:
+      - tool: polytope/scaffold
+        id: scaffold-client
+        args:
+          actions: |-
+            #pt-clj
+            (let [client (:client params)
+                  client-dir (str "/blueprints/clients/python/" client)
+                  bin-path (case client
+                            "couchbase" "/blueprints/services/api/bin/add-couchbase-model"
+                            "temporal" "/blueprints/services/api/bin/add-temporal-workflow"
+                            nil)]
+              (cond-> [{:template {:type "repo"
+                                   :repo "bluetext-io/bluetext"
+                                   :path client-dir}
+                        :path "/clients/python/"
+                        :on-conflict "skip"}]
+                bin-path (conj {:template {:type "repo"
+                                          :repo "bluetext-io/bluetext"
+                                          :path bin-path}
+                               :path (str "/services/{{ project-name }}/bin/add-"
+                                         (case client
+                                           "couchbase" "couchbase-model"
+                                           "temporal" "temporal-workflow"))
+                               :on-conflict "skip"})))
+
+      - tool: {{ project-name }}
+        after: { step: scaffold-client }
+        args:
+          id: '#pt-js "api-add-" + params.client + "-client"'
+          cmd: '#pt-js "./bin/add-" + params.client + "-client"'
+          restart-policy: never
+      - id: reload-{{ project-name }}
+        tool: {{ project-name }}
+
+  {{ project-name }}-add-couchbase-client:
+    info: Run before add-couchbase-model. Adds Couchbase client library with all interaction functions and registers add-couchbase-model tool to polytope.yml.
+    params: []
+    run:
+      - tool: polytope/scaffold
+        id: add-couchbase-client
+        args:
+          actions:
+            - template: {type: repo, repo: "bluetext-io/bluetext", path: /blueprints/clients/python/couchbase}
+              path: /clients/python/
+              on-conflict: skip
+            - template: {type: repo, repo: "bluetext-io/bluetext", path: /blueprints/services/api/bin/add-couchbase-model}
+              path: /services/{{ project-name }}/bin/add-couchbase-model
+              on-conflict: skip
+
+      - tool: {{ project-name }}
+        after: { step: add-couchbase-client }
+        args:
+          id: api-add-couchbase-client
+          cmd: ./bin/add-couchbase-client
+          restart-policy: never
+      - id: reload-{{ project-name }}
+        tool: {{ project-name }}
+
+  {{ project-name }}-add-temporal-client:
+    info: Adds Temporal client library with workflow orchestration support and registers add-temporal-workflow tool to polytope.yml.
+    params: []
+    run:
+      - tool: polytope/scaffold
+        id: add-temporal-client
+        args:
+          actions:
+            - template: {type: repo, repo: "bluetext-io/bluetext", path: /blueprints/clients/python/temporal}
+              path: /clients/python/
+              on-conflict: skip
+            - template: {type: repo, repo: "bluetext-io/bluetext", path: /blueprints/services/api/bin/add-temporal-workflow}
+              path: /services/{{ project-name }}/bin/add-temporal-workflow
+              on-conflict: skip
+
+      - tool: {{ project-name }}
+        after: { step: add-temporal-client }
+        args:
+          id: api-add-temporal-client
+          cmd: ./bin/add-temporal-client
+          restart-policy: never
+      - id: reload-{{ project-name }}
+        tool: {{ project-name }}
