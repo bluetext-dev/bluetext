@@ -959,7 +959,7 @@ tools:
             print(env_block)
             print(f"\n✅ Generated {len(env_vars)} env var entries for {client} -> {service}")
 
-  add-entities:
+  add-entity:
     info: |
       Scaffolds entity models for data store clients.
       Creates entity files in models/python/entities/ with proper structure.
@@ -967,6 +967,9 @@ tools:
       - id: client
         info: Data store client type
         type: [enum, couchbase]
+      - id: language
+        info: Language for the entity
+        type: [enum, python]
       - id: entity-singular
         info: Entity name in singular form (e.g., "project")
         type: str
@@ -981,21 +984,55 @@ tools:
         tool: polytope/scaffold
         args:
           actions:
-            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "add-entities/entities-dir-template"}
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "add-entity/entities-dir-template"}
               path: "#pt-clj (if (:is-public params) \"models/python/entities\" \"models/python/private/entities\")"
               on-conflict: skip
 
       - id: scaffold-entity
         after: {step: scaffold-entities-dir}
-        tool: polytope/scaffold
+        tool: run-script
         args:
-          actions:
-            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "#pt-clj (str \"add-entities/\" (:client params) \"/template\")"}
-              path: "#pt-clj (if (:is-public params) \"models/python/entities\" \"models/python/private/entities\")"
-              on-conflict: skip
-              template-values:
-                entity_singular: pt.param entity-singular
-                entity_plural: pt.param entity-plural
+          language: python
+          script: |
+            from pathlib import Path
+
+            client = "{pt.param client}"
+            language = "{pt.param language}"
+            entity_singular = "{pt.param entity-singular}"
+            entity_plural = "{pt.param entity-plural}"
+            is_public = "{pt.param is-public}" == "true"
+
+            # Read the template file
+            template_path = Path(f"/template/entity.py")
+
+            if not template_path.exists():
+                print(f"❌ Template not found: {template_path}")
+                exit(1)
+
+            template_content = template_path.read_text()
+
+            # Replace template variables
+            content = template_content.replace("{{ entity_singular | capitalize }}", entity_singular.capitalize())
+            content = content.replace("{{ entity_singular }}", entity_singular)
+            content = content.replace("{{ entity_plural }}", entity_plural)
+
+            # Determine output path
+            base_path = "models/python/entities" if is_public else "models/python/private/entities"
+            output_path = Path(f"/repo/{base_path}/{entity_plural}.py")
+
+            # Ensure directory exists
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # Write the file
+            output_path.write_text(content)
+
+            print(f"✅ Created entity file: {base_path}/{entity_plural}.py")
+          mounts: |-
+            #pt-clj
+            [{:path "/template"
+              :source {:type "repo"
+                       :repo pt/module-repo-ref
+                       :path (str "add-entity/" (:client params) "/" (:language params))}}]
 
   test-mount:
     info: Test mounting the couchbase client config.yml from the blueprints repo
