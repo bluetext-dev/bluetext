@@ -851,22 +851,32 @@ tools:
       - id: set-polytope-bindings
         after: {step: read-and-set-bindings}
         code: |
-          #pt-clj
-          (let [config-file (with-open [rdr (clojure.java.io/reader ".polytope-config.json")]
-                              (clojure.string/join "\n" (line-seq rdr)))
-                config (cheshire.core/parse-string config-file true)
-                values (:values config)
-                secrets (:secrets config)]
-            (println (str "🔧 Setting " (count values) " values and " (count secrets) " secrets"))
-            (doseq [[k v] values]
-              (println (str "  Setting value: " k " = " v))
-              (pt/set-project-value (name k) (str v)))
-            (doseq [[k v] secrets]
-              (println (str "  Setting secret: " k " = ***"))
-              (pt/set-secret (name k) (str v)))
-            (println "✅ Successfully set all bindings")
-            ;; Clean up temp file
-            (clojure.java.io/delete-file ".polytope-config.json" true))
+          #pt-js
+          // Read the JSON config file created by the Python step
+          const configContent = pt.readFile('.polytope-config.json');
+          const config = JSON.parse(configContent);
+
+          const values = config.values || {};
+          const secrets = config.secrets || {};
+
+          console.log(`🔧 Setting ${Object.keys(values).length} values and ${Object.keys(secrets).length} secrets`);
+
+          // Set values
+          for (const [key, value] of Object.entries(values)) {
+            console.log(`  Setting value: ${key} = ${value}`);
+            pt.setProjectValue(key, String(value));
+          }
+
+          // Set secrets
+          for (const [key, value] of Object.entries(secrets)) {
+            console.log(`  Setting secret: ${key} = ***`);
+            pt.setSecret(key, String(value));
+          }
+
+          console.log("✅ Successfully set all bindings");
+
+          // Clean up temp file
+          pt.deleteFile('.polytope-config.json');
 
   add-client-env-vars:
     info: |
@@ -963,12 +973,25 @@ tools:
       - id: entity-plural
         info: Entity name in plural form (e.g., "projects")
         type: str
+      - id: is-public
+        info: Whether the entity should be scaffolded in the public folder instead of private
+        type: [default, bool, false]
     run:
-      - tool: polytope/scaffold
+      - id: scaffold-entities-dir
+        tool: polytope/scaffold
+        args:
+          actions:
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "add-entities/entities-dir-template"}
+              path: "#pt-clj (if (:is-public params) \"models/python/entities\" \"models/python/private/entities\")"
+              on-conflict: skip
+
+      - id: scaffold-entity
+        after: {step: scaffold-entities-dir}
+        tool: polytope/scaffold
         args:
           actions:
             - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "#pt-clj (str \"add-entities/\" (:client params) \"/template\")"}
-              path: "#pt-clj (str \"models/python/entities/\" (:entity-singular params) \".py\")"
+              path: "#pt-clj (if (:is-public params) \"models/python/entities\" \"models/python/private/entities\")"
               on-conflict: skip
               template-values:
                 entity_singular: pt.param entity-singular
@@ -1009,3 +1032,22 @@ tools:
                 type: repo
                 repo: "#pt-clj pt/module-repo-ref"
                 path: add-client/python/couchbase/config.yml
+
+  test-polytope-bindings:
+    info: Test if polytope bindings (pt.callTool) are accessible from within a script
+    run:
+      - tool: run-script
+        args:
+          language: js
+          script: |
+            console.log("=== Testing Polytope Bindings ===\n");
+            console.log("🔍 Testing pt.callTool('polytope/hello-world')...\n");
+
+            // Use polytope binding to call hello-world tool
+            const result = pt.callTool("polytope/hello-world", {
+              message: "Testing bindings from script!"
+            });
+
+            console.log("✅ Successfully called polytope/hello-world\n");
+            console.log("📦 Result:");
+            console.log(JSON.stringify(result, null, 2));
