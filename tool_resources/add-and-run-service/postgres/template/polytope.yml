@@ -5,6 +5,7 @@ tools:
       Uses the persistent volume `postgres-data-{{ project-name }}`.
       Exposes the PostgreSQL port on `postgres:5432` within the job, and at `localhost:5432` on the host.
       Default database: postgres, default user: postgres
+    await: [set-values-and-secrets]
     run:
       - tool: polytope/postgres!simple
         args:

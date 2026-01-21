@@ -1,6 +1,7 @@
 tools:
   config-manager:
     info: Manages Redpanda topics and Couchbase buckets/scopes/collections
+    await: [set-values-and-secrets]
     run:
       - tool: polytope/python
         args:
@@ -11,16 +12,16 @@ tools:
           cmd: ./bin/run
           create: when-missing
           env:
-            - { name: ENVIRONMENT, value: dev }
-            - { name: SERVICES, value: couchbase }
+            - { name: ENVIRONMENT, value: pt.value config-manager-environment }
+            - { name: SERVICES, value: pt.value config-manager-services }
 
-            - { name: COUCHBASE_HOST, value: couchbase }
-            - { name: COUCHBASE_USERNAME, value: user }
-            - { name: COUCHBASE_PASSWORD, value: password }
-            - { name: COUCHBASE_MAIN_BUCKET_NAME, value: main }
+            - { name: COUCHBASE_HOST, value: pt.value config-manager-couchbase-host }
+            - { name: COUCHBASE_USERNAME, value: pt.value config-manager-couchbase-username }
+            - { name: COUCHBASE_PASSWORD, value: pt.secret config-manager-couchbase-password }
+            - { name: COUCHBASE_MAIN_BUCKET_NAME, value: pt.value config-manager-couchbase-main-bucket-name }
 
-            - { name: REDPANDA_HOST, value: redpanda }
-            - { name: REDPANDA_PORT, value: 9092 }
+            - { name: REDPANDA_HOST, value: pt.value config-manager-redpanda-host }
+            - { name: REDPANDA_PORT, value: pt.value config-manager-redpanda-port }
           mounts:
             - { path: /conf/, source: { type: repo, path: conf }}
             - { path: /root/.cache/, source: { type: volume, scope: project, id: dependency-cache } }

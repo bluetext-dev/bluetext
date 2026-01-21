@@ -1,0 +1,3 @@
+dependencies:
+  - name: config-manager
+    path: config-manager

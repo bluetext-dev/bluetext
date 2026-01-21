@@ -1,0 +1,2 @@
+env_vars: []
+# Temporal UI typically doesn't expose env vars to other services

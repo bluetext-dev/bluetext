@@ -1,6 +1,7 @@
 tools:
   temporal:
     info: "Runs Temporal with auto-initialization"
+    await: [set-values-and-secrets]
     run:
       - tool: polytope/container
         args:
@@ -13,33 +14,16 @@ tools:
               ports:
                 - {label: grpc, protocol: tcp, port: 7233, expose-as: 7233}
           env:
-            - {name: DB, value: postgres12}
-            - {name: DB_PORT, value: 5432}
-            - {name: DYNAMIC_CONFIG_FILE, value: /etc/temporal/config/dynamicconfig/development.yaml}
-            - {name: LOG_LEVEL, value: warn}
-            - {name: POSTGRES_PWD, value: password}
-            - {name: POSTGRES_SEEDS, value: postgres}
-            - {name: POSTGRES_USER, value: postgres}
-            - {name: TEMPORAL_ADDRESS, value: temporal:7233}
-            - {name: TEMPORAL_CLI_ADDRESS, value: temporal:7233}
+            - {name: DB, value: pt.value temporal-db}
+            - {name: DB_PORT, value: pt.value temporal-db-port}
+            - {name: DYNAMIC_CONFIG_FILE, value: pt.value temporal-dynamic-config-file}
+            - {name: LOG_LEVEL, value: pt.value temporal-log-level}
+            - {name: POSTGRES_PWD, value: pt.secret temporal-postgres-pwd}
+            - {name: POSTGRES_SEEDS, value: pt.value temporal-postgres-seeds}
+            - {name: POSTGRES_USER, value: pt.value temporal-postgres-user}
+            - {name: TEMPORAL_ADDRESS, value: pt.value temporal-address}
+            - {name: TEMPORAL_CLI_ADDRESS, value: pt.value temporal-cli-address}
           mounts:
             - path: /etc/temporal/config
               source: {type: volume, scope: project, id: temporal-config}
-          create: when-missing
-  temporal-ui:
-    info: "Runs the Temporal Web UI"
-    run:
-      - tool: polytope/container
-        args:
-          image: temporalio/ui:2.40.0
-          id: temporal-ui
-          restart:
-            policy: always
-          services:
-            - id: temporal-ui
-              ports:
-                - {protocol: http, port: 8233, expose-as: 8233}
-          env:
-            - {name: TEMPORAL_ADDRESS, value: temporal:7233}
-            - {name: TEMPORAL_UI_PORT, value: 8233}
           create: when-missing

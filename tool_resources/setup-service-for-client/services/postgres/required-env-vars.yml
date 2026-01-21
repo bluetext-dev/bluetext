@@ -1,0 +1,16 @@
+env_vars:
+  - name: POSTGRES_HOST
+    key: postgres-host
+    secret: false
+  - name: POSTGRES_PORT
+    key: postgres-port
+    secret: false
+  - name: POSTGRES_DATABASE
+    key: postgres-database
+    secret: false
+  - name: POSTGRES_USER
+    key: postgres-user
+    secret: false
+  - name: POSTGRES_PASSWORD
+    key: postgres-password
+    secret: true

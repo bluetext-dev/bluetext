@@ -1,0 +1,3 @@
+frontend-port: 51732
+frontend-api-base-url: http://localhost:3030
+frontend-log-level: INFO

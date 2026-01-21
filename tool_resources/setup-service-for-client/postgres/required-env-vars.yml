@@ -1,0 +1,4 @@
+env_vars:
+  - name: POSTGRES_HOST
+    key: postgres-host
+    secret: false

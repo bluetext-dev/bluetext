@@ -1,0 +1,6 @@
+env_vars: []
+# Define environment variables that Frontend service requires
+# Format:
+# - name: ENV_VAR_NAME
+#   key: value-or-secret-key
+#   secret: true/false

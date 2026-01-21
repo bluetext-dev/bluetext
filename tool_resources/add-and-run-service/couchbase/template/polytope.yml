@@ -1,6 +1,7 @@
 tools:
   {{ project-name }}:
     info: "Runs the Couchbase cluster"
+    await: [set-values-and-secrets]
     run:
       - tool: polytope/couchbase
         args:

@@ -1,0 +1,2 @@
+env_vars: []
+# Couchbase doesn't typically expose env vars to other services

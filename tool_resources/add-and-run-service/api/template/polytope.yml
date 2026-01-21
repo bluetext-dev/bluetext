@@ -1,6 +1,7 @@
 tools:
   {{ project-name }}:
     info: "'Base' module for other modules in this file to build on."
+    await: [set-values-and-secrets]
     params:
       - id: cmd
         info: The command to run
@@ -38,14 +39,7 @@ tools:
             - { name: HTTP_EXPOSE_ERRORS, value: pt.param dev-mode }
             - { name: HTTP_AUTORELOAD, value: pt.param dev-mode }
             - { name: HTTP_PORT, value: pt.param port }
-            - { name: LOG_LEVEL, value: INFO }
-
-            - { name: POSTGRES_HOST, value: postgres }
-
-            - { name: TEMPORAL_HOST, value: temporal }
-            - { name: TEMPORAL_PORT, value: 7233 }
-            - { name: TEMPORAL_NAMESPACE, value: default }
-            - { name: TEMPORAL_TASK_QUEUE, value: main-task-queue }
+            - { name: LOG_LEVEL, value: pt.value api-log-level }
           mounts:
             - { path: /root/.cache/, source: { type: volume, scope: project, id: {{ project-name | kebab_case}}-dependency-cache } }
             - { path: /clients/python, source: { type: repo, path: /clients/python, repo: "#pt-clj pt/module-project-ref" } }

@@ -1,0 +1,10 @@
+env_vars:
+  - name: TWILIO_ACCOUNT_SID
+    key: twilio-account-sid
+    secret: false
+  - name: TWILIO_AUTH_TOKEN
+    key: twilio-auth-token
+    secret: true
+  - name: TWILIO_FROM_PHONE_NUMBER
+    key: twilio-from-phone-number
+    secret: false

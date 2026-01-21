@@ -1,0 +1,13 @@
+env_vars:
+  - name: TEMPORAL_HOST
+    key: temporal-host
+    secret: false
+  - name: TEMPORAL_PORT
+    key: temporal-port
+    secret: false
+  - name: TEMPORAL_NAMESPACE
+    key: temporal-namespace
+    secret: false
+  - name: TEMPORAL_TASK_QUEUE
+    key: temporal-task-queue
+    secret: false

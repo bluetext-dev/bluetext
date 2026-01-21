@@ -1,0 +1,3 @@
+env_vars: []
+# Config Manager is typically a dependency management service
+# Other services don't usually need env vars from it

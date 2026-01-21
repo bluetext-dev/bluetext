@@ -1,0 +1,2 @@
+# Couchbase service values
+couchbase-image: couchbase:enterprise-7.6.6
