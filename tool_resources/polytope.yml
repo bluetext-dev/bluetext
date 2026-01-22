@@ -15,51 +15,53 @@ tools:
 
   scaffold-initialize-session:
     run:
-      - tool: run-script
+      - tool: pt/run-script
         args:
           language: bash
-          script: |
-            #!/bin/sh
-            set -e
+          script:
+            type: string
+            data: |
+              #!/bin/sh
+              set -e
 
-            TARGET_FILE="${1:-polytope.yml}"
+              TARGET_FILE="${1:-polytope.yml}"
 
-            if [ ! -f "$TARGET_FILE" ]; then
-              echo "Error: File $TARGET_FILE not found"
-              exit 1
-            fi
+              if [ ! -f "$TARGET_FILE" ]; then
+                echo "Error: File $TARGET_FILE not found"
+                exit 1
+              fi
 
-            # Check if tools block exists
-            if ! grep -q "^tools:" "$TARGET_FILE"; then
-              echo "Adding tools block to $TARGET_FILE"
-              echo "" >> "$TARGET_FILE"
-              echo "tools:" >> "$TARGET_FILE"
-            fi
+              # Check if tools block exists
+              if ! grep -q "^tools:" "$TARGET_FILE"; then
+                echo "Adding tools block to $TARGET_FILE"
+                echo "" >> "$TARGET_FILE"
+                echo "tools:" >> "$TARGET_FILE"
+              fi
 
-            # Check if initialize_session already exists
-            if grep -q "^  initialize_session:" "$TARGET_FILE" || grep -q "^    initialize_session:" "$TARGET_FILE"; then
-              echo "initialize_session already exists in $TARGET_FILE"
-              exit 0
-            fi
+              # Check if initialize_session already exists
+              if grep -q "^  initialize_session:" "$TARGET_FILE" || grep -q "^    initialize_session:" "$TARGET_FILE"; then
+                echo "initialize_session already exists in $TARGET_FILE"
+                exit 0
+              fi
 
-            # Append initialize_session tool
-            echo "Adding initialize_session tool to $TARGET_FILE"
-            cat >> "$TARGET_FILE" << 'EOF'
+              # Append initialize_session tool
+              echo "Adding initialize_session tool to $TARGET_FILE"
+              cat >> "$TARGET_FILE" << 'EOF'
 
-              initialize_session:
-                info: |-
-                  Initialize **EVERY** session by calling this tool.
-                  Returns required development context and ensures the project is running.
-                  This tool always needs to be called before doing anything else, regardless of the tasks complexity.
-                run:
-                  - id: run-stack
-                    tool: stack
-                  - id: get-general-context
-                    after: {step: run-stack}
-                    tool: get_dev_context
-            EOF
+                initialize_session:
+                  info: |-
+                    Initialize **EVERY** session by calling this tool.
+                    Returns required development context and ensures the project is running.
+                    This tool always needs to be called before doing anything else, regardless of the tasks complexity.
+                  run:
+                    - id: run-stack
+                      tool: stack
+                    - id: get-general-context
+                      after: {step: run-stack}
+                      tool: get_dev_context
+              EOF
 
-            echo "Successfully added initialize_session to $TARGET_FILE"
+              echo "Successfully added initialize_session to $TARGET_FILE"
 
   scaffold-add-to-includes:
     info: |
@@ -73,46 +75,48 @@ tools:
         info: Path to polytope.yml file
         type: [default, str, polytope.yml]
     run:
-      - tool: run-script
+      - tool: pt/run-script
         args:
           language: bash
-          script: |
-            #!/bin/sh
-            set -e
+          script:
+            type: string
+            data: |
+              #!/bin/sh
+              set -e
 
-            MODULE_PATH="{pt.param module-path}"
-            POLYTOPE_FILE="{pt.param polytope-file}"
+              MODULE_PATH="{pt.param module-path}"
+              POLYTOPE_FILE="{pt.param polytope-file}"
 
-            if [ -z "$MODULE_PATH" ]; then
-              echo "Error: Missing required argument 'module_path'"
-              exit 1
-            fi
+              if [ -z "$MODULE_PATH" ]; then
+                echo "Error: Missing required argument 'module_path'"
+                exit 1
+              fi
 
-            if [ ! -f "$POLYTOPE_FILE" ]; then
-              echo "Error: File $POLYTOPE_FILE not found"
-              exit 1
-            fi
+              if [ ! -f "$POLYTOPE_FILE" ]; then
+                echo "Error: File $POLYTOPE_FILE not found"
+                exit 1
+              fi
 
-            # Check if include block exists
-            if ! grep -q "^include:" "$POLYTOPE_FILE"; then
-              echo "Adding include block to $POLYTOPE_FILE"
-              sed -i '1i include:' "$POLYTOPE_FILE"
-            fi
+              # Check if include block exists
+              if ! grep -q "^include:" "$POLYTOPE_FILE"; then
+                echo "Adding include block to $POLYTOPE_FILE"
+                sed -i '1i include:' "$POLYTOPE_FILE"
+              fi
 
-            # Check if module is already included
-            if grep -q "^  - ${MODULE_PATH}$" "$POLYTOPE_FILE"; then
-              echo "Module '${MODULE_PATH}' is already in includes"
-              exit 0
-            fi
+              # Check if module is already included
+              if grep -q "^  - ${MODULE_PATH}$" "$POLYTOPE_FILE"; then
+                echo "Module '${MODULE_PATH}' is already in includes"
+                exit 0
+              fi
 
-            # Add the module to includes
-            echo "Adding '${MODULE_PATH}' to includes in $POLYTOPE_FILE"
-            awk -v path="$MODULE_PATH" '
-            /^include:/ { print; print "  - " path; next }
-            { print }
-            ' "$POLYTOPE_FILE" > "${POLYTOPE_FILE}.tmp" && mv "${POLYTOPE_FILE}.tmp" "$POLYTOPE_FILE"
+              # Add the module to includes
+              echo "Adding '${MODULE_PATH}' to includes in $POLYTOPE_FILE"
+              awk -v path="$MODULE_PATH" '
+              /^include:/ { print; print "  - " path; next }
+              { print }
+              ' "$POLYTOPE_FILE" > "${POLYTOPE_FILE}.tmp" && mv "${POLYTOPE_FILE}.tmp" "$POLYTOPE_FILE"
 
-            echo "Successfully added '${MODULE_PATH}' to includes"
+              echo "Successfully added '${MODULE_PATH}' to includes"
 
   scaffold-add-dependencies:
     info: |
@@ -127,52 +131,54 @@ tools:
         info: Packages to add (space separated)
         type: str
     run:
-      - tool: run-script
+      - tool: pt/run-script
         args:
           language: bash
-          script: |
-            #!/bin/sh
-            set -e
+          script:
+            type: string
+            data: |
+              #!/bin/sh
+              set -e
 
-            TARGET="{pt.param target}"
-            PACKAGES="{pt.param packages}"
+              TARGET="{pt.param target}"
+              PACKAGES="{pt.param packages}"
 
-            if [ -z "$TARGET" ] || [ -z "$PACKAGES" ]; then
-              echo "Error: Missing required arguments"
-              echo "Usage: add-dependencies.sh <target> <packages>"
-              exit 1
-            fi
-
-            echo "Adding packages to ${TARGET}: ${PACKAGES}"
-
-            cd /target/modules/${TARGET}
-
-            # Run the appropriate package manager based on target
-            case "$TARGET" in
-              api)
-                echo "Installing uv..."
-                apk add --no-cache curl python3
-                curl -LsSf https://astral.sh/uv/install.sh | sh
-                export PATH="/root/.local/bin:$PATH"
-                echo "Running: uv add ${PACKAGES}"
-                uv add ${PACKAGES}
-                ;;
-              frontend)
-                echo "Installing bun..."
-                apk add --no-cache curl unzip
-                curl -fsSL https://bun.sh/install | sh
-                export PATH="/root/.bun/bin:$PATH"
-                echo "Running: bun add ${PACKAGES}"
-                bun add ${PACKAGES}
-                ;;
-              *)
-                echo "Error: Unknown target '${TARGET}'"
-                echo "Supported targets: api, frontend"
+              if [ -z "$TARGET" ] || [ -z "$PACKAGES" ]; then
+                echo "Error: Missing required arguments"
+                echo "Usage: add-dependencies.sh <target> <packages>"
                 exit 1
-                ;;
-            esac
+              fi
 
-            echo "Successfully added packages to ${TARGET}"
+              echo "Adding packages to ${TARGET}: ${PACKAGES}"
+
+              cd /target/modules/${TARGET}
+
+              # Run the appropriate package manager based on target
+              case "$TARGET" in
+                api)
+                  echo "Installing uv..."
+                  apk add --no-cache curl python3
+                  curl -LsSf https://astral.sh/uv/install.sh | sh
+                  export PATH="/root/.local/bin:$PATH"
+                  echo "Running: uv add ${PACKAGES}"
+                  uv add ${PACKAGES}
+                  ;;
+                frontend)
+                  echo "Installing bun..."
+                  apk add --no-cache curl unzip
+                  curl -fsSL https://bun.sh/install | sh
+                  export PATH="/root/.bun/bin:$PATH"
+                  echo "Running: bun add ${PACKAGES}"
+                  bun add ${PACKAGES}
+                  ;;
+                *)
+                  echo "Error: Unknown target '${TARGET}'"
+                  echo "Supported targets: api, frontend"
+                  exit 1
+                  ;;
+              esac
+
+              echo "Successfully added packages to ${TARGET}"
 
   initialize_session:
     info: |-
@@ -205,7 +211,7 @@ tools:
       - id: get_dev_context
         tool: polytope/container
         args:
-          image: alpine:3.21.2
+          image: registry.k8s.io/pause:3.9
           cmd: cat /scopes/{pt.param scope}.md
           mounts:
             - { path: /scopes, source: { type: repo, path: scopes } }
@@ -273,40 +279,43 @@ tools:
             (pt/call-module "add-project-language" {:language (:language params)}))
       - id: update-gitignore
         after: {step: scaffold-base-structure}
-        tool: run-script
+        tool: pt/run-script
         args:
+          repo: {type: host, path: .}
           language: bash
-          script: |
-            #!/bin/bash
-            set -e
+          script:
+            type: string
+            data: |
+              #!/bin/bash
+              set -e
 
-            GITIGNORE_PATH="/repo/.gitignore"
+              GITIGNORE_PATH="/repo/.gitignore"
 
-            # Create .gitignore if it doesn't exist
-            if [ ! -f "$GITIGNORE_PATH" ]; then
-              echo "Creating .gitignore file"
-              touch "$GITIGNORE_PATH"
-            fi
+              # Create .gitignore if it doesn't exist
+              if [ ! -f "$GITIGNORE_PATH" ]; then
+                echo "Creating .gitignore file"
+                touch "$GITIGNORE_PATH"
+              fi
 
-            # Check if secrets.yml is already in .gitignore
-            if ! grep -q "secrets\.yml" "$GITIGNORE_PATH"; then
-              echo "Adding secrets.yml to .gitignore"
-              echo "" >> "$GITIGNORE_PATH"
-              echo "# Ignore secrets files" >> "$GITIGNORE_PATH"
-              echo "**/secrets.yml" >> "$GITIGNORE_PATH"
-            else
-              echo "✅ secrets.yml already in .gitignore"
-            fi
+              # Check if secrets.yml is already in .gitignore
+              if ! grep -q "secrets\.yml" "$GITIGNORE_PATH"; then
+                echo "Adding secrets.yml to .gitignore"
+                echo "" >> "$GITIGNORE_PATH"
+                echo "# Ignore secrets files" >> "$GITIGNORE_PATH"
+                echo "**/secrets.yml" >> "$GITIGNORE_PATH"
+              else
+                echo "✅ secrets.yml already in .gitignore"
+              fi
 
-            # Check if values.yml is already in .gitignore
-            if ! grep -q "values\.yml" "$GITIGNORE_PATH"; then
-              echo "Adding values.yml to .gitignore"
-              echo "**/values.yml" >> "$GITIGNORE_PATH"
-            else
-              echo "✅ values.yml already in .gitignore"
-            fi
+              # Check if values.yml is already in .gitignore
+              if ! grep -q "values\.yml" "$GITIGNORE_PATH"; then
+                echo "Adding values.yml to .gitignore"
+                echo "**/values.yml" >> "$GITIGNORE_PATH"
+              else
+                echo "✅ values.yml already in .gitignore"
+              fi
 
-            echo "✅ .gitignore updated successfully"
+              echo "✅ .gitignore updated successfully"
 
   add-and-run-service:
     info: |
@@ -382,7 +391,7 @@ tools:
             (let [template (:template params)
                   deps-path (str "tool_resources/add-and-run-service/" template "/dependencies.yml")
                   ;; Spawn container with dependencies.yml mounted
-                  container-id (pt/spawn {:image  "alpine:3.21.2"
+                  container-id (pt/spawn {:image  "registry.k8s.io/pause:3.9"
                                          :restart {:policy "never"}
                                          :mounts [{:path   "/dependencies.yml"
                                                   :source {:type "repo"
@@ -421,7 +430,7 @@ tools:
             (let [template (:template params)
                   deps-path (str "tool_resources/add-and-run-service/" template "/dependencies.yml")
                   ;; Spawn container with dependencies.yml mounted
-                  container-id (pt/spawn {:image  "alpine:3.21.2"
+                  container-id (pt/spawn {:image  "registry.k8s.io/pause:3.9"
                                          :restart {:policy "never"}
                                          :mounts [{:path   "/dependencies.yml"
                                                   :source {:type "repo"
@@ -505,62 +514,64 @@ tools:
               on-conflict: skip
       - id: update-pyproject
         after: {step: scaffold-client}
-        tool: run-script
+        tool: pt/run-script
         args:
           language: python
-          script: |
-            import re
-            from pathlib import Path
+          script:
+            type: string
+            data: |
+              import re
+              from pathlib import Path
 
-            name = "{pt.param name}"
-            language = "{pt.param language}"
+              name = "{pt.param name}"
+              language = "{pt.param language}"
 
-            # Define dependency mapping
-            dependencies_map = {
-                "couchbase": "couchbase>=4.4.0",
-                "temporal": "temporalio>=1.6.0",
-            }
+              # Define dependency mapping
+              dependencies_map = {
+                  "couchbase": "couchbase>=4.4.0",
+                  "temporal": "temporalio>=1.6.0",
+              }
 
-            # Get the dependency to add
-            dependency = dependencies_map.get(name)
-            if not dependency:
-                print(f"No dependency mapping found for {name}")
-                exit(0)
+              # Get the dependency to add
+              dependency = dependencies_map.get(name)
+              if not dependency:
+                  print(f"No dependency mapping found for {name}")
+                  exit(0)
 
-            # Path to pyproject.toml (scaffolded by the template)
-            pyproject_path = Path(f"/repo/clients/{language}/pyproject.toml")
+              # Path to pyproject.toml (scaffolded by the template)
+              pyproject_path = Path(f"/repo/clients/{language}/pyproject.toml")
 
-            # The pyproject.toml should have been scaffolded from the template
-            if not pyproject_path.exists():
-                print(f"✅ pyproject.toml was scaffolded with the client template")
-                exit(0)
+              # The pyproject.toml should have been scaffolded from the template
+              if not pyproject_path.exists():
+                  print(f"✅ pyproject.toml was scaffolded with the client template")
+                  exit(0)
 
-            # Read the file
-            content = pyproject_path.read_text()
+              # Read the file
+              content = pyproject_path.read_text()
 
-            # Check if dependency already exists
-            if dependency.split(">=")[0] in content:
-                print(f"✅ Dependency {dependency} already exists in pyproject.toml")
-                exit(0)
+              # Check if dependency already exists
+              if dependency.split(">=")[0] in content:
+                  print(f"✅ Dependency {dependency} already exists in pyproject.toml")
+                  exit(0)
 
-            # Add dependency to the dependencies array
-            # Find the dependencies section and add the new dependency
-            pattern = r'(dependencies\s*=\s*\[)(.*?)(\])'
+              # Add dependency to the dependencies array
+              # Find the dependencies section and add the new dependency
+              pattern = r'(dependencies\s*=\s*\[)(.*?)(\])'
 
-            def add_dependency(match):
-                deps_start = match.group(1)
-                deps_content = match.group(2)
-                deps_end = match.group(3)
+              def add_dependency(match):
+                  deps_start = match.group(1)
+                  deps_content = match.group(2)
+                  deps_end = match.group(3)
 
-                # Add the new dependency
-                new_dep = f'\n    "{dependency}",'
-                return deps_start + deps_content + new_dep + '\n' + deps_end
+                  # Add the new dependency
+                  new_dep = f'\n    "{dependency}",'
+                  return deps_start + deps_content + new_dep + '\n' + deps_end
 
-            new_content = re.sub(pattern, add_dependency, content, flags=re.DOTALL)
+              new_content = re.sub(pattern, add_dependency, content, flags=re.DOTALL)
 
-            # Write back
-            pyproject_path.write_text(new_content)
-            print(f"✅ Added {dependency} to pyproject.toml")
+              # Write back
+              pyproject_path.write_text(new_content)
+              print(f"✅ Added {dependency} to pyproject.toml")
 
       - id: set-values-and-secrets-for-client
         after: {step: update-pyproject}
@@ -595,7 +606,7 @@ tools:
                            (str "tool_resources/set-values-and-secrets/clients/" source-name))
                 values-path (str base-path "/values.yml")
                 secrets-path (str base-path "/secrets.yml")
-                container-id (pt/spawn {:image  "alpine:3.21.2"
+                container-id (pt/spawn {:image  "registry.k8s.io/pause:3.9"
                                        :restart {:policy "never"}
                                        :mounts [{:path   "/values.yml"
                                                 :source {:type "repo"
@@ -638,70 +649,72 @@ tools:
         type: [either, [enum, api, frontend, config-manager, couchbase, postgres, temporal, temporal-ui], [enum, couchbase, temporal, twilio]]
     run:
       - id: add-env-to-polytope
-        tool: run-script
+        tool: pt/run-script
         args:
           language: python
-          script: |
-            import yaml
-            from pathlib import Path
+          script:
+            type: string
+            data: |
+              import yaml
+              from pathlib import Path
 
-            client = "{pt.param client}"
-            service = "{pt.param service}"
+              client = "{pt.param client}"
+              service = "{pt.param service}"
 
-            # Determine if client is a service or client
-            services = {"api", "frontend", "config-manager", "couchbase", "postgres", "temporal", "temporal-ui"}
-            is_service = client in services
+              # Determine if client is a service or client
+              services = {"api", "frontend", "config-manager", "couchbase", "postgres", "temporal", "temporal-ui"}
+              is_service = client in services
 
-            # Build path to required-env-vars.yml
-            if is_service:
-                env_vars_path = Path(f"/repo/tool_resources/setup-service-for-client/services/{client}/required-env-vars.yml")
-            else:
-                env_vars_path = Path(f"/repo/tool_resources/setup-service-for-client/{client}/required-env-vars.yml")
+              # Build path to required-env-vars.yml
+              if is_service:
+                  env_vars_path = Path(f"/repo/tool_resources/setup-service-for-client/services/{client}/required-env-vars.yml")
+              else:
+                  env_vars_path = Path(f"/repo/tool_resources/setup-service-for-client/{client}/required-env-vars.yml")
 
-            if not env_vars_path.exists():
-                print(f"❌ Required env vars file not found: {env_vars_path}")
-                exit(1)
+              if not env_vars_path.exists():
+                  print(f"❌ Required env vars file not found: {env_vars_path}")
+                  exit(1)
 
-            with open(env_vars_path) as f:
-                config = yaml.safe_load(f)
+              with open(env_vars_path) as f:
+                  config = yaml.safe_load(f)
 
-            env_vars = config.get('env_vars', [])
+              env_vars = config.get('env_vars', [])
 
-            # Read service's polytope.yml
-            service_polytope_path = Path(f"/repo/services/{service}/polytope.yml")
+              # Read service's polytope.yml
+              service_polytope_path = Path(f"/repo/services/{service}/polytope.yml")
 
-            if not service_polytope_path.exists():
-                print(f"❌ Service polytope.yml not found: {service_polytope_path}")
-                exit(1)
+              if not service_polytope_path.exists():
+                  print(f"❌ Service polytope.yml not found: {service_polytope_path}")
+                  exit(1)
 
-            with open(service_polytope_path) as f:
-                content = f.read()
+              with open(service_polytope_path) as f:
+                  content = f.read()
 
-            # Build env var entries
-            env_entries = []
-            for var in env_vars:
-                name = var['name']
-                key = var['key']
-                is_secret = var['secret']
+              # Build env var entries
+              env_entries = []
+              for var in env_vars:
+                  name = var['name']
+                  key = var['key']
+                  is_secret = var['secret']
 
-                # Reference the value/secret using pt.value or pt.secret
-                if is_secret:
-                    env_entries.append(f'            - {{ name: {name}, value: "#pt-clj (pt/secret \\"{key}\\")" }}')
-                else:
-                    env_entries.append(f'            - {{ name: {name}, value: "#pt-clj (pt/value \\"{key}\\")" }}')
+                  # Reference the value/secret using pt.value or pt.secret
+                  if is_secret:
+                      env_entries.append(f'            - {{ name: {name}, value: "#pt-clj (pt/secret \\"{key}\\")" }}')
+                  else:
+                      env_entries.append(f'            - {{ name: {name}, value: "#pt-clj (pt/value \\"{key}\\")" }}')
 
-            # Check if env vars already exist
-            for var in env_vars:
-                if var['name'] in content:
-                    print(f"⚠️  {var['name']} already exists in {service_polytope_path}")
+              # Check if env vars already exist
+              for var in env_vars:
+                  if var['name'] in content:
+                      print(f"⚠️  {var['name']} already exists in {service_polytope_path}")
 
-            # Add env vars to the file (append to env section)
-            # This is a simple append - in production, use proper YAML manipulation
-            env_block = '\n'.join(env_entries)
+              # Add env vars to the file (append to env section)
+              # This is a simple append - in production, use proper YAML manipulation
+              env_block = '\n'.join(env_entries)
 
-            print(f"Add these env vars to {service_polytope_path}:")
-            print(env_block)
-            print(f"\n✅ Generated {len(env_vars)} env var entries for {client} -> {service}")
+              print(f"Add these env vars to {service_polytope_path}:")
+              print(env_block)
+              print(f"\n✅ Generated {len(env_vars)} env var entries for {client} -> {service}")
 
   add-entity:
     info: |
@@ -740,47 +753,49 @@ tools:
 
       - id: scaffold-entity
         after: {step: scaffold-entities-dir}
-        tool: run-script
+        tool: pt/run-script
         args:
           language: python
-          script: |
-            from pathlib import Path
+          script:
+            type: string
+            data: |
+              from pathlib import Path
 
-            client = "{pt.param client}"
-            language = "{pt.param language}"
-            entity_singular = "{pt.param entity-singular}"
-            entity_plural = "{pt.param entity-plural}"
-            is_public = "{pt.param is-public}" == "true"
+              client = "{pt.param client}"
+              language = "{pt.param language}"
+              entity_singular = "{pt.param entity-singular}"
+              entity_plural = "{pt.param entity-plural}"
+              is_public = "{pt.param is-public}" == "true"
 
-            # Read the template file
-            template_path = Path(f"/template/entity.py")
+              # Read the template file
+              template_path = Path(f"/template/entity.py")
 
-            if not template_path.exists():
-                print(f"❌ Template not found: {template_path}")
-                exit(1)
+              if not template_path.exists():
+                  print(f"❌ Template not found: {template_path}")
+                  exit(1)
 
-            template_content = template_path.read_text()
+              template_content = template_path.read_text()
 
-            # Replace template variables
-            content = template_content.replace("{{ entity_singular | capitalize }}", entity_singular.capitalize())
-            content = content.replace("{{ entity_singular }}", entity_singular)
-            content = content.replace("{{ entity_plural }}", entity_plural)
+              # Replace template variables
+              content = template_content.replace("{{ entity_singular | capitalize }}", entity_singular.capitalize())
+              content = content.replace("{{ entity_singular }}", entity_singular)
+              content = content.replace("{{ entity_plural }}", entity_plural)
 
-            # Determine output path
-            base_path = "models/python/entities" if is_public else "models/python/private/entities"
-            output_path = Path(f"/repo/{base_path}/{entity_plural}.py")
+              # Determine output path
+              base_path = "models/python/entities" if is_public else "models/python/private/entities"
+              output_path = Path(f"/repo/{base_path}/{entity_plural}.py")
 
-            # Ensure directory exists
-            output_path.parent.mkdir(parents=True, exist_ok=True)
+              # Ensure directory exists
+              output_path.parent.mkdir(parents=True, exist_ok=True)
 
-            # Write the file
-            output_path.write_text(content)
+              # Write the file
+              output_path.write_text(content)
 
-            print(f"✅ Created entity file: {base_path}/{entity_plural}.py")
-          mounts: |-
-            #pt-clj
-            [{:path "/template"
-              :source {:type "repo"
-                       :repo pt/module-repo-ref
-                       :path (str "add-entity/" (:client params) "/" (:language params))}}]
+              print(f"✅ Created entity file: {base_path}/{entity_plural}.py")
+          mounts:
+            - path: /template
+              source:
+                type: repo
+                repo: "#pt-clj pt/module-repo-ref"
+                path: "#pt-clj (str \"add-entity/\" (:client params) \"/\" (:language params))"
 
