@@ -17,6 +17,7 @@ tools:
     run:
       - tool: pt/run-script
         args:
+          repo: {type: host, path: .}
           language: bash
           script:
             type: string
@@ -62,123 +63,6 @@ tools:
               EOF
 
               echo "Successfully added initialize_session to $TARGET_FILE"
-
-  scaffold-add-to-includes:
-    info: |
-      Adds a module path to the includes section of polytope.yml.
-      This tool is currently not used but preserved for potential future use.
-    params:
-      - id: module-path
-        info: Path to the module to include
-        type: str
-      - id: polytope-file
-        info: Path to polytope.yml file
-        type: [default, str, polytope.yml]
-    run:
-      - tool: pt/run-script
-        args:
-          language: bash
-          script:
-            type: string
-            data: |
-              #!/bin/sh
-              set -e
-
-              MODULE_PATH="{pt.param module-path}"
-              POLYTOPE_FILE="{pt.param polytope-file}"
-
-              if [ -z "$MODULE_PATH" ]; then
-                echo "Error: Missing required argument 'module_path'"
-                exit 1
-              fi
-
-              if [ ! -f "$POLYTOPE_FILE" ]; then
-                echo "Error: File $POLYTOPE_FILE not found"
-                exit 1
-              fi
-
-              # Check if include block exists
-              if ! grep -q "^include:" "$POLYTOPE_FILE"; then
-                echo "Adding include block to $POLYTOPE_FILE"
-                sed -i '1i include:' "$POLYTOPE_FILE"
-              fi
-
-              # Check if module is already included
-              if grep -q "^  - ${MODULE_PATH}$" "$POLYTOPE_FILE"; then
-                echo "Module '${MODULE_PATH}' is already in includes"
-                exit 0
-              fi
-
-              # Add the module to includes
-              echo "Adding '${MODULE_PATH}' to includes in $POLYTOPE_FILE"
-              awk -v path="$MODULE_PATH" '
-              /^include:/ { print; print "  - " path; next }
-              { print }
-              ' "$POLYTOPE_FILE" > "${POLYTOPE_FILE}.tmp" && mv "${POLYTOPE_FILE}.tmp" "$POLYTOPE_FILE"
-
-              echo "Successfully added '${MODULE_PATH}' to includes"
-
-  scaffold-add-dependencies:
-    info: |
-      Adds packages to a service's dependency file using the appropriate package manager.
-      This tool is currently not used but preserved for potential future use.
-      The add-dependencies tool provides a more integrated approach for adding dependencies.
-    params:
-      - id: target
-        info: The service to add dependencies to (e.g., api, frontend)
-        type: str
-      - id: packages
-        info: Packages to add (space separated)
-        type: str
-    run:
-      - tool: pt/run-script
-        args:
-          language: bash
-          script:
-            type: string
-            data: |
-              #!/bin/sh
-              set -e
-
-              TARGET="{pt.param target}"
-              PACKAGES="{pt.param packages}"
-
-              if [ -z "$TARGET" ] || [ -z "$PACKAGES" ]; then
-                echo "Error: Missing required arguments"
-                echo "Usage: add-dependencies.sh <target> <packages>"
-                exit 1
-              fi
-
-              echo "Adding packages to ${TARGET}: ${PACKAGES}"
-
-              cd /target/modules/${TARGET}
-
-              # Run the appropriate package manager based on target
-              case "$TARGET" in
-                api)
-                  echo "Installing uv..."
-                  apk add --no-cache curl python3
-                  curl -LsSf https://astral.sh/uv/install.sh | sh
-                  export PATH="/root/.local/bin:$PATH"
-                  echo "Running: uv add ${PACKAGES}"
-                  uv add ${PACKAGES}
-                  ;;
-                frontend)
-                  echo "Installing bun..."
-                  apk add --no-cache curl unzip
-                  curl -fsSL https://bun.sh/install | sh
-                  export PATH="/root/.bun/bin:$PATH"
-                  echo "Running: bun add ${PACKAGES}"
-                  bun add ${PACKAGES}
-                  ;;
-                *)
-                  echo "Error: Unknown target '${TARGET}'"
-                  echo "Supported targets: api, frontend"
-                  exit 1
-                  ;;
-              esac
-
-              echo "Successfully added packages to ${TARGET}"
 
   initialize_session:
     info: |-
@@ -342,7 +226,23 @@ tools:
         type: [default, [enum, skip, overwrite], skip]
     run:
 
+      - id: read-dependencies
+        code: |-
+          #pt-js
+          const template = params.template;
+          const dependenciesPath = `/repo/tool_resources/add-and-run-service/${template}/dependencies.yml`;
+          let deps = [];
+          try {
+            const dependenciesContent = pt.readFile(dependenciesPath);
+            const dependenciesData = pt.readYaml(dependenciesContent);
+            deps = dependenciesData.dependencies || [];
+          } catch (error) {
+            // No dependencies file found
+          }
+          deps
+
       - id: scaffold-services
+        after: {step: read-dependencies}
         tool: polytope/scaffold
         args:
           container-id: scaffold-services
@@ -353,17 +253,7 @@ tools:
             const name = params.name.toLowerCase().replace(/[^a-z0-9_-]/g, '-');
             const onConflict = params["on-conflict"];
             const target = params.target;
-
-            // Read dependencies from dependencies.yml file
-            const dependenciesPath = `/repo/tool_resources/add-and-run-service/${template}/dependencies.yml`;
-            let deps = [];
-            try {
-              const dependenciesContent = pt.readFile(dependenciesPath);
-              const dependenciesData = pt.readYaml(dependenciesContent);
-              deps = dependenciesData.dependencies || [];
-            } catch (error) {
-              console.log(`No dependencies file found for ${template}, continuing without dependencies`);
-            }
+            const deps = pt.output("read-dependencies");
 
             // Build and return scaffold actions
             [
@@ -378,80 +268,49 @@ tools:
               ...deps.map(dep => ({
                 template: {type: "repo", repo: "#pt-clj pt/module-repo-ref", path: "add-and-run-service/" + dep.path + "/template"},
                 path: "services/" + dep.name,
-                "on-conflict": "skip",
+                "on-conflict": onConflict,
                 "add-to-tools": [{tool: target, call: dep.name}]
               })),
             ];
 
       - id: set-values-and-secrets-for-dependencies
-        after: {step: scaffold-services}
-        code: |
-          #pt-clj
-          (when (:run params)
-            (let [template (:template params)
-                  deps-path (str "tool_resources/add-and-run-service/" template "/dependencies.yml")
-                  ;; Spawn container with dependencies.yml mounted
-                  container-id (pt/spawn {:image  "registry.k8s.io/pause:3.9"
-                                         :restart {:policy "never"}
-                                         :mounts [{:path   "/dependencies.yml"
-                                                  :source {:type "repo"
-                                                          :repo pt/module-repo-ref
-                                                          :path deps-path}}]})
-                  _ (pt/await-started {:type "deployment" :ref container-id})
-                  deps (try
-                         (let [content (pt/read-container-file container-id "/dependencies.yml")
-                               data (pt/read-yaml content)]
-                           (get data :dependencies []))
-                         (catch Exception e
-                           (pt/log (str "No dependencies file found for " template))
-                           []))]
-              (pt/stop {:type "container" :ref container-id})
-              ;; Set values and secrets for dependencies
-              (when (seq deps)
-                (doseq [dep deps]
-                  (pt/log (str "Setting values and secrets for dependency: " (:name dep)))
-                  (pt/call-module "set-values-and-secrets" {:source (:name dep)})))))
+        after: {step: read-dependencies}
+        code: |-
+          #pt-js
+          if (params.run) {
+            const deps = pt.output("read-dependencies");
+            if (deps && deps.length > 0) {
+              for (const dep of deps) {
+                console.log(`Setting values and secrets for dependency: ${dep.name}`);
+                pt.callModule("set-values-and-secrets", {source: dep.name});
+              }
+            }
+          }
 
       - id: set-values-and-secrets-for-service
         after: {step: scaffold-services}
         code: |
           #pt-clj
           (when (:run params)
-            (let [template (:template params)]
-              ;; Set values and secrets for main service
-              (pt/log (str "Setting values and secrets for service: " template))
-              (pt/call-module "set-values-and-secrets" {:source template})))
+            (pt/call-module "set-values-and-secrets" {:source (:template params)}))
 
       - id: run-dependencies
-        after: {step: set-values-and-secrets-for-dependencies}
-        code: |
-          #pt-clj
-          (when (:run params)
-            (let [template (:template params)
-                  deps-path (str "tool_resources/add-and-run-service/" template "/dependencies.yml")
-                  ;; Spawn container with dependencies.yml mounted
-                  container-id (pt/spawn {:image  "registry.k8s.io/pause:3.9"
-                                         :restart {:policy "never"}
-                                         :mounts [{:path   "/dependencies.yml"
-                                                  :source {:type "repo"
-                                                          :repo pt/module-repo-ref
-                                                          :path deps-path}}]})
-                  _ (pt/await-started {:type "deployment" :ref container-id})
-                  deps (try
-                         (let [content (pt/read-container-file container-id "/dependencies.yml")
-                               data (pt/read-yaml content)]
-                           (get data :dependencies []))
-                         (catch Exception e
-                           (pt/log (str "No dependencies file found for " template))
-                           []))]
-              (pt/stop {:type "container" :ref container-id})
-              ;; Run dependencies first
-              (when (seq deps)
-                (doseq [dep deps]
-                  (pt/call-module (:name dep) {})))))
+        after:
+          - step: set-values-and-secrets-for-dependencies
+        code: |-
+          #pt-js
+          if (params.run) {
+            const deps = pt.output("read-dependencies");
+            if (deps && deps.length > 0) {
+              for (const dep of deps) {
+                pt.callModule(dep.name, {});
+              }
+            }
+          }
 
       - id: run-main-service
-        after: {step: set-values-and-secrets-for-service}
+        after:
+          - step: run-dependencies
         code: |
           #pt-clj
           (when (:run params)
@@ -499,13 +358,13 @@ tools:
         info: Language for the client
         type: [default, [enum, python], python]
     run:
-      - id: setup-project-structure
-        tool: setup-project-structure
-        args:
-          language: pt.param language
+      # TODO: chained tool resolution broken - call setup-project-structure manually first
+      # - id: setup-project-structure
+      #   code: |-
+      #     #pt-clj
+      #     (pt/call-module "setup-project-structure" {:language (:language params)})
 
       - id: scaffold-client
-        after: {step: setup-project-structure}
         tool: polytope/scaffold
         args:
           actions:
@@ -516,6 +375,7 @@ tools:
         after: {step: scaffold-client}
         tool: pt/run-script
         args:
+          repo: {type: host, path: .}
           language: python
           script:
             type: string
@@ -593,7 +453,7 @@ tools:
     run:
       - id: set-values-and-secrets
         code: |-
-          pt.clj
+          #pt-clj
           (let [source (:source params)
                 ;; Determine if source is a service or client
                 services #{"api" "frontend" "config-manager" "couchbase" "postgres" "temporal" "temporal-ui"}
@@ -651,6 +511,7 @@ tools:
       - id: add-env-to-polytope
         tool: pt/run-script
         args:
+          repo: {type: host, path: .}
           language: python
           script:
             type: string
@@ -737,13 +598,13 @@ tools:
         info: Whether the entity should be scaffolded in the public folder instead of private
         type: [default, bool, false]
     run:
-      - id: setup-project-structure
-        tool: setup-project-structure
-        args:
-          language: pt.param language
+      # TODO: chained tool resolution broken - call setup-project-structure manually first
+      # - id: setup-project-structure
+      #   code: |-
+      #     #pt-clj
+      #     (pt/call-module "setup-project-structure" {:language (:language params)})
 
       - id: scaffold-entities-dir
-        after: {step: setup-project-structure}
         tool: polytope/scaffold
         args:
           actions:
@@ -755,6 +616,7 @@ tools:
         after: {step: scaffold-entities-dir}
         tool: pt/run-script
         args:
+          repo: {type: host, path: .}
           language: python
           script:
             type: string
