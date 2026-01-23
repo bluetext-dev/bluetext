@@ -228,18 +228,23 @@ tools:
 
       - id: read-dependencies
         code: |-
-          #pt-js
-          const template = params.template;
-          const dependenciesPath = `/repo/tool_resources/add-and-run-service/${template}/dependencies.yml`;
-          let deps = [];
-          try {
-            const dependenciesContent = pt.readFile(dependenciesPath);
-            const dependenciesData = pt.readYaml(dependenciesContent);
-            deps = dependenciesData.dependencies || [];
-          } catch (error) {
-            // No dependencies file found
-          }
-          deps
+          #pt-clj
+          (let [template (:template params)
+                deps-path (str "tool_resources/add-and-run-service/" template "/dependencies.yml")
+                container-id (pt/spawn {:image "registry.k8s.io/pause:3.9"
+                                        :id (str "read-deps-" template)
+                                        :restart {:policy "never"}
+                                        :mounts [{:path "/dependencies.yml"
+                                                  :source {:type "repo"
+                                                           :repo pt/module-repo-ref
+                                                           :path deps-path}}]})]
+            (pt/await-started {:type "deployment" :ref container-id})
+            (let [content (pt/read-container-file container-id "/dependencies.yml")
+                  data (pt/read-yaml content)
+                  deps (or (:dependencies data) [])]
+              (pt/log (str "📦 Found " (count deps) " dependencies for " template))
+              (pt/stop {:type "container" :ref container-id})
+              deps))
 
       - id: scaffold-services
         after: {step: read-dependencies}
@@ -298,27 +303,24 @@ tools:
         after:
           - step: set-values-and-secrets-for-dependencies
         code: |-
-          #pt-js
-          if (params.run) {
-            const deps = pt.output("read-dependencies");
-            if (deps && deps.length > 0) {
-              for (const dep of deps) {
-                pt.callModule(dep.name, {});
-              }
-            }
-          }
+          #pt-clj
+          (when (:run params)
+            (doseq [{n :name} (seq (pt/output "read-dependencies"))]
+              (pt/log (str ":rocket: Starting dependency: " n))
+              (pt/call-module n {})))
 
       - id: run-main-service
         after:
-          - step: run-dependencies
+          - step: set-values-and-secrets-for-service
         code: |
           #pt-clj
           (when (:run params)
             (let [name (-> (:name params)
                            clojure.string/lower-case
                            (clojure.string/replace #"[^a-z0-9_-]" "-"))]
-              ;; Run main service
+              (pt/log (str "🚀 Starting main service: " name))
               (pt/call-module name {})))
+
 
   add-project-language:
     info: |
@@ -467,6 +469,7 @@ tools:
                 values-path (str base-path "/values.yml")
                 secrets-path (str base-path "/secrets.yml")
                 container-id (pt/spawn {:image  "registry.k8s.io/pause:3.9"
+                                        :id     (str "set-values-and-secrets-" source)
                                        :restart {:policy "never"}
                                        :mounts [{:path   "/values.yml"
                                                 :source {:type "repo"
