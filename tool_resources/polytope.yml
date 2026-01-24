@@ -457,15 +457,14 @@ tools:
         code: |-
           #pt-clj
           (let [source (:source params)
-                ;; Determine if source is a service or client
-                services #{"api" "frontend" "config-manager" "couchbase" "postgres" "temporal" "temporal-ui"}
-                is-service (contains? services source)
-                ;; Strip -client suffix only for clients
-                source-name (if is-service source (clojure.string/replace source #"-client$" ""))
-                ;; Build paths: tool_resources/set-values-and-secrets/clients/{source}/ or tool_resources/set-values-and-secrets/services/{source}/
-                base-path (if is-service
-                           (str "tool_resources/set-values-and-secrets/services/" source-name)
-                           (str "tool_resources/set-values-and-secrets/clients/" source-name))
+                ;; Determine if source is a service or client by checking for -client suffix
+                is-client (clojure.string/ends-with? source "-client")
+                ;; Strip -client suffix for clients
+                source-name (if is-client (clojure.string/replace source #"-client$" "") source)
+                ;; Build paths: set-values-and-secrets/clients/{source}/ or set-values-and-secrets/services/{source}/
+                base-path (if is-client
+                           (str "set-values-and-secrets/clients/" source-name)
+                           (str "set-values-and-secrets/services/" source-name))
                 values-path (str base-path "/values.yml")
                 secrets-path (str base-path "/secrets.yml")
                 container-id (pt/spawn {:image  "registry.k8s.io/pause:3.9"
@@ -508,14 +507,21 @@ tools:
         info: Service to set up (api, frontend, config-manager, etc.)
         type: str
       - id: client
-        info: Client or service providing the configuration
-        type: [either, [enum, api, frontend, config-manager, couchbase, postgres, temporal, temporal-ui], [enum, couchbase, temporal, twilio]]
+        info: Client or service providing the configuration (use -client suffix for clients, e.g. couchbase-client)
+        type: [enum, api, frontend, config-manager, couchbase, postgres, temporal, temporal-ui, couchbase-client, temporal-client, twilio-client]
     run:
       - id: add-env-to-polytope
         tool: pt/run-script
         args:
           repo: {type: host, path: .}
           language: python
+          dependencies: [pyyaml]
+          mounts:
+            - path: /env-vars.yml
+              source:
+                type: repo
+                repo: "#pt-clj pt/module-repo-ref"
+                path: "#pt-clj (let [client (:client params) base-name (clojure.string/replace client #\"-client$\" \"\") clients #{\"couchbase\" \"postgres\" \"temporal\" \"twilio\"}] (if (contains? clients base-name) (str \"setup-service-for-client/\" base-name \"/required-env-vars.yml\") (str \"setup-service-for-client/services/\" client \"/required-env-vars.yml\")))"
           script:
             type: string
             data: |
@@ -525,15 +531,8 @@ tools:
               client = "{pt.param client}"
               service = "{pt.param service}"
 
-              # Determine if client is a service or client
-              services = {"api", "frontend", "config-manager", "couchbase", "postgres", "temporal", "temporal-ui"}
-              is_service = client in services
-
-              # Build path to required-env-vars.yml
-              if is_service:
-                  env_vars_path = Path(f"/repo/tool_resources/setup-service-for-client/services/{client}/required-env-vars.yml")
-              else:
-                  env_vars_path = Path(f"/repo/tool_resources/setup-service-for-client/{client}/required-env-vars.yml")
+              # Read env vars from mounted file
+              env_vars_path = Path("/env-vars.yml")
 
               if not env_vars_path.exists():
                   print(f"❌ Required env vars file not found: {env_vars_path}")
@@ -576,7 +575,7 @@ tools:
               # This is a simple append - in production, use proper YAML manipulation
               env_block = '\n'.join(env_entries)
 
-              print(f"Add these env vars to {service_polytope_path}:")
+              print(f"Add these env vars to services/{service}/polytope.yml:")
               print(env_block)
               print(f"\n✅ Generated {len(env_vars)} env var entries for {client} -> {service}")
 
