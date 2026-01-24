@@ -1,13 +1,16 @@
 # Clients
 
-This directory contains all clients. Clients are responsible for the connection and standard SDK of networked services, such as data stores, durable execution engines, message brokers, micro services and external web services.
+This directory contains language-specific client implementations.
 
-Clients are imported and used by models.
+See `clients/README.md` in your project root for an overview of the client architecture.
 
 ## Structure
 
-For each programming language there is a sub-directory containing a library with client implementations.
+```
+clients/
+├── python/       # Python client implementations
+├── typescript/   # TypeScript client implementations
+└── README.md     # This file
+```
 
-## Environment Variables
-
-Each client implementation is dependend on environment variables with configuration data needed for the connection to the services, such as URL and credentials. Clients should fail immediately when they are imported if the configuration data is missing or invalid.
+Each language subdirectory is a library that can be imported by models in that language.
