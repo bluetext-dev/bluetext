@@ -461,10 +461,10 @@ tools:
                 is-client (clojure.string/ends-with? source "-client")
                 ;; Strip -client suffix for clients
                 source-name (if is-client (clojure.string/replace source #"-client$" "") source)
-                ;; Build paths: set-values-and-secrets/clients/{source}/ or set-values-and-secrets/services/{source}/
+                ;; Build paths: tool_resources/set-values-and-secrets/clients/{source}/ or tool_resources/set-values-and-secrets/services/{source}/
                 base-path (if is-client
-                           (str "set-values-and-secrets/clients/" source-name)
-                           (str "set-values-and-secrets/services/" source-name))
+                           (str "tool_resources/set-values-and-secrets/clients/" source-name)
+                           (str "tool_resources/set-values-and-secrets/services/" source-name))
                 values-path (str base-path "/values.yml")
                 secrets-path (str base-path "/secrets.yml")
                 container-id (pt/spawn {:image  "registry.k8s.io/pause:3.9"
@@ -521,7 +521,7 @@ tools:
               source:
                 type: repo
                 repo: "#pt-clj pt/module-repo-ref"
-                path: "#pt-clj (let [client (:client params) base-name (clojure.string/replace client #\"-client$\" \"\") clients #{\"couchbase\" \"postgres\" \"temporal\" \"twilio\"}] (if (contains? clients base-name) (str \"setup-service-for-client/\" base-name \"/required-env-vars.yml\") (str \"setup-service-for-client/services/\" client \"/required-env-vars.yml\")))"
+                path: "#pt-clj (let [client (:client params) base-name (clojure.string/replace client #\"-client$\" \"\") clients #{\"couchbase\" \"postgres\" \"temporal\" \"twilio\"}] (if (contains? clients base-name) (str \"tool_resources/setup-service-for-client/\" base-name \"/required-env-vars.yml\") (str \"tool_resources/setup-service-for-client/services/\" client \"/required-env-vars.yml\")))"
           script:
             type: string
             data: |
