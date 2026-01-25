@@ -14,5 +14,17 @@ export default defineConfig({
       '~': path.resolve(__dirname, './app'),
     },
   },
+  optimizeDeps: {
+    include: [
+      "react", "react/jsx-runtime", "react/jsx-dev-runtime",
+      "react-dom", "react-dom/client",
+      "react-router", "react-router/dom",
+    ],
+  },
+  server: {
+    warmup: {
+      clientFiles: ["./app/root.tsx", "./app/routes/**/*.tsx"],
+    },
+  },
   plugins: [tailwindcss(), reactRouter(), tsconfigPaths()],
 });
