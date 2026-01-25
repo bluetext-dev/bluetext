@@ -1,110 +1,132 @@
 # API Development Guidelines
 
-FastAPI template with hot reload development.
+FastAPI service with hot reload. Uses the models/clients architecture for business logic and data access.
+
+## Architecture
+
+```
+API Service (controller logic)
+    │
+    ▼
+Models (business logic)
+    │
+    ▼
+Clients (database/service connections)
+```
+
+**Keep the API thin**: Routes handle HTTP concerns. Business logic goes in models.
+
+## Project Structure
+
+```
+services/my-api/
+├── src/backend/
+│   ├── routes/       # API endpoints (controller logic)
+│   ├── conf.py       # Configuration
+│   └── workflows/    # Temporal workflows (if used)
+├── bin/              # Run scripts
+└── polytope.yml      # Container config
+```
+
+Models and clients are shared at project level:
+```
+models/python/
+├── entities/         # Data structures
+└── operations/       # Business functions
+
+clients/python/
+└── couchbase/        # Database client
+```
+
+## Using Models
+
+Import operations in your routes:
+
+```python
+from fastapi import APIRouter
+from models.python.operations.users import get_user, create_user
+from models.python.entities.user import User
+
+router = APIRouter()
+
+@router.get("/users/{user_id}")
+async def get_user_route(user_id: str) -> User:
+    return get_user(user_id)  # Business logic in models
+
+@router.post("/users")
+async def create_user_route(email: str, name: str) -> User:
+    return create_user(email, name)  # Validation in models
+```
+
+**Never import clients directly in routes.** Use operations.
+
+## Setting Up Client Access
+
+If your models use clients (e.g., Couchbase), configure environment variables:
+
+```bash
+# 1. Set values and secrets
+polytope run set-values-and-secrets --source couchbase-client
+
+# 2. Add env vars to service
+polytope run setup-service-for-client --service my-api --client couchbase-client
+
+# 3. Restart to apply
+pt run stack --mcp
+```
 
 ## Hot Reload
 
-The server runs with hot reload enabled. **No manual restarts needed** - changes are automatically applied when you save files.
-
-**ALWAYS check logs after making changes:**
-```mcp
+Changes are automatically applied. **Always check logs after changes:**
+```
 get-container-logs(container: <api-name>, limit: 50)
 ```
 
-Look for import errors, syntax errors, or runtime exceptions.
+Manual restart only needed when adding environment variables.
 
-**Note**: The only time a manual restart is required is when adding new environment variables to polytope.yml.
+## Adding Dependencies
 
-## Quick Start
-
-```mcp
-# Check service status
-list-services()
-
-# View recent logs
-get-container-logs(container: <api-name>, limit: 50)
-
-# Test the API
-curl http://localhost:3030/health
+```
+polytope run <api-name>-add --packages "package-name"
 ```
 
-## Key Files
+## Temporal Workflows
 
-- `src/backend/conf.py` - Feature toggles and configuration
-- `src/backend/routes/base.py` - Add your API endpoints here
-- `src/backend/routes/utils.py` - Database helpers (DBSession, RequestPrincipal)
-- `src/backend/workflows/` - Temporal workflow definitions
-- `polytope.yml` - Container and environment configuration
+### Setup
+1. Add Temporal Server: `add-and-run-service(template: "temporal", name: "temporal")`
+2. Add Temporal client: `add-client(name: "temporal", language: "python")`
+3. Configure env vars: `setup-service-for-client(service: "my-api", client: "temporal-client")`
+
+### Best Practice: Import Inside Activities
+
+```python
+@activity.defn
+def my_activity(input: MyInput) -> MyOutput:
+    # CORRECT: Import inside activity
+    from clients.python.couchbase import get_client
+
+    client = get_client()
+    return MyOutput(...)
+```
 
 ## Authentication
 
 1. Enable: `USE_AUTH = True` in `conf.py`
-2. Configure JWT authentication (JWK URL, audience, etc.)
-3. Protect routes with `RequestPrincipal` dependency:
+2. Configure JWT (JWK URL, audience)
+3. Protect routes:
 
 ```python
 from ..utils import RequestPrincipal
 
 @router.get("/protected")
 async def protected_route(principal: RequestPrincipal):
-    # principal.claims contains the decoded JWT claims
     return {"claims": principal.claims}
 ```
 
-Clients must send `Authorization: Bearer <jwt-token>` header.
+## Key Rules
 
-## Temporal Workflows
-
-### Setup
-
-1. Add Temporal Server: `add-temporal()`
-2. Add Temporal client: `run(tool: <api-name>-add-temporal-client, args: {})`
-3. Scaffold a workflow: `run(tool: <api-name>-add-temporal-workflow, args: {name: "workflow-name"})`
-
-### Best Practices
-
-**Import dependencies INSIDE activity functions, not at module level:**
-
-```python
-@activity.defn
-def my_activity(input: MyInput) -> MyOutput:
-    # CORRECT: Import inside activity
-    from couchbase_client import get_client
-    from google import genai
-
-    client = get_client()
-    return MyOutput(...)
-```
-
-## Couchbase
-
-### Setup
-
-```mcp
-run(tool: <api-name>-add-couchbase-client, args: {})
-```
-
-This adds the client library, configures environment variables, sets up model initialization, and registers hooks in FastAPI lifespan.
-
-### Creating Models
-
-```mcp
-run(tool: <api-name>-add-couchbase-model, args: {name: "model-name"})
-```
-
-Generates a model with Pydantic validation and automatic collection initialization. **DO NOT create model files manually** - always use the tool.
-
-## Adding Dependencies
-
-```mcp
-run(tool: <api-name>-add, args: {packages: "package-name"})
-```
-
-## Development Workflow
-
-1. **Make changes** - Edit any `.py` file
-2. **Check logs immediately** - `get-container-logs(container: <api-name>, limit: 50)`
-3. **Test changes** - `curl http://localhost:3030/your-route`
-4. **Fix errors before continuing** - Don't move on until it works
-
-Hot reload means instant feedback - use it! Always check logs after saving files.
+1. **Routes = controller logic only** - HTTP handling, no business logic
+2. **Models = business logic** - Validation, transformations, rules
+3. **Clients = connections** - Database access, external APIs
+4. **Operations over CRUD** - Never call raw client methods in routes
+5. **Document dependencies** - Operations should list which clients they need
