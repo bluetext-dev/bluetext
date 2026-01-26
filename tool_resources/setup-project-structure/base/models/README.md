@@ -1,94 +1,84 @@
 # Models
 
-Models contain the data structures and business logic of the system. They serve as the central layer between services and clients.
+Models contain the data structures and business logic of the system.
 
-## Purpose
-
-Models centralize business logic so it can be shared across services. Services should focus on controller logic (routing, authentication, request handling) while models handle the actual work.
+## Architecture
 
 ```
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│   Services   │ ──▶ │    Models    │ ──▶ │   Clients    │
-│  (controller │     │  (business   │     │  (external   │
-│    logic)    │     │    logic)    │     │   services)  │
-└──────────────┘     └──────────────┘     └──────────────┘
+Services → Operations → Entities → Clients → Datastore
+              ↑
+            Types (for request/response schemas)
 ```
+
+- **Services** call operations (never entities or clients directly)
+- **Operations** contain business logic, use entity CRUD
+- **Entities** extend client base classes, provide CRUD automatically
+- **Types** are ephemeral data structures for requests/responses
+- **Clients** handle datastore connections
 
 ## Structure
 
 ```
 models/
 ├── python/
-│   ├── entities/       # Data structures (public)
-│   ├── operations/     # Business logic functions (public)
-│   └── private/        # Internal models, not exported
-│       ├── entities/
-│       └── operations/
-├── typescript/
-│   ├── entities/
-│   ├── operations/
-│   └── private/
+│   ├── pyproject.toml
+│   └── models/           # The importable package
+│       ├── entities/     # Data structures with CRUD (backed by datastore)
+│       ├── types/        # Ephemeral data types (not persisted)
+│       └── operations/   # Public business logic functions
 └── README.md
 ```
 
-## Entities vs Operations
+## Entities
 
-### Entities
-Data structures that define the shape of your data. Entities are typically public and shared across the system.
+Entities extend a client base class that provides CRUD:
 
 ```python
-# models/python/entities/user.py
-from dataclasses import dataclass
+from pydantic import BaseModel
+from clients.couchbase import BaseModelCouchbase
 
-@dataclass
-class User:
-    id: str
-    email: str
+class UserData(BaseModel):
     name: str
+    email: str
+
+class User(BaseModelCouchbase[UserData]):
+    _collection_name = "users"
 ```
 
-### Operations
-Functions that perform business logic. Operations use clients to interact with external services and return entities.
+## Types
+
+Ephemeral data structures (not persisted):
 
 ```python
-# models/python/operations/users.py
-from clients.python.couchbase import get_bucket
-from models.python.entities.user import User
+from pydantic import BaseModel
 
-def get_user(user_id: str) -> User:
-    bucket = get_bucket()
-    doc = bucket.get(f"user:{user_id}")
-    return User(**doc.content)
-
-def create_user(email: str, name: str) -> User:
-    # Business logic here, not in the service
-    ...
+class SignupRequest(BaseModel):
+    name: str
+    email: str
+    password: str
 ```
 
-**Important**: Services should call operations, not CRUD functions directly. Operations encapsulate business rules.
+## Operations
 
-## Private Models
-
-The `private/` directory contains models that are internal to the library and should not be imported by services. Use this for:
-- Helper functions
-- Internal data transformations
-- Implementation details
-
-## Client Dependencies
-
-Models that use clients inherit their environment variable requirements. Document which clients a model depends on:
+Public business logic that services call:
 
 ```python
-# models/python/operations/users.py
-"""
-User operations.
+from models.entities.users import User, UserData
+from models.types.auth import SignupRequest
 
-Client dependencies:
-- couchbase: COUCHBASE_CONNECTION_STRING, COUCHBASE_USERNAME, etc.
-"""
+def signup(request: SignupRequest) -> User:
+    user = User(data=UserData(name=request.name, email=request.email))
+    user.save()
+    return user
 ```
 
-When a service imports a model, it must have the required environment variables configured. Use `setup-service-for-client` to add them.
+## Usage
+
+```python
+from models.entities.users import User
+from models.types.auth import SignupRequest
+from models.operations.users import signup
+```
 
 ## Adding Models
 
@@ -97,5 +87,3 @@ Use the `add-entity` tool to scaffold new entities:
 ```bash
 polytope run add-entity --client couchbase --language python --entity-singular user --entity-plural users
 ```
-
-See the language-specific README in `models/<language>/` for more details.

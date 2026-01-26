@@ -1,78 +1,80 @@
 # Python Models
 
-Python implementations of entities and operations.
+Python implementations of entities, types, and operations.
 
 ## Structure
 
 ```
 models/python/
-├── entities/       # Data structures (public)
-├── operations/     # Business logic functions (public)
-├── private/        # Internal models, not exported
-│   ├── entities/
-│   └── operations/
-└── README.md
+├── pyproject.toml
+├── README.md
+└── models/           # The importable package
+    ├── entities/     # Data structures with CRUD (backed by datastore)
+    ├── types/        # Ephemeral data types (not persisted)
+    └── operations/   # Public business logic functions
 ```
 
 ## Usage
 
-Import models in your Python services:
-
 ```python
-from models.python.entities.user import User
-from models.python.operations.users import get_user, create_user
+from models.entities.users import User, UserData
+from models.types.auth import SignupRequest
+from models.operations.users import signup, get_user
 ```
 
-## Adding Models
+## Entities
 
-### Entities
-
-Use the `add-entity` tool to scaffold new entities:
-
-```bash
-polytope run add-entity --client couchbase --language python --entity-singular user --entity-plural users
-```
-
-Or create manually in `entities/`:
+Entities extend a base client class that provides CRUD:
 
 ```python
-# models/python/entities/user.py
-from dataclasses import dataclass
+# models/python/models/entities/users.py
+from pydantic import BaseModel
+from clients.couchbase import BaseModelCouchbase
 
-@dataclass
-class User:
-    id: str
-    email: str
+class UserData(BaseModel):
     name: str
+    email: str
+    role: str = "member"
+
+class User(BaseModelCouchbase[UserData]):
+    _collection_name = "users"
 ```
 
-### Operations
+## Types
 
-Create operations in `operations/`:
+Types are ephemeral data structures (not persisted):
 
 ```python
-# models/python/operations/users.py
-"""
-User operations.
+# models/python/models/types/auth.py
+from pydantic import BaseModel
 
-Client dependencies:
-- couchbase
-"""
-from clients.python.couchbase import get_collection
-from models.python.entities.user import User
-
-def get_user(user_id: str) -> User:
-    collection = get_collection("users")
-    doc = collection.get(user_id)
-    return User(**doc.content_as[dict])
-
-def create_user(email: str, name: str) -> User:
-    # Business logic here
-    ...
+class SignupRequest(BaseModel):
+    name: str
+    email: str
+    password: str
 ```
 
-## Client Dependencies
+## Operations
 
-Document which clients your operations depend on. Services importing these operations need the corresponding environment variables configured.
+Operations are the public API that services call:
 
-See `operations/README.md` and `entities/README.md` for more details.
+```python
+# models/python/models/operations/users.py
+from models.entities.users import User, UserData
+from models.types.auth import SignupRequest
+
+def signup(request: SignupRequest) -> User:
+    user = User(data=UserData(name=request.name, email=request.email))
+    user.save()
+    return user
+```
+
+## Architecture
+
+```
+Services → Operations → Entities → Clients → Datastore
+              ↑
+            Types (for request/response schemas)
+```
+
+Services call operations. Operations use entity CRUD. Entities extend client base classes.

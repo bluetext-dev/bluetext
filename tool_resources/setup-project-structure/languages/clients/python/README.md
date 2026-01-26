@@ -2,21 +2,36 @@
 
 Python implementations of service clients.
 
+## Structure
+
+```
+clients/python/
+├── pyproject.toml
+├── README.md
+└── clients/           # The importable package
+    ├── couchbase/     # Couchbase client (added via add-client)
+    ├── temporal/      # Temporal client (added via add-client)
+    └── ...
+```
+
 ## Usage
 
 Import clients in your Python models:
 
 ```python
-from clients.python.couchbase import get_bucket, get_collection
-from clients.python.temporal import get_client
+from clients.couchbase import get_bucket, get_collection
+from clients.temporal import get_client
 ```
+
+The nested `clients/` directory is intentional - it allows the package at `clients/python` to expose `clients` as the importable package name.
 
 ## Adding a Client
 
 Use the `add-client` tool:
 
 ```bash
-polytope run add-client --name redis --language python
+polytope run add-client --name couchbase --language python
+polytope run add-client --name temporal --language python
 ```
 
 ## Environment Variables
@@ -26,7 +41,7 @@ Each client requires specific environment variables. The client should validate 
 Example implementation pattern:
 
 ```python
-# clients/python/redis/__init__.py
+# clients/python/clients/redis/__init__.py
 import os
 
 REDIS_URL = os.environ.get("REDIS_URL")
@@ -44,3 +59,4 @@ Clients are added as needed for your project. Common clients include:
 - `couchbase` - Couchbase database
 - `temporal` - Temporal workflow engine
 - `postgres` - PostgreSQL database
+- `twilio` - Twilio SMS/communication

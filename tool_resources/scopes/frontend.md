@@ -25,7 +25,7 @@ import { HomePage } from "~/routes/home";
 
 **Use `@` for project root:**
 ```tsx
-import { getUser } from "@/models/typescript/operations/users";
+import type { User } from "@/models/typescript/models/entities/user";
 ```
 
 **Rule**: `app/` = `~`, project root = `@`
@@ -81,14 +81,15 @@ Available: Button, Card, Input, Dialog, Sheet, Tabs, Badge, Avatar, Table, and 4
 
 ## API Integration
 
-Import operations from the models library:
+Import types from the models library:
 
 ```tsx
-import { getUser } from "@/models/typescript/operations/users";
-import type { User } from "@/models/typescript/entities/user";
+import type { User } from "@/models/typescript/models/entities/user";
+import type { LoginRequest } from "@/models/typescript/models/types/auth";
 
 export async function loader({ params }: Route.LoaderArgs) {
-  return { user: await getUser(params.id) };
+  const response = await fetch(`/api/users/${params.id}`);
+  return { user: await response.json() as User };
 }
 ```
 
@@ -115,4 +116,4 @@ get-container-logs(container: <frontend-name>, limit: 25)
 1. **Use `~` for app/, `@` for root** - Import paths matter
 2. **Theme classes only** - Never use fixed colors like `bg-white`
 3. **shadcn components first** - Don't reinvent UI elements
-4. **Operations for data** - Import from models, not raw API calls
+4. **Types from models** - Import entities and types from models library

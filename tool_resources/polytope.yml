@@ -80,25 +80,35 @@ tools:
           #pt-clj
           (pt/call-module "stack" {})
       - id: echo-context
-        tool: get_dev_context
+        after:
+          - step: attempt-run-local-stack
+        tool: polytope/container
+        args:
+          image: registry.k8s.io/pause:3.9
+          cmd: cat /context.md
+          mounts:
+            - { path: /context.md, source: { type: repo, repo: "#pt-clj pt/module-repo-ref", path: initialize-session/context.md } }
 
   get_dev_context:
     info: |
-      Outputs essential AI development guidelines for this project.
-      Call this tool before making changes to a service.
+      Outputs development guidelines for a specific scope.
+      Call this tool to get detailed documentation about models, clients, api, or frontend.
     await: [initialize-session]
     params:
       - id: scope
-        info: "The scope to fetch (default: general)"
-        type: [default, [enum, general, api, frontend], general]
+        info: "The scope to fetch"
+        type: [enum, models, clients, api, frontend]
     run:
       - id: get_dev_context
         tool: polytope/container
         args:
           image: registry.k8s.io/pause:3.9
-          cmd: cat /scopes/{pt.param scope}.md
+          cmd: "#pt-clj (case (:scope params) \"models\" \"cat /models.md\" \"clients\" \"cat /clients.md\" \"api\" \"cat /api.md\" \"frontend\" \"cat /frontend.md\")"
           mounts:
-            - { path: /scopes, source: { type: repo, path: scopes } }
+            - { path: /models.md, source: { type: repo, repo: "#pt-clj pt/module-repo-ref", path: setup-project-structure/base/models/README.md } }
+            - { path: /clients.md, source: { type: repo, repo: "#pt-clj pt/module-repo-ref", path: setup-project-structure/base/clients/README.md } }
+            - { path: /api.md, source: { type: repo, repo: "#pt-clj pt/module-repo-ref", path: scopes/api.md } }
+            - { path: /frontend.md, source: { type: repo, repo: "#pt-clj pt/module-repo-ref", path: scopes/frontend.md } }
 
   add-dependencies:
     info: |
@@ -503,7 +513,7 @@ tools:
         args:
           actions:
             - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "#pt-clj (str \"add-client/\" (:language params) \"/\" (:name params) \"/template\")"}
-              path: "#pt-clj (str \"clients/\" (:language params) \"/\" (:name params))"
+              path: "#pt-clj (str \"clients/\" (:language params) \"/clients/\" (:name params))"
               on-conflict: skip
       - id: update-pyproject
         after: {step: scaffold-client}
@@ -715,7 +725,7 @@ tools:
   add-entity:
     info: |
       Scaffolds entity models for data store clients.
-      Creates entity files in models/python/entities/ with proper structure.
+      Creates entity files in models/python/models/entities/ with proper structure.
     params:
       - id: client
         info: Data store client type
@@ -729,26 +739,41 @@ tools:
       - id: entity-plural
         info: Entity name in plural form (e.g., "projects")
         type: str
-      - id: is-public
-        info: Whether the entity should be scaffolded in the public folder instead of private
-        type: [default, bool, false]
     run:
-      # TODO: chained tool resolution broken - call setup-project-structure manually first
-      # - id: setup-project-structure
-      #   code: |-
-      #     #pt-clj
-      #     (pt/call-module "setup-project-structure" {:language (:language params)})
-
-      - id: scaffold-entities-dir
+      # Inlined setup-project-structure logic (chained tool resolution broken in Polytope)
+      - id: scaffold-base-structure
         tool: polytope/scaffold
         args:
+          container-id: scaffold-base-structure
           actions:
-            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "add-entity/entities-dir-template"}
-              path: "#pt-clj (if (:is-public params) \"models/python/entities\" \"models/python/private/entities\")"
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: setup-project-structure/base/clients}
+              path: clients
+              on-conflict: skip
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: setup-project-structure/base/models}
+              path: models
+              on-conflict: skip
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: setup-project-structure/base/services}
+              path: services
+              on-conflict: skip
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: setup-project-structure/base/config}
+              path: config
+              on-conflict: skip
+
+      - id: scaffold-language
+        after: {step: scaffold-base-structure}
+        tool: polytope/scaffold
+        args:
+          container-id: scaffold-language
+          actions:
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "#pt-clj (str \"setup-project-structure/languages/clients/\" (:language params))"}
+              path: "#pt-clj (str \"clients/\" (:language params))"
+              on-conflict: skip
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "#pt-clj (str \"setup-project-structure/languages/models/\" (:language params))"}
+              path: "#pt-clj (str \"models/\" (:language params))"
               on-conflict: skip
 
       - id: scaffold-entity
-        after: {step: scaffold-entities-dir}
+        after: {step: scaffold-language}
         tool: pt/run-script
         args:
           repo: {type: host, path: .}
@@ -762,7 +787,6 @@ tools:
               language = "{pt.param language}"
               entity_singular = "{pt.param entity-singular}"
               entity_plural = "{pt.param entity-plural}"
-              is_public = "{pt.param is-public}" == "true"
 
               # Read the template file
               template_path = Path(f"/template/entity.py")
@@ -778,8 +802,8 @@ tools:
               content = content.replace("{{ entity_singular }}", entity_singular)
               content = content.replace("{{ entity_plural }}", entity_plural)
 
-              # Determine output path
-              base_path = "models/python/entities" if is_public else "models/python/private/entities"
+              # Determine output path - entities go in models/python/models/entities/
+              base_path = "models/python/models/entities"
               output_path = Path(f"/repo/{base_path}/{entity_plural}.py")
 
               # Ensure directory exists

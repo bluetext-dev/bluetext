@@ -13,7 +13,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel.force-include]
-"." = "models"
+"models" = "models"
 
 [tool.uv.sources]
 clients = { path = "../../clients/python", editable = true }

@@ -5,16 +5,12 @@ FastAPI service with hot reload. Uses the models/clients architecture for busine
 ## Architecture
 
 ```
-API Service (controller logic)
-    │
-    ▼
-Models (business logic)
-    │
-    ▼
-Clients (database/service connections)
+API Routes → Operations → Entities → Clients → Datastore
+                 ↑
+               Types (for request/response schemas)
 ```
 
-**Keep the API thin**: Routes handle HTTP concerns. Business logic goes in models.
+**Keep the API thin**: Routes handle HTTP concerns. Business logic goes in operations.
 
 ## Project Structure
 
@@ -31,11 +27,14 @@ services/my-api/
 Models and clients are shared at project level:
 ```
 models/python/
-├── entities/         # Data structures
-└── operations/       # Business functions
+└── models/
+    ├── entities/     # Data structures with CRUD
+    ├── types/        # Request/response schemas
+    └── operations/   # Business logic (services call these)
 
 clients/python/
-└── couchbase/        # Database client
+└── clients/
+    └── couchbase/    # Database client with base classes
 ```
 
 ## Using Models
@@ -44,21 +43,22 @@ Import operations in your routes:
 
 ```python
 from fastapi import APIRouter
-from models.python.operations.users import get_user, create_user
-from models.python.entities.user import User
+from models.operations.users import signup, get_user
+from models.types.auth import SignupRequest
+from models.entities.users import User
 
 router = APIRouter()
 
+@router.post("/signup")
+async def signup_route(request: SignupRequest) -> User:
+    return signup(request)  # Business logic in operations
+
 @router.get("/users/{user_id}")
 async def get_user_route(user_id: str) -> User:
-    return get_user(user_id)  # Business logic in models
-
-@router.post("/users")
-async def create_user_route(email: str, name: str) -> User:
-    return create_user(email, name)  # Validation in models
+    return get_user(user_id)
 ```
 
-**Never import clients directly in routes.** Use operations.
+**Routes call operations, not entity CRUD directly.**
 
 ## Setting Up Client Access
 
@@ -103,7 +103,7 @@ polytope run <api-name>-add --packages "package-name"
 @activity.defn
 def my_activity(input: MyInput) -> MyOutput:
     # CORRECT: Import inside activity
-    from clients.python.couchbase import get_client
+    from clients.couchbase import get_client
 
     client = get_client()
     return MyOutput(...)
@@ -125,8 +125,8 @@ async def protected_route(principal: RequestPrincipal):
 
 ## Key Rules
 
-1. **Routes = controller logic only** - HTTP handling, no business logic
-2. **Models = business logic** - Validation, transformations, rules
-3. **Clients = connections** - Database access, external APIs
-4. **Operations over CRUD** - Never call raw client methods in routes
-5. **Document dependencies** - Operations should list which clients they need
+1. **Routes call operations** - Never call entity CRUD or clients directly
+2. **Operations = business logic** - Validation, transformations, rules
+3. **Entities = data + CRUD** - Extend client base classes
+4. **Types = schemas** - Request/response data structures
+5. **Clients = connections** - Database access, external APIs

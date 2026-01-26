@@ -18,14 +18,25 @@ Clients provide a standardized SDK for interacting with external services. They 
 
 ```
 clients/
-├── python/           # Python client implementations
-│   ├── couchbase/    # Couchbase client
-│   ├── temporal/     # Temporal client
-│   └── ...
-├── typescript/       # TypeScript client implementations
-│   └── ...
-└── README.md         # This file
+├── python/
+│   ├── pyproject.toml
+│   └── clients/          # The importable package
+│       ├── couchbase/    # Couchbase client
+│       ├── temporal/     # Temporal client
+│       └── ...
+└── README.md
 ```
+
+## Usage
+
+Import clients in your models:
+
+```python
+from clients.couchbase import get_bucket, get_collection
+from clients.temporal import get_client
+```
+
+The nested `clients/python/clients/` structure allows the package at `clients/python` to expose `clients` as the importable package name.
 
 ## Environment Variables
 
@@ -44,7 +55,7 @@ COUCHBASE_BUCKET=default
 To use a client in a service, the service must have the required environment variables configured. Use the `setup-service-for-client` tool to add them:
 
 ```bash
-polytope run setup-service-for-client --service my-api --client couchbase
+polytope run setup-service-for-client --service my-api --client couchbase-client
 ```
 
 This adds the necessary environment variable definitions to the service's `polytope.yml`.
@@ -54,7 +65,7 @@ This adds the necessary environment variable definitions to the service's `polyt
 Use the `add-client` tool to scaffold a new client:
 
 ```bash
-polytope run add-client --name redis --language python
+polytope run add-client --name couchbase --language python
 ```
 
 See the language-specific README in `clients/<language>/` for implementation details.
