@@ -56,7 +56,9 @@ tools:
                     This tool always needs to be called before doing anything else, regardless of the tasks complexity.
                   run:
                     - id: run-stack
-                      tool: stack
+                      code: |-
+                        #pt-clj
+                        (pt/call-module "stack" {})
                     - id: get-general-context
                       after: {step: run-stack}
                       tool: get_dev_context
@@ -590,53 +592,131 @@ tools:
     info: |
       Sets values and secrets using pt.setValue and pt.setSecret.
       Reads from pre-existing values.yml and secrets.yml files in set-values-and-secrets/clients/{source}/ or set-values-and-secrets/services/{source}/.
+      Also writes the values to the user's config/values.yml and config/secrets.yml files.
       This must be called before setup-service-for-client.
     params:
       - id: source
         info: Source to configure (service or client name)
         type: [enum, api_python_fastapi, frontend_typescript_react-router-v7, config-manager, couchbase-server_enterprise-v7, postgres, temporal, temporal-ui, couchbase-client, temporal-client, twilio-client]
     run:
-      - id: set-values-and-secrets
+      # Step 1: Write values to user's config files (merge with existing)
+      - id: write-to-config-files
+        tool: pt/run-script
+        args:
+          repo: {type: host, path: .}
+          language: python
+          dependencies: [pyyaml]
+          mounts:
+            - path: /source-values.yml
+              source:
+                type: repo
+                repo: "#pt-clj pt/module-repo-ref"
+                path: "#pt-clj (let [source (:source params) is-client (clojure.string/ends-with? source \"-client\") source-name (if is-client (clojure.string/replace source #\"-client$\" \"\") source)] (if is-client (str \"set-values-and-secrets/clients/\" source-name \"/values.yml\") (str \"set-values-and-secrets/services/\" source-name \"/values.yml\")))"
+            - path: /source-secrets.yml
+              source:
+                type: repo
+                repo: "#pt-clj pt/module-repo-ref"
+                path: "#pt-clj (let [source (:source params) is-client (clojure.string/ends-with? source \"-client\") source-name (if is-client (clojure.string/replace source #\"-client$\" \"\") source)] (if is-client (str \"set-values-and-secrets/clients/\" source-name \"/secrets.yml\") (str \"set-values-and-secrets/services/\" source-name \"/secrets.yml\")))"
+          script:
+            type: string
+            data: |
+              import yaml
+              from pathlib import Path
+
+              source = "{pt.param source}"
+
+              # Read source values and secrets from mounted files
+              with open("/source-values.yml") as f:
+                  new_values = yaml.safe_load(f) or {}
+
+              with open("/source-secrets.yml") as f:
+                  new_secrets = yaml.safe_load(f) or {}
+
+              # Ensure config directory exists
+              config_dir = Path("/repo/config")
+              config_dir.mkdir(parents=True, exist_ok=True)
+
+              values_file = config_dir / "values.yml"
+              secrets_file = config_dir / "secrets.yml"
+
+              # Read existing values.yml or start fresh
+              if values_file.exists():
+                  with open(values_file) as f:
+                      existing_values = yaml.safe_load(f) or {}
+              else:
+                  existing_values = {}
+
+              # Read existing secrets.yml or start fresh
+              if secrets_file.exists():
+                  with open(secrets_file) as f:
+                      existing_secrets = yaml.safe_load(f) or {}
+              else:
+                  existing_secrets = {}
+
+              # Merge new values (new values take precedence)
+              for k, v in new_values.items():
+                  existing_values[k] = v
+
+              for k, v in new_secrets.items():
+                  existing_secrets[k] = v
+
+              # Write values.yml with header
+              values_header = """# Configuration values
+              # Non-sensitive configuration that can be committed to version control
+              # Generated and managed by Bluetext tools
+
+              """
+              with open(values_file, 'w') as f:
+                  f.write(values_header.replace("              ", ""))
+                  if existing_values:
+                      yaml.dump(existing_values, f, default_flow_style=False, sort_keys=True)
+
+              # Write secrets.yml with header
+              secrets_header = """# Configuration secrets
+              # Sensitive configuration that should NOT be committed to version control
+              # Add this file to .gitignore
+              # Generated and managed by Bluetext tools
+
+              """
+              with open(secrets_file, 'w') as f:
+                  f.write(secrets_header.replace("              ", ""))
+                  if existing_secrets:
+                      yaml.dump(existing_secrets, f, default_flow_style=False, sort_keys=True)
+
+              print(f"✅ Written {len(new_values)} values to config/values.yml")
+              print(f"✅ Written {len(new_secrets)} secrets to config/secrets.yml")
+
+      # Step 2: Read from user's config files and set in Polytope runtime
+      - id: set-from-config-files
+        after: {step: write-to-config-files}
         code: |-
           #pt-clj
-          (let [source (:source params)
-                ;; Determine if source is a service or client by checking for -client suffix
-                is-client (clojure.string/ends-with? source "-client")
-                ;; Strip -client suffix for clients
-                source-name (if is-client (clojure.string/replace source #"-client$" "") source)
-                ;; Build paths: tool_resources/set-values-and-secrets/clients/{source}/ or tool_resources/set-values-and-secrets/services/{source}/
-                base-path (if is-client
-                           (str "tool_resources/set-values-and-secrets/clients/" source-name)
-                           (str "tool_resources/set-values-and-secrets/services/" source-name))
-                values-path (str base-path "/values.yml")
-                secrets-path (str base-path "/secrets.yml")
-                container-id (pt/spawn {:image  "registry.k8s.io/pause:3.9"
-                                        :id     (str "set-values-and-secrets-" source)
-                                       :restart {:policy "never"}
-                                       :mounts [{:path   "/values.yml"
-                                                :source {:type "repo"
-                                                        :repo pt/module-repo-ref
-                                                        :path values-path}}
-                                               {:path   "/secrets.yml"
-                                                :source {:type "repo"
-                                                        :repo pt/module-repo-ref
-                                                        :path secrets-path}}]})]
+          (let [container-id (pt/spawn {:image "registry.k8s.io/pause:3.9"
+                                        :id "read-user-config"
+                                        :restart {:policy "never"}
+                                        :mounts [{:path "/values.yml"
+                                                  :source {:type "repo"
+                                                           :repo {:type "host" :path "."}
+                                                           :path "config/values.yml"}}
+                                                 {:path "/secrets.yml"
+                                                  :source {:type "repo"
+                                                           :repo {:type "host" :path "."}
+                                                           :path "config/secrets.yml"}}]})]
             (pt/await-started {:type "deployment" :ref container-id})
-            ;; Read and set values
             (let [values-content (pt/read-container-file container-id "/values.yml")
                   secrets-content (pt/read-container-file container-id "/secrets.yml")
                   values (pt/read-yaml values-content)
                   secrets (pt/read-yaml secrets-content)]
-              (pt/log (str "📦 Setting " (count values) " values and " (count secrets) " secrets for " source))
-              ;; Set values
+              (pt/log (str "📦 Setting " (count values) " values and " (count secrets) " secrets from config files"))
+              ;; Set values in Polytope runtime
               (doseq [[k v] values]
                 (pt/log (str "  Setting value: " (name k) " = " v))
                 (pt/set-project-value (name k) (str v)))
-              ;; Set secrets
+              ;; Set secrets in Polytope runtime
               (doseq [[k v] secrets]
                 (pt/log (str "  Setting secret: " (name k) " = ***"))
                 (pt/set-secret (name k) (str v)))
-              (pt/log "✅ Successfully set all bindings")
+              (pt/log "✅ Successfully set all bindings from config files")
               (pt/stop {:type "container" :ref container-id})))
 
   setup-service-for-client:
