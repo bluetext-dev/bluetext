@@ -1228,6 +1228,14 @@ tools:
               for var in vars_to_add:
                   print(f"   - {var['name']}")
 
+      - id: restart-service
+        after: {step: add-env-to-polytope}
+        code: |-
+          #pt-clj
+          (let [service (:service params)]
+            (pt/log (str "🔄 Restarting service to load new env vars: " service))
+            (pt/call-module service {}))
+
   add-entity:
     info: |
       Scaffolds entity models for data store clients.
