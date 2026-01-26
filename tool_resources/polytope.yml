@@ -157,10 +157,19 @@ tools:
               on-conflict: skip
       - id: scaffold-language
         after: {step: scaffold-base-structure}
-        code: |
-          #pt-clj
-          (when (and (:language params) (not (:skip-language params)))
-            (pt/call-module "add-project-language" {:language (:language params)}))
+        tool: polytope/scaffold
+        args:
+          container-id: scaffold-language
+          actions: |-
+            #pt-clj
+            (if (and (:language params) (not (:skip-language params)))
+              [{:template {:type "repo" :repo pt/module-repo-ref :path (str "setup-project-structure/languages/clients/" (:language params))}
+                :path (str "clients/" (:language params))
+                :on-conflict "skip"}
+               {:template {:type "repo" :repo pt/module-repo-ref :path (str "setup-project-structure/languages/models/" (:language params))}
+                :path (str "models/" (:language params))
+                :on-conflict "skip"}]
+              [])
       - id: update-gitignore
         after: {step: scaffold-base-structure}
         tool: pt/run-script
@@ -211,7 +220,7 @@ tools:
     params:
       - id: template
         info: Template to scaffold
-        type: [enum, api, frontend, couchbase, temporal, temporal-ui, postgres]
+        type: [enum, api_python_fastapi, frontend_typescript_react-router-v7, couchbase-server_enterprise-v7, temporal, temporal-ui, postgres]
       - id: name
         info: Service name (e.g., "my-api"). Will be scaffolded to "services/<name>"
         type: str
@@ -226,7 +235,67 @@ tools:
         type: [default, [enum, skip, overwrite], skip]
     run:
 
+      # Inlined setup-project-structure logic (chained tool resolution broken in Polytope)
+      - id: scaffold-base-structure
+        tool: polytope/scaffold
+        args:
+          container-id: scaffold-base-structure
+          actions:
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: setup-project-structure/base/clients}
+              path: clients
+              on-conflict: skip
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: setup-project-structure/base/models}
+              path: models
+              on-conflict: skip
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: setup-project-structure/base/services}
+              path: services
+              on-conflict: skip
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: setup-project-structure/base/config}
+              path: config
+              on-conflict: skip
+
+      - id: update-gitignore
+        after: {step: scaffold-base-structure}
+        tool: pt/run-script
+        args:
+          repo: {type: host, path: .}
+          language: bash
+          script:
+            type: string
+            data: |
+              #!/bin/bash
+              set -e
+
+              GITIGNORE_PATH="/repo/.gitignore"
+
+              # Create .gitignore if it doesn't exist
+              if [ ! -f "$GITIGNORE_PATH" ]; then
+                echo "Creating .gitignore file"
+                touch "$GITIGNORE_PATH"
+              fi
+
+              # Check if secrets.yml is already in .gitignore
+              if ! grep -q "secrets\.yml" "$GITIGNORE_PATH"; then
+                echo "Adding secrets.yml to .gitignore"
+                echo "" >> "$GITIGNORE_PATH"
+                echo "# Ignore secrets files" >> "$GITIGNORE_PATH"
+                echo "**/secrets.yml" >> "$GITIGNORE_PATH"
+              else
+                echo "✅ secrets.yml already in .gitignore"
+              fi
+
+              # Check if values.yml is already in .gitignore
+              if ! grep -q "values\.yml" "$GITIGNORE_PATH"; then
+                echo "Adding values.yml to .gitignore"
+                echo "**/values.yml" >> "$GITIGNORE_PATH"
+              else
+                echo "✅ values.yml already in .gitignore"
+              fi
+
+              echo "✅ .gitignore updated successfully"
+
       - id: read-dependencies
+        after: {step: scaffold-base-structure}
         code: |-
           #pt-clj
           (let [template (:template params)
@@ -241,56 +310,40 @@ tools:
             (pt/await-started {:type "deployment" :ref container-id})
             (let [content (pt/read-container-file container-id "/dependencies.yml")
                   data (pt/read-yaml content)
-                  deps (or (:dependencies data) [])]
-              (pt/log (str "📦 Found " (count deps) " dependencies for " template))
+                  deps (or (:dependencies data) [])
+                  lang (:language data)]
+              (pt/log (str "📦 Found " (count deps) " dependencies for " template (when lang (str ", language: " lang))))
               (pt/stop {:type "container" :ref container-id})
-              deps))
+              ;; Scaffold language directories if specified
+              (when lang
+                (pt/call-module "_scaffold-language" {:language lang}))
+              ;; Handle dependency scaffolding and set-values inline to avoid pt.output issues
+              ;; Running deps is handled by separate run-dependencies step (which reads deps inline too)
+              (when (seq deps)
+                (pt/call-module "_scaffold-deps" {:deps deps
+                                                   :on-conflict (:on-conflict params)
+                                                   :target (:target params)})
+                (when (:run params)
+                  (pt/call-module "_set-values-for-deps" {:deps deps})))
+              {:dependencies deps :language lang}))
 
       - id: scaffold-services
         after: {step: read-dependencies}
         tool: polytope/scaffold
         args:
-          container-id: scaffold-services
+          container-id: "#pt-clj (str \"scaffold-services-\" (:template params))"
           actions: |-
-            #pt-js
-            const template = params.template;
-            // Normalize name to lowercase and replace invalid characters
-            const name = params.name.toLowerCase().replace(/[^a-z0-9_-]/g, '-');
-            const onConflict = params["on-conflict"];
-            const target = params.target;
-            const deps = pt.output("read-dependencies");
-
-            // Build and return scaffold actions
-            [
-              // Main service
-              {
-                template: {type: "repo", repo: "#pt-clj pt/module-repo-ref", path: "add-and-run-service/" + template + "/template"},
-                path: "services/" + name,
-                "on-conflict": onConflict,
-                "add-to-tools": [{tool: target, call: name}]
-              },
-              // Dependencies
-              ...deps.map(dep => ({
-                template: {type: "repo", repo: "#pt-clj pt/module-repo-ref", path: "add-and-run-service/" + dep.path + "/template"},
-                path: "services/" + dep.name,
-                "on-conflict": onConflict,
-                "add-to-tools": [{tool: target, call: dep.name}]
-              })),
-            ];
-
-      - id: set-values-and-secrets-for-dependencies
-        after: {step: read-dependencies}
-        code: |-
-          #pt-js
-          if (params.run) {
-            const deps = pt.output("read-dependencies");
-            if (deps && deps.length > 0) {
-              for (const dep of deps) {
-                console.log(`Setting values and secrets for dependency: ${dep.name}`);
-                pt.callModule("set-values-and-secrets", {source: dep.name});
-              }
-            }
-          }
+            #pt-clj
+            (let [template (:template params)
+                  name (-> (:name params)
+                           clojure.string/lower-case
+                           (clojure.string/replace #"[^a-z0-9_-]" "-"))
+                  on-conflict (:on-conflict params)
+                  target (:target params)]
+              [{:template {:type "repo" :repo pt/module-repo-ref :path (str "add-and-run-service/" template "/template")}
+                :path (str "services/" name)
+                :on-conflict on-conflict
+                :add-to-tools [{:tool target :call name}]}])
 
       - id: set-values-and-secrets-for-service
         after: {step: scaffold-services}
@@ -300,18 +353,30 @@ tools:
             (pt/call-module "set-values-and-secrets" {:source (:template params)}))
 
       - id: run-dependencies
-        after:
-          - step: set-values-and-secrets-for-dependencies
+        after: {step: read-dependencies}
         code: |-
           #pt-clj
           (when (:run params)
-            (doseq [{n :name} (seq (pt/output "read-dependencies"))]
-              (pt/log (str ":rocket: Starting dependency: " n))
-              (pt/call-module n {})))
+            (let [template (:template params)
+                  deps-path (str "tool_resources/add-and-run-service/" template "/dependencies.yml")
+                  container-id (pt/spawn {:image "registry.k8s.io/pause:3.9"
+                                          :id (str "run-deps-read-" template)
+                                          :restart {:policy "never"}
+                                          :mounts [{:path "/dependencies.yml"
+                                                    :source {:type "repo"
+                                                             :repo pt/module-repo-ref
+                                                             :path deps-path}}]})]
+              (pt/await-started {:type "deployment" :ref container-id})
+              (let [content (pt/read-container-file container-id "/dependencies.yml")
+                    data (pt/read-yaml content)
+                    deps (or (:dependencies data) [])]
+                (pt/stop {:type "container" :ref container-id})
+                (doseq [{n :name} (seq deps)]
+                  (pt/log (str "🚀 Starting dependency: " n))
+                  (pt/call-module n {})))))
 
       - id: run-main-service
-        after:
-          - step: set-values-and-secrets-for-service
+        after: {step: set-values-and-secrets-for-service}
         code: |
           #pt-clj
           (when (:run params)
@@ -355,18 +420,85 @@ tools:
     params:
       - id: name
         info: Client name (e.g., "couchbase", "temporal")
-        type: str
+        type: [enum, couchbase, temporal]
       - id: language
         info: Language for the client
         type: [default, [enum, python], python]
     run:
-      # TODO: chained tool resolution broken - call setup-project-structure manually first
-      # - id: setup-project-structure
-      #   code: |-
-      #     #pt-clj
-      #     (pt/call-module "setup-project-structure" {:language (:language params)})
+      # Inlined setup-project-structure logic (chained tool resolution broken in Polytope)
+      - id: scaffold-base-structure
+        tool: polytope/scaffold
+        args:
+          container-id: scaffold-base-structure
+          actions:
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: setup-project-structure/base/clients}
+              path: clients
+              on-conflict: skip
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: setup-project-structure/base/models}
+              path: models
+              on-conflict: skip
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: setup-project-structure/base/services}
+              path: services
+              on-conflict: skip
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: setup-project-structure/base/config}
+              path: config
+              on-conflict: skip
+
+      - id: scaffold-language
+        after: {step: scaffold-base-structure}
+        tool: polytope/scaffold
+        args:
+          container-id: scaffold-language
+          actions:
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "#pt-clj (str \"setup-project-structure/languages/clients/\" (:language params))"}
+              path: "#pt-clj (str \"clients/\" (:language params))"
+              on-conflict: skip
+            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "#pt-clj (str \"setup-project-structure/languages/models/\" (:language params))"}
+              path: "#pt-clj (str \"models/\" (:language params))"
+              on-conflict: skip
+
+      - id: update-gitignore
+        after: {step: scaffold-base-structure}
+        tool: pt/run-script
+        args:
+          repo: {type: host, path: .}
+          language: bash
+          script:
+            type: string
+            data: |
+              #!/bin/bash
+              set -e
+
+              GITIGNORE_PATH="/repo/.gitignore"
+
+              # Create .gitignore if it doesn't exist
+              if [ ! -f "$GITIGNORE_PATH" ]; then
+                echo "Creating .gitignore file"
+                touch "$GITIGNORE_PATH"
+              fi
+
+              # Check if secrets.yml is already in .gitignore
+              if ! grep -q "secrets\.yml" "$GITIGNORE_PATH"; then
+                echo "Adding secrets.yml to .gitignore"
+                echo "" >> "$GITIGNORE_PATH"
+                echo "# Ignore secrets files" >> "$GITIGNORE_PATH"
+                echo "**/secrets.yml" >> "$GITIGNORE_PATH"
+              else
+                echo "✅ secrets.yml already in .gitignore"
+              fi
+
+              # Check if values.yml is already in .gitignore
+              if ! grep -q "values\.yml" "$GITIGNORE_PATH"; then
+                echo "Adding values.yml to .gitignore"
+                echo "**/values.yml" >> "$GITIGNORE_PATH"
+              else
+                echo "✅ values.yml already in .gitignore"
+              fi
+
+              echo "✅ .gitignore updated successfully"
 
       - id: scaffold-client
+        after: {step: scaffold-language}
         tool: polytope/scaffold
         args:
           actions:
@@ -439,9 +571,10 @@ tools:
         after: {step: update-pyproject}
         code: |
           #pt-clj
-          (let [name (:name params)]
-            (pt/log (str "Setting values and secrets for client: " name))
-            (pt/call-module "set-values-and-secrets" {:source name}))
+          (let [name (:name params)
+                source (str name "-client")]
+            (pt/log (str "Setting values and secrets for client: " source))
+            (pt/call-module "set-values-and-secrets" {:source source}))
 
   set-values-and-secrets:
     info: |
@@ -451,7 +584,7 @@ tools:
     params:
       - id: source
         info: Source to configure (service or client name)
-        type: [enum, api, frontend, config-manager, couchbase, postgres, temporal, temporal-ui, couchbase-client, temporal-client, twilio-client]
+        type: [enum, api_python_fastapi, frontend_typescript_react-router-v7, config-manager, couchbase-server_enterprise-v7, postgres, temporal, temporal-ui, couchbase-client, temporal-client, twilio-client]
     run:
       - id: set-values-and-secrets
         code: |-
@@ -508,7 +641,7 @@ tools:
         type: str
       - id: client
         info: Client or service providing the configuration (use -client suffix for clients, e.g. couchbase-client)
-        type: [enum, api, frontend, config-manager, couchbase, postgres, temporal, temporal-ui, couchbase-client, temporal-client, twilio-client]
+        type: [enum, api_python_fastapi, frontend_typescript_react-router-v7, config-manager, couchbase-server_enterprise-v7, postgres, temporal, temporal-ui, couchbase-client, temporal-client, twilio-client]
     run:
       - id: add-env-to-polytope
         tool: pt/run-script
@@ -662,4 +795,58 @@ tools:
                 type: repo
                 repo: "#pt-clj pt/module-repo-ref"
                 path: "#pt-clj (str \"add-entity/\" (:client params) \"/\" (:language params))"
+
+  # Internal tools for dependency handling (called by read-dependencies)
+  _scaffold-deps:
+    params:
+      - id: deps
+        type: any
+      - id: on-conflict
+        type: str
+      - id: target
+        type: str
+    run:
+      - tool: polytope/scaffold
+        args:
+          container-id: "#pt-clj (str \"scaffold-deps-\" (hash (:deps params)))"
+          actions: |-
+            #pt-js
+            const deps = params.deps;
+            const onConflict = params["on-conflict"];
+            const target = params.target;
+            deps.map(dep => ({
+              template: {type: "repo", repo: "#pt-clj pt/module-repo-ref", path: "add-and-run-service/" + dep.path + "/template"},
+              path: "services/" + dep.name,
+              "on-conflict": onConflict,
+              "add-to-tools": [{tool: target, call: dep.name}]
+            }));
+
+  _scaffold-language:
+    params:
+      - id: language
+        type: str
+    run:
+      - tool: polytope/scaffold
+        args:
+          container-id: "#pt-clj (str \"scaffold-lang-\" (:language params))"
+          actions: |-
+            #pt-clj
+            (let [lang (:language params)]
+              [{:template {:type "repo" :repo pt/module-repo-ref :path (str "setup-project-structure/languages/clients/" lang)}
+                :path (str "clients/" lang)
+                :on-conflict "skip"}
+               {:template {:type "repo" :repo pt/module-repo-ref :path (str "setup-project-structure/languages/models/" lang)}
+                :path (str "models/" lang)
+                :on-conflict "skip"}])
+
+  _set-values-for-deps:
+    params:
+      - id: deps
+        type: any
+    run:
+      - code: |-
+          #pt-clj
+          (doseq [{n :name} (:deps params)]
+            (pt/log (str "Setting values and secrets for dependency: " n))
+            (pt/call-module "set-values-and-secrets" {:source n}))
 
