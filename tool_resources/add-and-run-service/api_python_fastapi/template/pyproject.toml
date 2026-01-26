@@ -25,5 +25,5 @@ build-backend = "hatchling.build"
 "src" = "."
 
 [tool.uv.sources]
-clients = { path = "../clients/python", editable = true }
-models = { path = "../models/python", editable = true }
+clients = { path = "/clients/python", editable = true }
+models = { path = "/models/python", editable = true }

@@ -2,7 +2,7 @@
 
 . "$(dirname "$0")/init"
 
-CMD="uv run --active app"
+CMD="uv run python src/main.py"
 
 if [ -f /etc/os-release ]; then
   DISTRO=$(cat /etc/os-release | grep '^NAME' | sed 's/.*"\([^ "]*\)[ "].*/\1/')
