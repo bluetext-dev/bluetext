@@ -640,8 +640,8 @@ tools:
         info: Service to set up (api, frontend, config-manager, etc.)
         type: str
       - id: client
-        info: Client or service providing the configuration (use -client suffix for clients, e.g. couchbase-client)
-        type: [enum, api_python_fastapi, frontend_typescript_react-router-v7, config-manager, couchbase-server_enterprise-v7, postgres, temporal, temporal-ui, couchbase-client, temporal-client, twilio-client]
+        info: Client providing the configuration
+        type: [enum, couchbase-client, temporal-client, twilio-client, postgres-client]
     run:
       - id: add-env-to-polytope
         tool: pt/run-script
@@ -654,7 +654,7 @@ tools:
               source:
                 type: repo
                 repo: "#pt-clj pt/module-repo-ref"
-                path: "#pt-clj (let [client (:client params) base-name (clojure.string/replace client #\"-client$\" \"\") clients #{\"couchbase\" \"postgres\" \"temporal\" \"twilio\"}] (if (contains? clients base-name) (str \"tool_resources/setup-service-for-client/\" base-name \"/required-env-vars.yml\") (str \"tool_resources/setup-service-for-client/services/\" client \"/required-env-vars.yml\")))"
+                path: "#pt-clj (let [client (:client params) base-name (clojure.string/replace client #\"-client$\" \"\") clients #{\"couchbase\" \"postgres\" \"temporal\" \"twilio\"}] (if (contains? clients base-name) (str \"setup-service-for-client/\" base-name \"/required-env-vars.yml\") (str \"setup-service-for-client/services/\" client \"/required-env-vars.yml\")))"
           script:
             type: string
             data: |
