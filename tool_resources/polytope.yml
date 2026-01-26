@@ -1147,6 +1147,7 @@ tools:
             type: string
             data: |
               import yaml
+              import re
               from pathlib import Path
 
               client = "{pt.param client}"
@@ -1174,9 +1175,21 @@ tools:
               with open(service_polytope_path) as f:
                   content = f.read()
 
+              # Check which env vars already exist
+              vars_to_add = []
+              for var in env_vars:
+                  if var['name'] in content:
+                      print(f"⚠️  {var['name']} already exists, skipping")
+                  else:
+                      vars_to_add.append(var)
+
+              if not vars_to_add:
+                  print(f"✅ All env vars already exist in services/{service}/polytope.yml")
+                  exit(0)
+
               # Build env var entries
               env_entries = []
-              for var in env_vars:
+              for var in vars_to_add:
                   name = var['name']
                   key = var['key']
                   is_secret = var['secret']
@@ -1187,18 +1200,33 @@ tools:
                   else:
                       env_entries.append(f'            - {{ name: {name}, value: "#pt-clj (pt/value \\"{key}\\")" }}')
 
-              # Check if env vars already exist
-              for var in env_vars:
-                  if var['name'] in content:
-                      print(f"⚠️  {var['name']} already exists in {service_polytope_path}")
-
-              # Add env vars to the file (append to env section)
-              # This is a simple append - in production, use proper YAML manipulation
               env_block = '\n'.join(env_entries)
 
-              print(f"Add these env vars to services/{service}/polytope.yml:")
-              print(env_block)
-              print(f"\n✅ Generated {len(env_vars)} env var entries for {client} -> {service}")
+              # Find the env: section and insert after the last env var
+              # Look for pattern: env:\n followed by lines starting with spaces and -
+              env_pattern = r'(env:\s*\n(?:\s+-[^\n]*\n)*)'
+
+              match = re.search(env_pattern, content)
+              if match:
+                  # Insert new env vars at the end of the existing env section
+                  env_section = match.group(1)
+                  new_env_section = env_section.rstrip('\n') + '\n' + env_block + '\n'
+                  new_content = content[:match.start()] + new_env_section + content[match.end():]
+              else:
+                  # No env section found - look for args: section and add env: after it
+                  # This is a fallback, ideally the template should have an env section
+                  print(f"⚠️  No env: section found, cannot auto-insert")
+                  print(f"Add these env vars manually to services/{service}/polytope.yml:")
+                  print(env_block)
+                  exit(0)
+
+              # Write the updated content back
+              with open(service_polytope_path, 'w') as f:
+                  f.write(new_content)
+
+              print(f"✅ Added {len(vars_to_add)} env vars to services/{service}/polytope.yml")
+              for var in vars_to_add:
+                  print(f"   - {var['name']}")
 
   add-entity:
     info: |
