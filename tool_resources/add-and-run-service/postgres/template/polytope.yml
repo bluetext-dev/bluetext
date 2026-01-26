@@ -50,6 +50,7 @@ tools:
       - tool: polytope/container
         args:
           image: pt.param image
+          await: false
           env:
             - name: PG_PASSWORD
               value: pt.param password
@@ -75,6 +76,7 @@ tools:
         args:
           image: sosedoff/pgweb:0.15.0
           id: pgweb
+          await: false
           restart:
             policy: always
           services:

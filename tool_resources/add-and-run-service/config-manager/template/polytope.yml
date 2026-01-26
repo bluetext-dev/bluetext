@@ -5,6 +5,7 @@ tools:
     run:
       - tool: polytope/python
         args:
+          await: false
           image: python:3.11.8-slim-bookworm
           id: config-manager
           restart: { policy: on-failure }

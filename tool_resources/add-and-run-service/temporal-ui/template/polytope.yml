@@ -5,6 +5,7 @@ tools:
     run:
       - tool: polytope/container
         args:
+          await: false
           image: temporalio/ui:2.40.0
           id: temporal-ui
           restart:

@@ -78,9 +78,7 @@ tools:
       - id: attempt-run-local-stack
         after:
           - step: scaffold-local-overwrite
-        code: |-
-          #pt-clj
-          (pt/call-module "stack" {})
+        tool: stack
       - id: echo-context
         after:
           - step: attempt-run-local-stack

@@ -6,4 +6,6 @@ tools:
       - tool: polytope/couchbase
         args:
           image: couchbase:enterprise-7.6.6
+          await: false
+          create: when-missing
           data-volume: { id: {{ project-name }}-data, type: volume, scope: project }

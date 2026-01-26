@@ -5,6 +5,7 @@ tools:
     run:
       - tool: polytope/container
         args:
+          await: false
           image: temporalio/auto-setup:1.26.3.0
           id: temporal
           restart:

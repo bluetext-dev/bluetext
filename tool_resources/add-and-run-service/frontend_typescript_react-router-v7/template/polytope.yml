@@ -24,6 +24,7 @@ tools:
     run:
       - tool: polytope/node
         args:
+          await: false
           id: {{ project-name }}
           image: oven/bun:alpine
           create: pt.param create

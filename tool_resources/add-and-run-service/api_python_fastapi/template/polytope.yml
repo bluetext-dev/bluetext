@@ -28,6 +28,7 @@ tools:
           create: pt.param create
           image: astral/uv:python3.13-bookworm-slim
           code: { type: repo, path: . }
+          await: false
           cmd: pt.param cmd
           restart:
             policy: pt.param restart-policy
