@@ -1,7 +1,7 @@
 instructions: |
   **FIRST ACTION**: Before doing ANYTHING else, retrieve AI development context for the relevant scope:
   ```mcp
-  __polytope__initialize_session(scope: "general")
+  __polytope__initialize_session()
   ```
   This is MANDATORY as your first action in every conversation. It provides guidelines that you must follow.
 
@@ -55,13 +55,10 @@ tools:
                     Returns required development context and ensures the project is running.
                     This tool always needs to be called before doing anything else, regardless of the tasks complexity.
                   run:
-                    - id: run-stack
-                      code: |-
-                        #pt-clj
-                        (pt/call-module "stack" {})
                     - id: get-general-context
-                      after: {step: run-stack}
                       tool: get_dev_context
+                    - id: apply-stack-and-await-finish
+                      tool: "stack"
               EOF
 
               echo "Successfully added initialize_session to $TARGET_FILE"
@@ -79,32 +76,26 @@ tools:
         after:
           - step: scaffold-local-overwrite
         tool: stack
-      - id: echo-context
-        after:
-          - step: attempt-run-local-stack
-        tool: polytope/container
-        args:
-          image: registry.k8s.io/pause:3.9
-          cmd: cat /context.md
-          mounts:
-            - { path: /context.md, source: { type: repo, repo: "#pt-clj pt/module-repo-ref", path: initialize-session/context.md } }
+      - id: return-context
+        tool: get_dev_context
 
   get_dev_context:
     info: |
       Outputs development guidelines for a specific scope.
       Call this tool to get detailed documentation about models, clients, api, or frontend.
-    await: [initialize-session]
+      If no scope is provided, returns general development context.
     params:
       - id: scope
-        info: "The scope to fetch"
-        type: [enum, models, clients, api, frontend]
+        info: "The scope to fetch (optional, defaults to general context)"
+        type: [default, [enum, general, models, clients, api, frontend], general]
     run:
       - id: get_dev_context
         tool: polytope/container
         args:
           image: registry.k8s.io/pause:3.9
-          cmd: "#pt-clj (case (:scope params) \"models\" \"cat /models.md\" \"clients\" \"cat /clients.md\" \"api\" \"cat /api.md\" \"frontend\" \"cat /frontend.md\")"
+          cmd: "#pt-clj (case (:scope params) \"models\" \"cat /models.md\" \"clients\" \"cat /clients.md\" \"api\" \"cat /api.md\" \"frontend\" \"cat /frontend.md\" \"cat /general.md\")"
           mounts:
+            - { path: /general.md, source: { type: repo, repo: "#pt-clj pt/module-repo-ref", path: initialize-session/context.md } }
             - { path: /models.md, source: { type: repo, repo: "#pt-clj pt/module-repo-ref", path: setup-project-structure/base/models/README.md } }
             - { path: /clients.md, source: { type: repo, repo: "#pt-clj pt/module-repo-ref", path: setup-project-structure/base/clients/README.md } }
             - { path: /api.md, source: { type: repo, repo: "#pt-clj pt/module-repo-ref", path: scopes/api.md } }
