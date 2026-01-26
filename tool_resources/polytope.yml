@@ -329,14 +329,12 @@ tools:
               ;; Scaffold language directories if specified
               (when lang
                 (pt/call-module "_scaffold-language" {:language lang}))
-              ;; Handle dependency scaffolding and set-values inline to avoid pt.output issues
-              ;; Running deps is handled by separate run-dependencies step (which reads deps inline too)
+              ;; Handle dependency scaffolding inline to avoid pt.output issues
+              ;; Running deps and setting values are handled by separate steps (which read deps inline too)
               (when (seq deps)
                 (pt/call-module "_scaffold-deps" {:deps deps
                                                    :on-conflict (:on-conflict params)
-                                                   :target (:target params)})
-                (when (:run params)
-                  (pt/call-module "_set-values-for-deps" {:deps deps})))
+                                                   :target (:target params)}))
               {:dependencies deps :language lang}))
 
       - id: scaffold-services
@@ -454,34 +452,198 @@ tools:
         code: |-
           #pt-clj
           (when (:run params)
-            (let [container-id (pt/spawn {:image "registry.k8s.io/pause:3.9"
-                                          :id "read-service-config"
+            (let [template (:template params)
+                  safe-id (clojure.string/replace template #"[^a-z0-9-]" "-")
+                  values-path (str "tool_resources/set-values-and-secrets/services/" template "/values.yml")
+                  secrets-path (str "tool_resources/set-values-and-secrets/services/" template "/secrets.yml")
+                  container-id (pt/spawn {:image "registry.k8s.io/pause:3.9"
+                                          :id (str "set-svc-vals-" safe-id)
                                           :restart {:policy "never"}
                                           :mounts [{:path "/values.yml"
                                                     :source {:type "repo"
-                                                             :repo {:type "host" :path "."}
-                                                             :path "config/values.yml"}}
+                                                             :repo pt/module-repo-ref
+                                                             :path values-path}}
                                                    {:path "/secrets.yml"
                                                     :source {:type "repo"
-                                                             :repo {:type "host" :path "."}
-                                                             :path "config/secrets.yml"}}]})]
+                                                             :repo pt/module-repo-ref
+                                                             :path secrets-path}}]})]
               (pt/await-started {:type "deployment" :ref container-id})
               (let [values-content (pt/read-container-file container-id "/values.yml")
                     secrets-content (pt/read-container-file container-id "/secrets.yml")
                     values (pt/read-yaml values-content)
                     secrets (pt/read-yaml secrets-content)]
-                (pt/log (str "📦 Setting " (count values) " values and " (count secrets) " secrets from config files"))
+                (pt/log (str "📦 Setting " (count values) " values and " (count secrets) " secrets from source files"))
                 (doseq [[k v] values]
                   (pt/log (str "  Setting value: " (name k) " = " v))
                   (pt/set-project-value (name k) (str v)))
                 (doseq [[k v] secrets]
                   (pt/log (str "  Setting secret: " (name k) " = ***"))
                   (pt/set-secret (name k) (str v)))
-                (pt/log "✅ Successfully set all bindings from config files")
+                (pt/log "✅ Successfully set all service bindings")
+                (pt/stop {:type "container" :ref container-id}))))
+
+      # Inlined _set-values-for-deps logic (chained tool resolution broken in Polytope)
+      - id: write-deps-values-to-config
+        after: {step: read-dependencies}
+        tool: pt/run-script
+        args:
+          repo: {type: host, path: .}
+          language: python
+          dependencies: [pyyaml]
+          mounts:
+            - path: /dependencies.yml
+              source:
+                type: repo
+                repo: "#pt-clj pt/module-repo-ref"
+                path: "#pt-clj (str \"add-and-run-service/\" (:template params) \"/dependencies.yml\")"
+            - path: /service-configs
+              source:
+                type: repo
+                repo: "#pt-clj pt/module-repo-ref"
+                path: set-values-and-secrets/services
+          script:
+            type: string
+            data: |
+              import yaml
+              from pathlib import Path
+
+              run_enabled = "{pt.param run}"
+              if run_enabled != "true":
+                  print("Skipping - run is not enabled")
+                  exit(0)
+
+              # Read dependencies from mounted file
+              with open("/dependencies.yml") as f:
+                  deps_data = yaml.safe_load(f) or {}
+
+              deps = deps_data.get("dependencies", [])
+              if not deps:
+                  print("No dependencies to process")
+                  exit(0)
+
+              # Ensure config directory exists
+              config_dir = Path("/repo/config")
+              config_dir.mkdir(parents=True, exist_ok=True)
+
+              values_file = config_dir / "values.yml"
+              secrets_file = config_dir / "secrets.yml"
+
+              # Read existing values.yml or start fresh
+              if values_file.exists():
+                  with open(values_file) as f:
+                      existing_values = yaml.safe_load(f) or {}
+              else:
+                  existing_values = {}
+
+              # Read existing secrets.yml or start fresh
+              if secrets_file.exists():
+                  with open(secrets_file) as f:
+                      existing_secrets = yaml.safe_load(f) or {}
+              else:
+                  existing_secrets = {}
+
+              # Process each dependency
+              for dep in deps:
+                  dep_name = dep.get("name")
+                  if not dep_name:
+                      continue
+
+                  values_path = Path(f"/service-configs/{dep_name}/values.yml")
+                  secrets_path = Path(f"/service-configs/{dep_name}/secrets.yml")
+
+                  if values_path.exists():
+                      with open(values_path) as f:
+                          new_values = yaml.safe_load(f) or {}
+                      for k, v in new_values.items():
+                          existing_values[k] = v
+                      print(f"Merged {len(new_values)} values for {dep_name}")
+                  else:
+                      print(f"No values.yml found for {dep_name}")
+
+                  if secrets_path.exists():
+                      with open(secrets_path) as f:
+                          new_secrets = yaml.safe_load(f) or {}
+                      for k, v in new_secrets.items():
+                          existing_secrets[k] = v
+                      print(f"Merged {len(new_secrets)} secrets for {dep_name}")
+                  else:
+                      print(f"No secrets.yml found for {dep_name}")
+
+              # Write values.yml with header
+              values_header = """# Configuration values
+              # Non-sensitive configuration that can be committed to version control
+              # Generated and managed by Bluetext tools
+
+              """
+              with open(values_file, "w") as f:
+                  f.write(values_header.replace("              ", ""))
+                  if existing_values:
+                      yaml.dump(existing_values, f, default_flow_style=False, sort_keys=True)
+
+              # Write secrets.yml with header
+              secrets_header = """# Configuration secrets
+              # Sensitive configuration that should NOT be committed to version control
+              # Add this file to .gitignore
+              # Generated and managed by Bluetext tools
+
+              """
+              with open(secrets_file, "w") as f:
+                  f.write(secrets_header.replace("              ", ""))
+                  if existing_secrets:
+                      yaml.dump(existing_secrets, f, default_flow_style=False, sort_keys=True)
+
+              print(f"Written all dependency values to config/values.yml")
+              print(f"Written all dependency secrets to config/secrets.yml")
+
+      - id: set-deps-values-in-runtime
+        after: {step: write-deps-values-to-config}
+        code: |-
+          #pt-clj
+          (when (:run params)
+            (let [template (:template params)
+                  safe-id (clojure.string/replace template #"[^a-z0-9-]" "-")
+                  deps-path (str "tool_resources/add-and-run-service/" template "/dependencies.yml")
+                  container-id (pt/spawn {:image "registry.k8s.io/pause:3.9"
+                                          :id (str "set-deps-vals-" safe-id)
+                                          :restart {:policy "never"}
+                                          :mounts [{:path "/dependencies.yml"
+                                                    :source {:type "repo"
+                                                             :repo pt/module-repo-ref
+                                                             :path deps-path}}
+                                                   {:path "/service-configs"
+                                                    :source {:type "repo"
+                                                             :repo pt/module-repo-ref
+                                                             :path "tool_resources/set-values-and-secrets/services"}}]})]
+              (pt/await-started {:type "deployment" :ref container-id})
+              (let [deps-content (pt/read-container-file container-id "/dependencies.yml")
+                    deps-data (pt/read-yaml deps-content)
+                    deps (or (:dependencies deps-data) [])]
+                (doseq [{dep-name :name} deps]
+                  (let [values-path (str "/service-configs/" dep-name "/values.yml")
+                        secrets-path (str "/service-configs/" dep-name "/secrets.yml")]
+                    (try
+                      (let [values-content (pt/read-container-file container-id values-path)
+                            values (pt/read-yaml values-content)]
+                        (pt/log (str "📦 Setting " (count values) " values for dependency " dep-name))
+                        (doseq [[k v] values]
+                          (pt/log (str "  Setting value: " (name k) " = " v))
+                          (pt/set-project-value (name k) (str v))))
+                      (catch Exception e
+                        (pt/log (str "⚠️ Could not read values for " dep-name))))
+                    (try
+                      (let [secrets-content (pt/read-container-file container-id secrets-path)
+                            secrets (pt/read-yaml secrets-content)]
+                        (pt/log (str "🔐 Setting " (count secrets) " secrets for dependency " dep-name))
+                        (doseq [[k v] secrets]
+                          (pt/log (str "  Setting secret: " (name k) " = ***"))
+                          (pt/set-secret (name k) (str v))))
+                      (catch Exception e
+                        (pt/log (str "⚠️ Could not read secrets for " dep-name))))))
+                (pt/log "✅ Successfully set all dependency bindings")
                 (pt/stop {:type "container" :ref container-id}))))
 
       - id: run-dependencies
-        after: {step: read-dependencies}
+        after: {step: set-deps-values-in-runtime}
         code: |-
           #pt-clj
           (when (:run params)
