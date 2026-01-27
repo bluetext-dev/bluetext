@@ -68,7 +68,7 @@ tools:
       Initialize **EVERY** session by calling this tool.
       Returns required development context and ensures the project is running.
       This tool always needs to be called before doing anything else, regardless of the tasks complexity.
-    await: [scaffold-local-overwrite]
+    await: [return-context]
     run:
       - id: scaffold-local-overwrite
         tool: scaffold-initialize-session
@@ -77,6 +77,8 @@ tools:
           - step: scaffold-local-overwrite
         tool: stack
       - id: return-context
+        after:
+          - step: scaffold-local-overwrite
         tool: get_dev_context
 
   get_dev_context:
@@ -90,42 +92,54 @@ tools:
         type: [default, [enum, general, models, clients, api, frontend], general]
     run:
       - id: get_dev_context
-        tool: polytope/container
+        tool: pt/run-script
         args:
-          image: registry.k8s.io/pause:3.9
-          cmd: "#pt-clj (case (:scope params) \"models\" \"cat /models.md\" \"clients\" \"cat /clients.md\" \"api\" \"cat /api.md\" \"frontend\" \"cat /frontend.md\" \"cat /general.md\")"
+          repo: {type: host, path: .}
+          language: bash
           mounts:
             - { path: /general.md, source: { type: repo, repo: "#pt-clj pt/module-repo-ref", path: initialize-session/context.md } }
             - { path: /models.md, source: { type: repo, repo: "#pt-clj pt/module-repo-ref", path: setup-project-structure/base/models/README.md } }
             - { path: /clients.md, source: { type: repo, repo: "#pt-clj pt/module-repo-ref", path: setup-project-structure/base/clients/README.md } }
             - { path: /api.md, source: { type: repo, repo: "#pt-clj pt/module-repo-ref", path: scopes/api.md } }
             - { path: /frontend.md, source: { type: repo, repo: "#pt-clj pt/module-repo-ref", path: scopes/frontend.md } }
+          script:
+            type: string
+            data: |
+              #!/bin/bash
+              SCOPE="{pt.param scope}"
+              case "$SCOPE" in
+                models) cat /models.md ;;
+                clients) cat /clients.md ;;
+                api) cat /api.md ;;
+                frontend) cat /frontend.md ;;
+                *) cat /general.md ;;
+              esac
 
-  add-dependencies:
-    info: |
-      Adds packages to a service's dependency file.
-      Automatically detects the package manager for the target service.
-    params:
-      - id: target
-        info: The service to add dependencies to (e.g., api, frontend)
-        type: str
-      - id: packages
-        info: Packages to add (comma or space separated)
-        type: str
-    run:
-      - id: run-add-deps
-        code: |
-          #pt-clj
-          (let [target (:target params)
-                packages (clojure.string/replace (:packages params) #"[\s,]+" " ")
-                [cmd restart-policy] (case target
-                                       "api" [(str "./bin/add-dependencies " packages) "never"]
-                                       "frontend" [(str "bun add " packages) "on-failure"]
-                                       (throw (Exception. (str "Unknown target: " target))))]
-            (pt/call-module target {:id (str target "-add-deps")
-                                   :cmd cmd
-                                   :restart-policy restart-policy
-                                   :create "always"}))
+  # add-dependencies:
+  #   info: |
+  #     Adds packages to a service's dependency file.
+  #     Automatically detects the package manager for the target service.
+  #   params:
+  #     - id: target
+  #       info: The service to add dependencies to (e.g., api, frontend)
+  #       type: str
+  #     - id: packages
+  #       info: Packages to add (comma or space separated)
+  #       type: str
+  #   run:
+  #     - id: run-add-deps
+  #       code: |
+  #         #pt-clj
+  #         (let [target (:target params)
+  #               packages (clojure.string/replace (:packages params) #"[\s,]+" " ")
+  #               [cmd restart-policy] (case target
+  #                                      "api" [(str "./bin/add-dependencies " packages) "never"]
+  #                                      "frontend" [(str "bun add " packages) "on-failure"]
+  #                                      (throw (Exception. (str "Unknown target: " target))))]
+  #           (pt/call-module target {:id (str target "-add-deps")
+  #                                  :cmd cmd
+  #                                  :restart-policy restart-policy
+  #                                  :create "always"}))
 
   setup-project-structure:
     info: |
