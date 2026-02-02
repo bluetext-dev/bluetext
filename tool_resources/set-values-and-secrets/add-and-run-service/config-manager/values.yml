@@ -1,8 +1,0 @@
-# Config Manager service values
-config-manager-environment: dev
-config-manager-services: couchbase
-config-manager-couchbase-host: couchbase
-config-manager-couchbase-username: user
-config-manager-couchbase-main-bucket-name: main
-config-manager-redpanda-host: redpanda
-config-manager-redpanda-port: 9092

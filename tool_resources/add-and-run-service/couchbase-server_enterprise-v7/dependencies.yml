@@ -1,4 +1,4 @@
 language: null
 dependencies:
-  - name: config-manager
-    path: config-manager
+  - name: service-config-manager
+    path: service-config-manager

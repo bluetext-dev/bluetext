@@ -7,37 +7,16 @@ tools:
           image: python:3.11.8-slim-bookworm
           id: phantom-token-kong
           code: { type: repo, path: . }
-          cmd: ./bin/kong
+          cmd: ./services/{{ project-name }}/bin/kong
           mounts:        
             - { path: /workspace, source: { type: host, path: . }}
-  curity:
+  {{ project-name }}:
     info: "Runs the Curity Identity Server (blueprint: curity-identity-provider)"
     run:
-      - tool: polytope/container
-        args:
-          image: postgres:16.2
-          id: seed-db
-          restart: { policy: on-failure }
-          env:
-            - { name: PGPASSWORD, value: pt.secret postgres-password }
-          cmd: |
-            #pt-clj
-            (let [host (or (System/getenv "POSTGRES_HOST") "postgres")
-                  port (or (System/getenv "POSTGRES_PORT") "5432")
-                  user (or (System/getenv "POSTGRES_USER") "admin")
-                  db   (or (System/getenv "POSTGRES_DB") "idsvr")]
-              ["psql"
-               (str "--host=" host)
-               (str "--port=" port)
-               (str "--username=" user)
-               (str "--dbname=" db)
-               "-f" "/db.sql"])
-          mounts:
-            - { path: /db.sql, source: { type: host, path: ./services/curity/db.sql }}
       - tool: polytope/curity
         args:
           image: curity.azurecr.io/curity/idsvr:10.4.0
-          config-file: { type: host, path: ./services/curity/config.xml }
+          config-file: { type: host, path: ./config/{{ project-name }}/config.xml }
           restart: { policy: always }
           password: "{pt.secret curity-password}"
           env:
@@ -48,8 +27,8 @@ tools:
             - { name: AGENT_BASE_URL, value: "{pt.value web-app-host}:{pt.value web-app-port}" }
             - { name: POSTGRES_USERNAME, value: pt.secret postgres-username }
           mounts:
-            - { path: /opt/idsvr/usr/bin/post-commit-cli-scripts, source: { type: host, path: ./services/curity/post-commit-cli-scripts }}
-            - { path: /opt/idsvr/etc/init/curity-users.xml, source: { type: host, path: ./services/curity/users.xml }}
-            - { path: /opt/idsvr/usr/share/templates, source: { type: host, path: ./services/curity/curity-ui-build/curity/templates }}
-            - { path: /opt/idsvr/usr/share/messages, source: { type: host, path: ./services/curity/curity-ui-build/curity/messages }}
-            - { path: /opt/idsvr/usr/share/webroot, source: { type: host, path: ./services/curity/curity-ui-build/curity/webroot }}
+            - { path: /opt/idsvr/usr/bin/post-commit-cli-scripts, source: { type: host, path: ./services/{{ project-name }}/post-commit-cli-scripts }}
+            - { path: /opt/idsvr/etc/init/curity-users.xml, source: { type: host, path: ./services/{{ project-name }}/users.xml }}
+            - { path: /opt/idsvr/usr/share/templates, source: { type: host, path: ./services/{{ project-name }}/curity-ui-build/curity/templates }}
+            - { path: /opt/idsvr/usr/share/messages, source: { type: host, path: ./services/{{ project-name }}/curity-ui-build/curity/messages }}
+            - { path: /opt/idsvr/usr/share/webroot, source: { type: host, path: ./services/{{ project-name }}/curity-ui-build/curity/webroot }}

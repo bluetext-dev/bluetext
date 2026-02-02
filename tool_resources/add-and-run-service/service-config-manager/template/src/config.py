@@ -68,7 +68,7 @@ class Config:
         """Get available target config file paths by detecting existing files in conf/ directory."""
         if self._targets is None:
             # Always look in the conf/ directory in project root
-            conf_dir = Path('conf')
+            conf_dir = Path('config')
             self._targets = {}
             
             # Check for couchbase config files
