@@ -1,2 +1,4 @@
 language: null
-dependencies: []
+dependencies:
+  - name: service-config-manager
+    path: service-config-manager

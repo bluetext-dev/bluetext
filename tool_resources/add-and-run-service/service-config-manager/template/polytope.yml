@@ -1,0 +1,28 @@
+tools:
+  service-config-manager:
+    info: Manages Redpanda topics and Couchbase buckets/scopes/collections
+    await: [set-values-and-secrets]
+    run:
+      - tool: polytope/python
+        args:
+          await: false
+          image: python:3.11.8-slim-bookworm
+          id: service-config-manager
+          restart: { policy: on-failure }
+          code: { type: repo, path: . }
+          cmd: ./bin/run
+          create: when-missing
+          env:
+            - { name: ENVIRONMENT, value: pt.value service-config-manager-environment }
+            - { name: SERVICES, value: pt.value service-config-manager-services }
+
+            - { name: COUCHBASE_HOST, value: pt.value service-config-manager-couchbase-host }
+            - { name: COUCHBASE_USERNAME, value: pt.value service-config-manager-couchbase-username }
+            - { name: COUCHBASE_PASSWORD, value: pt.secret service-config-manager-couchbase-password }
+            - { name: COUCHBASE_MAIN_BUCKET_NAME, value: pt.value service-config-manager-couchbase-main-bucket-name }
+
+            - { name: REDPANDA_HOST, value: pt.value service-config-manager-redpanda-host }
+            - { name: REDPANDA_PORT, value: pt.value service-config-manager-redpanda-port }
+          mounts:
+            - { path: /config/, source: { type: repo, path: config }}
+            - { path: /root/.cache/, source: { type: volume, scope: project, id: dependency-cache } }

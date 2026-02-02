@@ -542,7 +542,7 @@ tools:
                   print("No image fields found to update")
 
       - id: write-service-values-to-config
-        after: {step: apply_service_version}
+        after: {step: apply-service-version}
         tool: pt/run-script
         args:
           repo: {type: host, path: .}
@@ -749,10 +749,110 @@ tools:
 
 
 
+      - id: copy-config-files
+        after: {step: write-deps-values-to-config}
+        tool: pt/run-script
+        args:
+          repo: {type: host, path: .}
+          language: python
+          dependencies: [pyyaml]
+          mounts:
+            - path: /dependencies.yml
+              source:
+                type: repo
+                repo: "#pt-clj pt/module-repo-ref"
+                path: "#pt-clj (str \"tool_resources/add-and-run-service/\" (:template params) \"/dependencies.yml\")"
+            - path: /tool-resources
+              source:
+                type: repo
+                repo: "#pt-clj pt/module-repo-ref"
+                path: tool_resources/add-and-run-service
+          script:
+            type: string
+            data: |
+              import yaml
+              import shutil
+              from pathlib import Path
+              import os
+
+              run_enabled = "{pt.param run}"
+              if run_enabled != "true":
+                  print("Skipping - run is not enabled")
+                  exit(0)
+
+              repo_config_dir = Path("/repo/config")
+              repo_config_dir.mkdir(parents=True, exist_ok=True)
+
+              # 1. Copy from the service itself
+              template = "{pt.param template}"
+              service_config_dir = Path(f"/tool-resources/{template}/config")
+              if service_config_dir.exists() and service_config_dir.is_dir():
+                  print(f"Found config templates for {template} at {service_config_dir}")
+                  for item in service_config_dir.iterdir():
+                      if item.is_file():
+                          target_file = repo_config_dir / item.name
+                          shutil.copy2(item, target_file)
+                          print(f"✅ Copied {item.name} to config/")
+              
+              # 2. Copy from recursively resolved dependencies
+              visited = set()
+              
+              def collect_dependencies(deps_list):
+                  results = []
+                  for dep in deps_list:
+                      dep_name = dep.get("name")
+                      if not dep_name or dep_name in visited:
+                          continue
+                      
+                      visited.add(dep_name)
+                      results.append(dep)
+                      
+                      # Check for nested dependencies
+                      dep_path = dep.get("path", dep_name)
+                      dep_deps_file = Path(f"/tool-resources/{dep_path}/dependencies.yml")
+                      
+                      if dep_deps_file.exists():
+                          try:
+                              with open(dep_deps_file) as f:
+                                  nested_data = yaml.safe_load(f) or {}
+                                  nested_deps = nested_data.get("dependencies", [])
+                                  if nested_deps:
+                                      print(f"🔎 Found nested dependencies for {dep_name}: {[d.get('name') for d in nested_deps]}")
+                                      results.extend(collect_dependencies(nested_deps))
+                          except Exception as e:
+                              print(f"⚠️ Could not read dependencies for {dep_name}: {e}")
+                  return results
+
+              # Initial dependencies from the mounted file
+              with open("/dependencies.yml") as f:
+                  initial_data = yaml.safe_load(f) or {}
+              
+              initial_deps = initial_data.get("dependencies", [])
+              all_deps = collect_dependencies(initial_deps)
+
+              if all_deps:
+                  print(f"📦 Processing {len(all_deps)} unique dependencies")
+                  for dep in all_deps:
+                      dep_name = dep.get("name")
+                      dep_path = dep.get("path", dep_name)
+
+                      # Check for tool_resources/{dep}/config
+                      source_config_dir = Path(f"/tool-resources/{dep_path}/config")
+                      if source_config_dir.exists() and source_config_dir.is_dir():
+                          print(f"Found config templates for dependency {dep_name} at {source_config_dir}")
+                          for item in source_config_dir.iterdir():
+                              if item.is_file():
+                                  target_file = repo_config_dir / item.name
+                                  shutil.copy2(item, target_file)
+                                  print(f"✅ Copied {item.name} to config/ (from dependency {dep_name})")
+                      else:
+                          print(f"No config templates found for dependency {dep_name}")
+
       - id: run-stack
         after:
           - step: write-service-values-to-config
           - step: write-deps-values-to-config
+          - step: copy-config-files
         code: |
           #pt-clj
           (when (:run params)
