@@ -1,0 +1,84 @@
+#*
+ * Copyright (C) 2016 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * This is the page shown when a new the user wants to register a new device
+ *
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+#if ($!_postBack.get('devicetype') == "other")
+    #set ($otherChecked = "checked")
+#elseif ($!_postBack.get('devicetype') == "tablet")
+    #set ($tabletChecked = "checked")
+#else
+    #set ($phoneChecked = "checked")
+#end
+#set ($page_symbol = $page_symbol_authenticate_pair_device)
+#define($_body)
+<form method="post">
+    <div class="center">
+        <h1>#message("authenticator.encap.activate-device.view.pair-device")</h1>
+        <p>#message("authenticator.encap.activate-device.view.description")</p>
+    </div>
+    <div class="center mb2">
+    #if ($_activationCodeDataUri)
+        <img id="activationcodeqr" src="$_activationCodeDataUri" title="$!_activationCode"
+                alt="$!_activationCode" class="mx-auto block" onclick="document.getElementById('activationCode').click()">
+    #end
+    <input type="text" class="disabled field-light" id="activationCode" onclick="this.select()" readonly value="$!_activationCode"/>
+    </div>
+    <div class="form-field">
+        <label>#message("authenticator.encap.activate-device.view.device.alias")</label>
+        <input type="text" class="block full-width mb1 field-light" autofocus name="alias" id="alias" required
+               value="$!_postBack.get('alias')">
+        <i class="form-field-icon icon ion-iphone"></i>
+    </div>
+    <div class="form-field">
+        <label>#message("authenticator.encap.activate-device.view.device.phone-number")</label>
+        <input type="text" class="block full-width mb1 field-light" name="number" id="number"
+               value="$!_postBack.get('number')">
+        <i class="form-field-icon icon ion-iphone"></i>
+    </div>
+    <fieldset class="fieldset-reset">
+        <legend>#message("authenticator.encap.activate-device.view.device.type")</legend>
+        <label for="devicetype_phone" class="block">
+            <input name="devicetype" id="devicetype_phone" type="radio" value="phone" $!phoneChecked>
+            #message("authenticator.encap.activate-device.view.device.phone")
+        </label>
+        <label for="devicetype_tablet" class="block">
+            <input name="devicetype" id="devicetype_tablet" type="radio" value="tablet" $!tabletChecked>
+            #message("authenticator.encap.activate-device.view.device.tablet")
+        </label>
+        <label for="devicetype_other" class="block">
+            <input name="devicetype" id="devicetype_other" type="radio" value="other" $!otherChecked>
+            #message("authenticator.encap.activate-device.view.device.other")
+        </label>
+    </fieldset>
+    <button class="button button-medium button-primary button-fullwidth center" role="button">#message("${_templatePrefix}.view.activate")</button>
+</form>
+#end
+#parse("layouts/default")

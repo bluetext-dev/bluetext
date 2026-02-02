@@ -1,0 +1,18 @@
+#
+# Copyright (C) 2018 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=Enter device alias
+view.title1=Enter device alias
+view.p1=Type an alias for your device. This can be useful if you have multiple devices registered, or you use your app in multiple websites.
+view.alias=Alias
+view.generate-code=Generate QR code
+
+validation.error.alias.required=Alias is required

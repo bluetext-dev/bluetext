@@ -1,0 +1,30 @@
+#
+# Copyright (C) 2022 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=Registrar novo dispositivo
+view.title=Registrar novo dispositivo
+view.register=Selecione o dispositivo a ser registrado
+view.try-again=Tentar novamente
+view.button.any-attachment=Continuar com uma passkey
+view.button.platform=Integrado
+view.button.cross-platform=Chave de segurança
+view.authenticator-attachment.platform=Um dispositivo integrado não removível, como o reconhecimento facial ou um leitor de impressão digital integrado em seu dispositivo.
+view.authenticator-attachment.cross-platform=Uma chave de segurança, como uma chave portátil conectada através de USB ou sem fio através de NFC.
+view.error.title=Erro
+view.error.registration=Algo deu errado. Não foi possível registrar este dispositivo.
+view.error.cancel-or-timeout=O registro do dispositivo foi cancelado ou o tempo esgotou.
+view.error.not-supported=O WebAuthn não é atualmente suportado neste navegador
+view.error.user-not-found=Usuário não encontrado
+view.success.title=Sucesso!
+view.success.success=Seu dispositivo foi registrado!
+view.return-to-login=Retornar para login
+view.retry=Tentar novamente registrar o dispositivo
+view.register-additional-device=Registrar um dispositivo adicional

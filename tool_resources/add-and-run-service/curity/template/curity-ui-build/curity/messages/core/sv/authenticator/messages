@@ -1,0 +1,18 @@
+#
+# Copyright (C) 2019 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+# Shared authenticator messages
+
+continue-to-login=Fortsätt för att logga in som 
+continue-to-login-template=Fortsätt för att logga in som %s
+external-browser.launch.use-browser=Extern webbläsare måste användas
+external-browser.launch.continue=Om du inte omdirigeras automatiskt, klicka här för att fortsätta
+external-browser.launch.cancel=Avbryt

@@ -1,0 +1,18 @@
+#
+# Copyright (C) 2022 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+page.title=Definir autenticação em dois passos
+meta.title=Definir autenticação em dois passos
+view.title=Definir autenticação em dois passos
+view.sub-title=Aumente a segurança adicionando um método de autenticação adicional
+view.available-methods=Métodos disponíveis
+view.opt-out.action=Saltar
+view.opt-out.description=Saltar definição de método de autenticação adicional. A sua conta será menos segura

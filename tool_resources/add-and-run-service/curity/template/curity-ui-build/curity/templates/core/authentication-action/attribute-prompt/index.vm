@@ -1,0 +1,76 @@
+#*
+ * Copyright (C) 2018 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * This is the default authentication view in the html adapter. It collects the username and password from the user.
+ *
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+## The title of this page can be overridden by setting the $title variable here to a resource string or the actual value
+##set($title = "")
+#set ($page_symbol = $page_symbol_authenticate_desktop)
+#define ($_body)
+<form method="post" action="$_actionUrl">
+    <p>#message("authentication-action.attribute-prompt.view.p1")</p>
+    #foreach($field in $_fields.entrySet())
+        #define($fieldLabel)authentication-action.attribute-prompt.attribute.${field.key}.label#end
+        #define($fieldIcon)authentication-action.attribute-prompt.attribute.${field.key}.icon#end
+        #if($field.value == "checkbox" || $field.value == "color")
+            <label class="block full-width mt2">
+                <input type="$field.value" name="$field.key" id="$field.key" class="mr1">#message($fieldLabel)</label>
+        #else
+            <div class="form-field mt2">
+                <label for="$field.key" class="$!_errorClass">#message($fieldLabel)</label>
+                <input type="$field.value" name="$field.key" class="block full-width mb1 field-light $!_errorClass"
+                       autocapitalize="none" autofocus>
+                <i class="form-field-icon icon ion-ios-#message($fieldIcon)"></i>
+            </div>
+        #end
+    #end
+    <button id="submit-button" type="submit" class="button button-fullwidth $!button_color mt2">#message(
+        "authentication-action.attribute-prompt.view.confirm")</button>
+    #if($!_allowSkip == true)
+        #parse("fragments/jquery")
+        <div class="mt3 clearfix">
+            <div class="center py2 login-actions">
+                <a id="skip-button" href="#" $!nonceAttr >#message(
+                        "authentication-action.attribute-prompt.view.skip")</a>
+            </div>
+        </div>
+        <input id="skip-field" type="hidden" name="_skip"/>
+        <script type="text/javascript" $!nonceAttr>
+            jQuery(document).ready(function ($) {
+                $("#skip-button").on("click", function (e) {
+                    $("#skip-field").val(true);
+                    $("#submit-button").click();
+                })
+            })
+        </script>
+    #end
+</form>
+#end
+#parse("layouts/default")

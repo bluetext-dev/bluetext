@@ -36,42 +36,32 @@ Each service has its own directory with a `polytope.yml` that defines how it run
 
 Use `add-and-run-service` to scaffold and start a new service:
 
-```bash
+```
 # Add a frontend
-polytope run add-and-run-service --template frontend --name my-frontend
+add-and-run-service(template: "frontend_typescript_react-router-v7", name: "my-frontend")
 
 # Add an API
-polytope run add-and-run-service --template api --name my-api
+add-and-run-service(template: "api_python_fastapi", name: "my-api")
 ```
 
 ## Running Services
 
-Services run through Polytope:
+Services run through Polytope automatically in the sandbox. Use MCP tools to interact with them.
 
-```bash
-# Run the entire stack
-pt run stack --mcp
-
-# Run a specific service
-pt run my-frontend
+```
+# View logs
+get-container-logs(container: "my-frontend", limit: 50)
 ```
 
 ## Environment Variables
 
 Services that use models depending on clients need the appropriate environment variables. Use `setup-service-for-client` to configure them:
 
-```bash
-polytope run setup-service-for-client --service my-api --client couchbase
+```
+setup-service-for-client(service: "my-api", client: "couchbase")
 ```
 
 This modifies the service's `polytope.yml` to include the required environment variables.
-
-After changing environment variables, restart the sandbox:
-
-```bash
-# Stop and restart to apply changes
-pt run stack --mcp
-```
 
 ## Service Types
 
@@ -89,4 +79,3 @@ Background processors, scheduled jobs, or event handlers.
 1. **Keep services thin**: Controller logic only. Business logic goes in models.
 2. **Use models for data access**: Don't import clients directly in services.
 3. **Document dependencies**: Note which models (and therefore clients) the service uses.
-4. **Use bin/ scripts**: Standardized scripts let any developer run the service without domain knowledge.

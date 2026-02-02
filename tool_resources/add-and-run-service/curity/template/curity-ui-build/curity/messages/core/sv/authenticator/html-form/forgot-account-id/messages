@@ -1,0 +1,13 @@
+meta.title=Glömt e-postadress
+page.title=Glömt e-postadress
+view.head1=Glömt ditt e-postadress?
+view.p1=Ange e-postadressen du angav när du skapade ditt konto så skickar vi ditt e-postadress.
+view.email=E-post
+view.button=Skicka mitt e-postadress
+view.cancel=Ta mig till inloggningssidan
+view.success.head1=Kolla din inkorg!
+view.success.p1=Ett mail med ditt e-postadress har skickats till dig.
+view.back.to.login=Ta mig till inloggningssidan
+
+validation.error.email.required=Du måste ange din e-postadress
+validation.error.email.invalid=E-postadressen du angav är felaktig

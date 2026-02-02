@@ -1,0 +1,67 @@
+#*
+ * Copyright (C) 2015 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * This template initiates all processing of other templates.
+ *
+ * It is not recommended to modify this file unless you understand very well how the templating system works.
+ *
+ * The most common change that is made in this file is to change the processing to begin with the layout rather
+ * than a view (as done below by default). This can be done by changing the #parse directive so something like this
+ * instead:
+ *
+ * #parse("layouts/default")
+ *
+ * By doing this, the layout will be parsed and included first. This gives you the opportunity to nest views in the
+ * layout rather than wrapping the layout around a view (which is the default way that templates are processed). Using
+ * the default method of wrapping views around the layout, every view must define the content (i.e., $_body).
+ *
+ * NOTE: There is no way to override this template in the third-party directory, as with others. This means that
+ * upgrades will be more involved if this template is overridden.
+ *
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+#*
+ * To define global variables and macros, override the file called globals.vm.
+ * All macros and variables defined in that template will
+ * be availble in your layout, views, and other template fragments.
+ * By doing this in globals.vm rather than directly in this file,
+ * upgrades will be as easy as copying your templates
+ * from the old third-party and third-party-debug directories to the
+ * one in your new deployment.
+ *###
+#parse("settings")
+#parse("fragments/globals")
+## Now, parse the actual template view and kick off processing.
+## * use_api_driven_ui - flag to enable the API driven UI, set by "settings" evaluation
+## * _haapiNotSupported - flag set to true when the request context does not support HAAPI
+## * api-driven-ui - folder containing the index.vm with the api driven application
+#if ($use_api_driven_ui && !$_haapiNotSupported)
+    #parse("api-driven-ui/index")
+#else
+    #parse("$_template")
+#end

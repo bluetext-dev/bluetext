@@ -1,0 +1,19 @@
+#
+# Copyright (C) 2022 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+view.allow=Allow
+view.deny=Deny
+view.info=Do you want to link these accounts?
+view.prev=Previously Used
+view.current=Current
+view.question-template=Do you want to link account '%s' with the account '%s' from '%s'?
+view.text=You just logged in with a new account. If you want, you can link these accounts. If you deny this, accounts will not be linked.
+validation.error.invalid-response-value=Missing or invalid input parameters

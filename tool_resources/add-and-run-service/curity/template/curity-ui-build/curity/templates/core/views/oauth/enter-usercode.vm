@@ -1,0 +1,48 @@
+#*
+ * Copyright (C) 2017 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#set ($page_symbol = $page_symbol_authenticate_desktop)
+#define($_body)
+<form method="post" class="enter-usercode-form center">
+    <h1>#message("views.oauth.enter-user-code")</h1>
+    <p>#message("views.oauth.enter-user-code-description")</p>
+    <div class="enter-usercode-wrapper">
+        #* Add the correct amount of boxes. Also, add each character to each box if it exists. *###
+        #set ($valueArray = $!_userCodeValue.split(""))
+        #foreach($i in [1..$_userCodeLength])
+            #set ($j = $i - 1)
+            #if ($j < $valueArray.size())
+                #set ($value = $valueArray.get($j))
+            #else
+                #set ($value = "")
+            #end
+            <input type="text" inputMode="numeric" class="block full-width mb1 field-light field-enter-usercode $!_errorClass" value="$!value" required name="userCode" maxlength="1" autofocus id="$i" >
+            #if ($i == $_userCodeLength/2 )
+                <span class="field-enter-usercode-separator" tabindex="-1"></span>
+            #end
+        #end
+    </div>
+    #* If the code is given by the model and all characters are available, enable the submit button *###
+    #if ($_userCodeValue.length() == $_userCodeLength)
+        #set ($tabindex = "1")
+        #set ($successClass = "button-success")
+    #else
+        #set ($disabled = "disabled")
+        #set ($tabindex = $_userCodeLength + 1)
+    #end
+    <input type="submit" class="button button-medium button-primary button-fullwidth $!_errorClass $!successClass" value='#message("views.oauth.enter-user-code-submit")' tabindex="$tabindex" $!disabled>
+    <div class="center py2 login-actions">
+        <a href="#">
+            #message("views.oauth.enter-user-code-help")
+        </a>
+    </div>
+</form>
+#end
+#parse("layouts/default")

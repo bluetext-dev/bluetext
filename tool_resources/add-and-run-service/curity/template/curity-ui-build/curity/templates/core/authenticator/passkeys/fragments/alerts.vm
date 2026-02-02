@@ -1,0 +1,27 @@
+#*
+ * Copyright (C) 2023 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+<div class="alert-wrapper hidden" id="alertWrapper">
+    <div class="alert" id="alertBox">
+        <span></span>
+    </div>
+</div>
+<script $!nonceAttr>
+    const showError = (msg) => {
+        $('#alertWrapper > div').removeClass('alert-info').addClass('alert-danger');
+        $('#alertWrapper span').text(msg);
+        $('#alertWrapper').showElement();
+    }
+    const showInfo = (msg) => {
+        $('#alertWrapper > div').removeClass('alert-danger').addClass('alert-info');
+        $('#alertWrapper span').text(msg);
+        $('#alertWrapper').showElement();
+    }
+</script>

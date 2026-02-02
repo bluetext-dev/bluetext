@@ -1,0 +1,50 @@
+#*
+ * Copyright (C) 2019 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * This view creates the icons for the available consentors
+ *
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+#parse("fragments/icon-mappings")
+#define($_consentorChooser)
+    <h1 class="mt0 center">#message("views.select-consentor.page.title")</h1>
+    #foreach($_consentorMapItem in $_allowedConsentors.values())
+        <div class="form-field #if($icons_only_consentor_chooser)form-field-social-icon#end mb1">
+            <a href="$_consentorMapItem.url" id="$_consentorMapItem.consentorId" class="button button-primary button-fullwidth button-social #if($icons_only_consentor_chooser)button-social-icon#end button-$_consentorMapItem.type">
+                <i class="icon #iconClassName($_consentorMapItem.type)"></i>
+                #if(!$icons_only_consentor_chooser)
+                    #if($_consentorMapItem.description != "")
+                        #message($_consentorMapItem.description)
+                    #else
+                        $_consentorMapItem.consentorId
+                    #end
+                #end
+            </a>
+        </div>
+    #end
+#end

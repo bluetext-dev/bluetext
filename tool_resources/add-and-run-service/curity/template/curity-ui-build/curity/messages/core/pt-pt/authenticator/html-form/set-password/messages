@@ -1,0 +1,28 @@
+#
+# Copyright (C) 2022 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=Definir senha
+page.title=Definir senha
+view.head1=Definir senha
+view.newPassword=Nova senha
+view.repeatNewPassword=Repita a nova senha
+view.button=Atualizar senha
+view.cancel=Cancelar
+view.success.head1=Sua senha foi redefinida
+view.success.done=Você pode fechar esta janela.
+view.back.to.login=Retornar à página de login
+
+validation.error.token.invalid=Link inválido. Observe que os links são válidos apenas por um curto período de tempo.
+validation.error.token.required=Token ausente
+validation.error.password.required=Você precisa digitar uma nova senha
+validation.error.password.mismatch=Suas senhas não correspondem
+validation.error.password.weak=A senha não é forte o suficiente
+

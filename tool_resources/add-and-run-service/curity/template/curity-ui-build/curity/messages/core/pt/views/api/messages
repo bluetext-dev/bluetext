@@ -1,0 +1,13 @@
+#
+# Copyright (C) 2022 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+error.launch.expired=Sua sessão expirou. Por favor retorne ao aplicativo e tente novamente.
+error.parent=Não é possível completar a autenticação. Certifique-se de que o site original possa abrir pop-ups e repita o processo.

@@ -1,0 +1,22 @@
+#
+# Copyright (C) 2021 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+page.title=Hantera tvåstegsverifiering
+meta.title=Hantera tvåstegsverifiering
+view.title=Hantera tvåstegsverifiering
+view.sub-title=Hantera metoder för tvåstegsverifiering
+view.remove-methods=Ta bort metoder
+view.add-methods=Tillgängliga metoder att lägga till
+view.available-recovery-codes=Giltiga reservkoder
+view.available-recovery-codes.template=Antal giltiga reservkoder %s
+view.recovery-codes.create=Skapa nya reservkoder
+view.complete-authentication=Klart
+view.exit=Avsluta

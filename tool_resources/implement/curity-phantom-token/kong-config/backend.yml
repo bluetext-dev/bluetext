@@ -1,0 +1,42 @@
+services:
+- name: api
+  url: http://backend:${API_SERVICE_PORT}
+  routes:
+  - name: api-route
+    strip_path: false
+    paths:
+    - ${API_SERVICE_PATH}
+  plugins:
+    - name: cors
+      config:
+        origins:
+        - ${WEB_APP_URL}
+        methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+        headers:
+        - Accept
+        - Authorization
+        - Content-Type
+        - x-curity-csrf
+        exposed_headers:
+        - Authorization
+        credentials: true
+        preflight_continue: false
+
+    - name: oauth-proxy
+      config:
+        cookie_prefix: th-
+        cookie_key: ${OAUTH_PROXY_COOKIE_KEY_PEM}
+        cookie_key_pass: ${KONG_OAUTH_PROXY_COOKIE_KEY}
+
+    - name: phantom-token
+      config:
+        introspection_endpoint: ${CURITY_INTROSPECTION_ENDPOINT}
+        client_id: kong-introspection 
+        client_secret: ${CURITY_PHANTOM_TOKEN_CLIENT_SECRET}
+        token_cache_seconds: 900
+        verify_ssl: false

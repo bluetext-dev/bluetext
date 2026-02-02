@@ -1,0 +1,223 @@
+tools:
+  implement-curity-phantom-token:
+    info: |
+      Implements the Curity Phantom Token Pattern.
+      Adds JWT Validator to Python clients and Phantom Token Handler to TypeScript clients.
+      Appends Kong configuration to config/kong.yml.
+    run:
+      # Check if Kong is present in the project and add it if missing
+      - id: check-and-add-kong
+        code: |-
+          #pt-clj
+          (let [container-id (pt/spawn {:image "registry.k8s.io/pause:3.9"
+                                        :id "check-kong-ctx"
+                                        :restart {:policy "never"}
+                                        :mounts [{:path "/polytope.yml"
+                                                  :source {:type "host"
+                                                           :path "polytope.yml"}}]})]
+            (pt/await-started {:type "deployment" :ref container-id})
+            (try
+              (let [poly-content (pt/read-container-file container-id "/polytope.yml")]
+                (if-not (clojure.string/includes? poly-content "template: kong")
+                  (do
+                    (pt/log "🚀 Kong not found. Adding Kong service...")
+                    (pt/call-module "add-and-run-service" {:template "kong" :name "kong" :run true}))
+                  (pt/log "✅ Kong already present in project.")))
+              (catch Exception e
+                (pt/log (str "⚠️ Could not read polytope.yml: " e)))
+              (finally
+                (pt/stop {:type "container" :ref container-id}))))
+
+      - id: add-python-client
+        after: {step: check-and-add-kong}
+        tool: add-client
+        args:
+          name: jwt_validator
+          language: python
+      - id: add-typescript-client
+        after: {step: add-python-client}
+        tool: add-client
+        args:
+          name: phantom-token-handler
+          language: typescript
+
+      - id: set-secrets
+        after: {step: add-typescript-client}
+        tool: set-values-and-secrets
+        args:
+          source: implement/curity-phantom-token
+
+      - id: generate-missing-secrets
+        after: {step: set-secrets}
+        tool: pt/run-script
+        args:
+          repo: {type: host, path: .}
+          language: python
+          dependencies: [pyyaml, cryptography]
+          script:
+            type: string
+            data: |
+              import yaml
+              import secrets
+              import string
+              from pathlib import Path
+              from cryptography.hazmat.primitives import serialization
+              from cryptography.hazmat.primitives.asymmetric import rsa
+
+              def generate_random_string(length=32):
+                  alphabet = string.ascii_letters + string.digits
+                  return ''.join(secrets.choice(alphabet) for i in range(length))
+
+              def generate_rsa_key():
+                  key = rsa.generate_private_key(
+                      public_exponent=65537,
+                      key_size=2048,
+                  )
+                  pem = key.private_bytes(
+                      encoding=serialization.Encoding.PEM,
+                      format=serialization.PrivateFormat.PKCS8,
+                      encryption_algorithm=serialization.NoEncryption()
+                  )
+                  return pem.decode('utf-8')
+
+              secrets_path = Path("/repo/config/secrets.yml")
+              
+              if secrets_path.exists():
+                  with open(secrets_path) as f:
+                      existing_secrets = yaml.safe_load(f) or {}
+              else:
+                  existing_secrets = {}
+
+              new_secrets = {}
+              
+              # 1. curity-phantom-token-client-secret
+              if "curity-phantom-token-client-secret" not in existing_secrets:
+                  print("🔑 Generating: curity-phantom-token-client-secret")
+                  new_secrets["curity-phantom-token-client-secret"] = generate_random_string()
+              
+              # 2. kong-oauth-proxy-cookie-key
+              if "kong-oauth-proxy-cookie-key" not in existing_secrets:
+                  print("🔑 Generating: kong-oauth-proxy-cookie-key")
+                  new_secrets["kong-oauth-proxy-cookie-key"] = generate_random_string()
+              
+              # 3. oauth-proxy-cookie-key-pem
+              if "oauth-proxy-cookie-key-pem" not in existing_secrets:
+                  print("🔑 Generating: oauth-proxy-cookie-key-pem")
+                  new_secrets["oauth-proxy-cookie-key-pem"] = generate_rsa_key()
+
+              if new_secrets:
+                  # Merge into existing
+                  existing_secrets.update(new_secrets)
+                  
+                  # Write back to file
+                  with open(secrets_path, 'w') as f:
+                      yaml.dump(existing_secrets, f, default_flow_style=False, sort_keys=True)
+                  
+                  print(f"✅ Generated and saved {len(new_secrets)} missing secrets.")
+              else:
+                  print("✅ All required secrets already exist.")
+
+      - id: set-generated-secrets-in-runtime
+        after: {step: generate-missing-secrets}
+        code: |-
+          #pt-clj
+          (let [secrets-path "config/secrets.yml"
+                container-id (pt/spawn {:image "registry.k8s.io/pause:3.9"
+                                        :id "set-gen-secrets"
+                                        :restart {:policy "never"}
+                                        :mounts [{:path "/secrets.yml"
+                                                  :source {:type "host"
+                                                           :path secrets-path}}]})]
+            (pt/await-started {:type "deployment" :ref container-id})
+            (try
+              (let [secrets-content (pt/read-container-file container-id "/secrets.yml")
+                    secrets (pt/read-yaml secrets-content)]
+                (pt/log (str "🔐 Ensuring secrets are in context"))
+                (doseq [[k v] secrets]
+                  (pt/log (str "  Setting secret: " (name k) " = ***"))
+                  (pt/set-secret (name k) (str v))))
+              (catch Exception e
+                (pt/log (str "⚠️ Could not read secrets: " e))))
+            (pt/stop {:type "container" :ref container-id}))
+
+      - id: setup-kong-env-vars
+        after: {step: set-secrets}
+        tool: setup-environment-variables
+        args:
+          caller: implement
+          source: curity-phantom-token
+          target: kong
+
+      - id: update-kong-config
+        after: {step: setup-kong-env-vars}
+        tool: pt/run-script
+        args:
+          repo: {type: host, path: .}
+          language: python
+          dependencies: [pyyaml]
+          mounts:
+            - path: /kong-config
+              source:
+                type: repo
+                repo: "#pt-clj pt/module-repo-ref"
+                path: tool_resources/implement/curity-phantom-token/kong-config
+          script:
+            type: string
+            data: |
+              import yaml
+              from pathlib import Path
+              import os
+
+              # Define target path
+              target_path = Path("/repo/config/kong.yml")
+              
+              if not target_path.exists():
+                  print(f"⚠️ {target_path} does not exist. Checking for services/kong/kong.yml")
+                  fallback_path = Path("/repo/services/kong/kong.yml")
+                  if fallback_path.exists():
+                      target_path = fallback_path
+                      print(f"Using {target_path}")
+                  else:
+                      print(f"❌ No kong.yml found. Please ensure Kong service is added.")
+                      exit(0)
+
+              # Read existing config
+              with open(target_path) as f:
+                  existing_data = yaml.safe_load(f) or {}
+              
+              if "services" not in existing_data:
+                  existing_data["services"] = []
+              
+              existing_services = existing_data["services"]
+              # Map of existing service names
+              existing_names = {s.get("name") for s in existing_services if "name" in s}
+              
+              added_count = 0
+              config_dir = Path("/kong-config")
+              
+              # Iterate over all yaml files in the mounted directory
+              for config_file in config_dir.glob("*.yml"):
+                  print(f"Processing config file: {config_file.name}")
+                  with open(config_file) as f:
+                      snippet_data = yaml.safe_load(f) or {}
+                  
+                  snippet_services = snippet_data.get("services", [])
+                  if not snippet_services:
+                      continue
+
+                  for service in snippet_services:
+                      name = service.get("name")
+                      if name and name in existing_names:
+                          print(f"ℹ️ Service '{name}' already exists in kong.yml - skipping.")
+                      else:
+                          print(f"✅ Adding service '{name}' to kong.yml")
+                          existing_services.append(service)
+                          existing_names.add(name) # Check duplicates within same execution
+                          added_count += 1
+              
+              if added_count > 0:
+                  with open(target_path, 'w') as f:
+                      yaml.dump(existing_data, f, default_flow_style=False, sort_keys=False)
+                  print(f"✅ Successfully added {added_count} services to {target_path}")
+              else:
+                  print("No new services added to kong.yml")

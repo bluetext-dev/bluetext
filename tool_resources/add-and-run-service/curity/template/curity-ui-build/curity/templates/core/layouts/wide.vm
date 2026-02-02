@@ -1,0 +1,70 @@
+#*
+ * Copyright (C) 2016 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+#if($_language)
+    #set($_langAttr = ' lang="' + ${_language} + '"')
+#else
+    #set($_langAttr = '')
+#end
+#if($_rtlLanguages.contains($_language))
+    #set($_directionAttr = ' dir="rtl"')
+#end
+<!DOCTYPE html>
+<html itemscope itemtype="http://schema.org/WebPage"$!_langAttr $!_directionAttr>
+    <head>
+        #parse("fragments/head")
+    </head>
+    <body class="login $!body_background">
+        <main class="container clearfix" role="main">
+            <div class="login-well login-well-full clearfix $!login_form_background">
+                #parse("fragments/logo")
+                #parse("fragments/symbol")
+                <div class="sm-col sm-col-12 md-col-6">
+                    $!_leftColumn
+                    #if ($_errors || $_warnings || $_infoMessages)
+                        <div class="alert-wrapper">
+                            #parse("fragments/alerts")
+                        </div>
+                    #end
+                </div>
+                <div class="sm-col sm-col-12 md-col-6">
+                    $!_rightColumn
+                </div>
+                <div class="sm-col sm-col-12 center">
+                    #if ($powered_by)
+                        #parse("fragments/poweredby")
+                    #end
+                </div>
+            </div>
+        </main>
+    #parse("fragments/jquery")
+    #parse("fragments/curity-ui")
+    </body>
+</html>

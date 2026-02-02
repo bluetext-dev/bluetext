@@ -1,0 +1,18 @@
+#*
+ * Copyright (C) 2023 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+## See browser-strategy.js.vm for available parameters
+browsers.push(new BrowserStrategy({
+    browserName: 'edge-ios',
+    redirect: 'microsoft-edge-https://',
+    platform: PLATFORM_IOS,
+    launchStrategy: LAUNCH_STRATEGY_CLICK,
+    detectCurrentBrowser: () => /edgios/i.test(navigator.userAgent)
+}));

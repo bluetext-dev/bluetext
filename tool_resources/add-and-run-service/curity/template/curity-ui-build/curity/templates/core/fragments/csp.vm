@@ -1,0 +1,64 @@
+#*
+ * Copyright (C) 2016 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+#if($_inlineScriptNonce)
+    #set ($nonceScriptSrc = "'nonce-$_inlineScriptNonce'")
+    #set ($nonceAttr = "nonce=""" + ${_inlineScriptNonce} + """")
+#end
+#if(${_cspImgsrc})
+    #set ($imgSrc = ${_cspImgsrc})
+#else
+    #set ($imgSrc = "img-src 'self';")
+#end
+#if(${_cspStyleSrc})
+    #set ($styleSrc = ${_cspStyleSrc})
+#else
+    #set ($styleSrc = "style-src 'self' 'unsafe-inline' ${nonceScriptSrc};")
+#end
+#if(${_cspChildSrc})
+    #set ($childSrc = ${_cspChildSrc})
+#else
+    #set ($childSrc = "child-src 'self';")
+#end
+#if(${_cspObjSrc})
+    #set ($objSrc = ${_cspObjSrc})
+#else
+    #set ($objSrc = "object-src 'none';")
+#end
+#if(${_cspConnectSrc})
+    #set ($connectSrc = ${_cspConnectSrc})
+#else
+    #set ($connectSrc = "connect-src 'self';")
+#end
+<meta http-equiv="Content-Security-Policy" content="$!objSrc media-src 'none';">
+<meta http-equiv="Content-Security-Policy" content="$!connectSrc font-src 'self'; $childSrc">
+<meta http-equiv="Content-Security-Policy" content="$!imgSrc">
+<meta http-equiv="Content-Security-Policy" content="$!styleSrc">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' $!nonceScriptSrc;">

@@ -1,0 +1,53 @@
+#*
+ * Copyright (C) 2021 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+## This template is not indended to work in the UI-Builder
+#set ($page_symbol = $page_symbol_authenticate_webauthn)
+#define($_body)
+    <form id="additionalDeviceForm" method="post" class="login-form hidden">
+        <input type="hidden" name="json"/>
+    </form>
+    <form id="noAdditionalDeviceForm" method="post" class="login-form hidden">
+        <input type="hidden" name="dont_ask_again_for"/>
+    </form>
+    #parse("authenticator/webauthn/fragments/alerts")
+    <div id="waitingDiv" class="hidden">
+        #parse("fragments/spinner")
+    </div>
+    <div id ="registerDiv" class="area center">
+        <p>
+            #message("${_templatePrefix}.view.description")
+        </p>
+        <div class="flex justify-between mxn1 mt2 mb2">
+            <div class="col-12 px1">
+                <button id="registerNoAdditionalDeviceButton" class="button button-fullwidth button-primary-outline">
+                        #message("${_templatePrefix}.view.button.no")
+                </button>
+            </div>
+            <div class="col-12 px1 mb2">
+                <button id="registerAdditionalDeviceButton" class="button button-fullwidth button-primary">
+                    #message("${_templatePrefix}.view.button.yes")
+                </button>
+            </div>
+        </div>
+        <div class="mb1">
+            <a id="dontAskAgainForBrowserLink" href="#">
+                #message("${_templatePrefix}.view.button.dont-ask-again-for-browser")
+            </a>
+        </div>
+        <div class="mb1">
+            <a id="dontAskAgainForAccountLink"  href="#">
+                #message("${_templatePrefix}.view.button.dont-ask-again-for-account")
+            </a>
+        </div>
+    </div>
+#parse("authenticator/webauthn/js/add-additional-device")
+#end ## /body
+#parse("layouts/default")

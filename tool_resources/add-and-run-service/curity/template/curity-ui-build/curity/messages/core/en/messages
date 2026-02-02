@@ -1,0 +1,65 @@
+#
+# Copyright (C) 2016 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+page.problems-logging-in=Having problems logging in?
+page.documentation=Documentation
+page.help-support=Help and Support
+system.error-contact=You can <a href="#">return to our front page</a>, or <a href="#">drop us a line</a> if you can't find what you're looking for.
+system.status.authentication.missing-authenticators=An unrecoverable internal error occurred that prevented the request from being completed.
+email.footer=This email is sent by Bluetext
+page.redirect.please-wait=Please wait...
+error.identifier=Error identifier:
+authentication.success=You have successfully authenticated
+view.title.cancel=Cancel this operation
+
+validation.error.username.required=Username is required
+error.password.update.failed=Password update failed
+
+error.too-many-attempts=Too many attempts. You may try again later.
+
+rejected.update.credential=Your password was not accepted. Please try again with a different one.
+update-required.rejected.verification.credential=You must update your password before proceeding
+
+password-in-dictionary.rejected.update.credential=Your password is too common and easy to guess.
+
+# invalid password built-in reasons
+# see se.curity.identityserver.sdk.service.credential.results.InvalidPassword
+credential.invalid-password.reason.HISTORY=You cannot reuse recently used passwords.
+credential.invalid-password.reason.MINIMUM_LENGTH=Your password is too short.
+credential.invalid-password.reason.MINIMUM_LOWER_CASE=Your password needs more lower case letters.
+credential.invalid-password.reason.MINIMUM_UPPER_CASE=Your password needs more upper case letters.
+credential.invalid-password.reason.MINIMUM_DIGITS=Your password needs more digits.
+credential.invalid-password.reason.MINIMUM_SPECIAL=Your password needs more special characters (!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~).
+credential.invalid-password.reason.MINIMUM_UNIQUE=Your password needs more unique characters.
+credential.invalid-password.reason.MAXIMUM_SEQUENCE=Your password cannot contain well-known character sequences which are easy to guess.
+
+# password rule requirements
+credential.password.rules=Password requirements
+credential.password.rule.min-length=Minimum length
+credential.password.rule.min-length.details=Minimum number of characters
+credential.password.rule.min-lower-case-characters=Minimum lower case letters
+credential.password.rule.min-lower-case-characters.details=Minimum number of lower case letters (ex. a-z)
+credential.password.rule.min-upper-case-characters=Minimum upper case letters
+credential.password.rule.min-upper-case-characters.details=Minimum number of upper case letters (ex. A-Z)
+credential.password.rule.min-digits=Minimum digits
+credential.password.rule.min-digits.details=Minimum number of digits (0-9)
+credential.password.rule.min-special-characters=Minimum special characters
+credential.password.rule.min-special-characters.details=Minimum number of special characters (ex. #@!-+)
+credential.password.rule.min-unique-characters=Minimum unique characters
+credential.password.rule.min-unique-characters.details=Minimum number of unique characters
+credential.password.rule.max-sequence=Maximum in well-known sequences
+credential.password.rule.max-sequence.details=Maximum number of consecutive characters from well-known sequences, such as alphabet, numbers, and keyboard key rows (ex. abcd..., 1234...)
+
+# recover from an invalid action on the authentication flow
+invalid-action-recover.error-title=Operation not allowed
+invalid-action-recover.error-message=Navigation to or interaction with this page is not possible because it is no longer valid. Authentication can be resumed or restarted.
+invalid-action-recover.resume-action=Resume
+invalid-action-recover.retry-authenticator=Restart

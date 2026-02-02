@@ -1,0 +1,75 @@
+#*
+ * Copyright (C) 2017 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+## To allow the netid plugin to be loaded
+#set($_cspObjSrc = "object-src 'self';")
+#define($extendedHead)
+#parse("fragments/jquery")
+<script src="$_staticResourceRootPath/assets/js/lib/_netid.js"></script>
+<script type="application/javascript" $nonceAttr>
+    var netid = {};
+    netid.checkForCards = function() {
+        if (typeof iid_IsAvailable !== 'function') {
+            // netid JS toolkit failed to load
+            console.log('Could not load the Net iD toolkit. Make sure the javascript is loaded.');
+            return;
+        }
+        if (iid_GetProperty("Version") === '') {
+            // Not installed, or browser without plugin
+            console.log('Net iD plugin is not available, cannot check status of smart card.');
+            $('#info-message').addClass('alert-info').removeClass('hidden')
+                    .text('#message("${_templatePrefix}.check-card")');
+            return;
+        }
+        $('#next-link').hide();
+        var cards = iid_EnumProperty('TokenCard', 0);
+        if (cards !== '') {
+            // We have a card somewhere, allow redirect
+            console.log('Found a card. Redirecting to windows connector.');
+            window.location = "$!_action";
+        }
+        else {
+            $('#info-message').addClass('alert-warning').removeClass('hidden')
+                    .text('#message("${_templatePrefix}.insert-card")');
+            setTimeout(netid.checkForCards , 1000);
+        }
+    }
+    netid.logout = function() {
+        if (typeof iid_IsAvailable !== 'function') {
+            console.log('Could not load the Net iD toolkit. Make sure the javascript is loaded.');
+            return;
+        }
+        // Clear browser ssl cache
+        document.execCommand("ClearAuthenticationCache");
+        // Logout the card
+        return iid_Invoke('Logout');
+    };
+</script>
+#end

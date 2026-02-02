@@ -1,0 +1,23 @@
+#
+# Copyright (C) 2022 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=Registrar novo dispositivo
+view.title1=Registrar novo dispositivo
+view.register=Registrar
+view.next=Próximo
+view.deviceId=Número de série do dispositivo
+view.totp=Senha única
+view.device-expiration=Validade (tempo em segundos)
+view.p1=Digitalize o código QR ou toque na imagem se quiser digitalizá-la no mesmo dispositivo para configurar seu aplicativo.
+validation.error.totp.required=Insira a senha única.
+validation.error.deviceId.required=Insira o número de série do dispositivo.
+error.device-already-registered=Algo deu errado. Não foi possível registrar este dispositivo.
+error.invalid-otp=Não foi possível verificar o OTP

@@ -1,0 +1,49 @@
+#*
+ * Copyright (C) 2023 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+#set ($page_symbol = $page_symbol_openid_wallet)
+#define($_body)
+    <form method="post" class="poller-onsuccess">
+        <input type="hidden"  id="moveOn" name="moveOn" value="true"/>
+        <h1 class="center">#message("${_templatePrefix}.page.title")</h1>
+        <p class="center">#message("${_templatePrefix}.view.instructions")</p>
+        <div class="center p2">
+            #parse("fragments/spinner")
+        </div>
+    </form>
+    <div class="center py2 login-actions">
+        <a href="$_restartUrl">
+            <i class="icon ion-refresh inlineicon"></i>#message("${_templatePrefix}.view.button.retry")
+        </a>
+    </div>
+    #set($_maxWaitTime = 300) ## 5mins to give the user enough time to work with a wallet
+    #parse("fragments/poller")
+#end
+#parse("layouts/default")

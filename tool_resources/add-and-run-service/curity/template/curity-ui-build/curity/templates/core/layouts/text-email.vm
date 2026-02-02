@@ -1,0 +1,9 @@
+**#if(${title})
+    ${title}
+#else
+    #message("${_templatePrefix}.email.title")
+#end**
+
+$_body
+
+#message("${_templatePrefix}.email.footer")

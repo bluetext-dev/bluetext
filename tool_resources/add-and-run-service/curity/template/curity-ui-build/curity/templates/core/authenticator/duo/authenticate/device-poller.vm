@@ -1,0 +1,26 @@
+#*
+* Copyright (C) 2020 Curity AB. All rights reserved.
+*
+* The contents of this file are the property of Curity AB.
+* You may not copy or use this file, in either source code
+* or executable form, except in compliance with terms
+* set by Curity AB.
+*
+* For further information, please contact Curity AB.
+*###
+#define($_body)
+<form action="$_action" method="post" class="poller-onsuccess">
+    <input type="hidden" id="moveOn" name="moveOn" value="true"/>
+    <h1 class="center">#message("authenticator.duo.authenticate.view.device.waiting")</h1>
+    <div class="center p2">
+        #parse("fragments/spinner")
+        #parse("fragments/poller")
+        <div class="mt2">
+            <a href="$!_authenticationEndpoint" class="button button-fullwidth">#message(
+                    "authenticator.duo.authenticate.view.device.cancel")
+            </a>
+        </div>
+    </div>
+</form>
+#end
+#parse("layouts/default")

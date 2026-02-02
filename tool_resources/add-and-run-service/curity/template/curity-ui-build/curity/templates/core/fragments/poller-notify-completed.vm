@@ -1,0 +1,22 @@
+#*
+ * Copyright (C) 2023 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * This template is used to notify a poller running on another tab that the operation that required polling is
+ * complete.
+ *###
+<script src="$_staticResourceRootPath/assets/js/curity.js"></script>
+<script type="text/javascript" $!nonceAttr>
+    const pollerName = #if($_authenticatorId) '$!_authenticatorId' #else undefined #end;
+    #* This check is here due to ui-kit tests, where the poller JS is not available *###
+    if (typeof se !== 'undefined') {
+        se.curity.utils.poller.notifyCompleted(pollerName);
+    }
+</script>

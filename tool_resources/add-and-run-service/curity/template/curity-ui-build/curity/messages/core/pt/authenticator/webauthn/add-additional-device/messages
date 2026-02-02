@@ -1,0 +1,18 @@
+#
+# Copyright (C) 2022 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+view.description=Você acabou de se autenticar com uma chave de segurança. Deseja registrar um dispositivo adicional integrado, como reconhecimento facial ou um leitor de impressões digitais integrado?
+view.button.dont-ask-again-for-browser=Não pedir novamente para este navegador
+view.button.dont-ask-again-for-account=Não perguntar novamente para nenhum navegador
+view.button.yes=Sim
+view.button.no=Não, agora não
+view.error.registration=Algo deu errado. Não foi possível registrar este dispositivo.
+view.error.cancel-or-timeout=O registro do dispositivo foi cancelado ou o tempo esgotou.

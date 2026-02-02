@@ -1,0 +1,22 @@
+#
+# Copyright (C) 2018 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+view.p1=A password reset is required.
+view.password.label=Password
+view.password2.label=Verify Password
+view.currentPassword.label=Current Password
+view.button=Submit
+view.skip=Skip
+
+validation.error.password.required=Password is required
+validation.error.password.mismatch=Passwords don't match
+validation.error.password.weak=Password not strong enough
+validation.error.incorrect.credentials=Current password is incorrect

@@ -1,0 +1,137 @@
+#*
+* Copyright (C) 2019 Curity AB. All rights reserved.
+*
+* The contents of this file are the property of Curity AB.
+* You may not copy or use this file, in either source code
+* or executable form, except in compliance with terms
+* set by Curity AB.
+*
+* For further information, please contact Curity AB.
+*###
+#*
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+#set ($page_symbol = $page_symbol_authenticate_bankid)
+#set ($_qrCodeId = 'qrCodeImg')
+#set($_sameDeviceLinkId = "startBankIdApp")
+#define($_body)
+#if($_maxWaitTime < 60)
+    #set($qr_time_left = $_maxWaitTime)
+#else
+    #set($qr_time_left = $_maxWaitTime / 60)
+#end
+#set($qr_time_elapsed = 0)
+<iframe id="autoStart" height="0" width="0" frameborder="0"></iframe>
+<form id="pollerForm" action="$_action" method="post" class="poller-onsuccess">
+## The moveOn is a flag that when set indicates that the page is ready to move on
+## the poller script will post to the server _without_ this flag, and when the script
+## detects that authentication is ready, this form is posted with moveOn true, to mark
+## that it's the page and not the script calling.
+    <input type="hidden" id="moveOn" name="moveOn" value="true"/>
+    <input type="hidden" id="cancelled" name="cancelled" value="false"/>
+    <input type="hidden" name="state" value="$_state"/>
+    <div class="center">
+        <h1 id="signData" class="center header">#message("${_templatePrefix}.view.visibleSignData")</h1>
+        <h3 id="visibleSignData">
+            <pre>$!_visibleSigningData</pre>
+        </h3>
+        <p class="h4 mb4 semibold center" id="startupAttemptMessage">#message("${_templatePrefix}.view.title")</p>
+        <p/>
+        <div class="manuallink pb0 display-none">
+            <a id="startBankIdApp" class="button button-light-grey button-small" href="">#message("${_templatePrefix}.view.sign")</a>
+        </div>
+        <h1 id="qrCode" class="center header">
+            #message("${_templatePrefix}.view.scan-qrcode")
+        </h1>
+        <div class="p2">
+            <div>
+                <button class="button button-link p0 m0" id="trigger-fullscreen">
+                    <img src="$_qrCode" id="$_qrCodeId" class="mx-auto block" alt="#message("${_templatePrefix}.view.qr.click")" title="#message("${_templatePrefix}.view.qr.click")">
+                </button>
+                <progress id="qr-time" max="$_maxWaitTime" value="$qr_time_elapsed"></progress>
+                <p class="h4 center" id="qr-time-duration"><span>${qr_time_left.intValue()}</span>
+                    <span id="qr-time-label-minutes" #if($_maxWaitTime < 60) class="hide"#end>#message("${_templatePrefix}.view.qr.minutes-left")</span>
+                    <span id="qr-time-label-seconds" #if($_maxWaitTime >= 60) class="hide"#end>#message("${_templatePrefix}.view.qr.seconds-left")</span>
+                 </p>
+                 <div class="mt2">
+                    <a class="button button-tiny button-primary-outline" id="qr-time-extend" href="$_authUrl">
+                    #message("${_templatePrefix}.view.button.qr-time-extend")
+                    </a>
+                 </div>
+            </div>
+        </div>
+    </div>
+    <div class="p3">
+        <details>
+            <summary>#message("${_templatePrefix}.view.qr.instruction.heading")</summary>
+            <ul>
+                <li>#message("${_templatePrefix}.view.qr.instruction.step1")</li>
+                <li>#message("${_templatePrefix}.view.qr.instruction.step2")</li>
+                <li>#message("${_templatePrefix}.view.qr.instruction.step3")</li>
+                <li>#message("${_templatePrefix}.view.qr.instruction.step4")</li>
+            </ul>
+            <p>#message("${_templatePrefix}.view.qr.instruction.outro")</p>
+        </details>
+        <details>
+            <summary>#message("${_templatePrefix}.view.qr.screen-reader.heading")</summary>
+            #message("${_templatePrefix}.view.qr.screen-reader.intro")
+            <ul>
+                <li>#message("${_templatePrefix}.view.qr.screen-reader.step1")</li>
+                <li>#message("${_templatePrefix}.view.qr.screen-reader.step2")</li>
+                <li>#message("${_templatePrefix}.view.qr.screen-reader.step3")</li>
+                <li>#message("${_templatePrefix}.view.qr.screen-reader.step4")
+                    <ul>
+                        <li>#message("${_templatePrefix}.view.qr.screen-reader.step4.1")</li>
+                        <li>#message("${_templatePrefix}.view.qr.screen-reader.step4.2")
+                            <ul>
+                                <li>#message("${_templatePrefix}.view.qr.screen-reader.step4.2.1")</li>
+                                <li>#message("${_templatePrefix}.view.qr.screen-reader.step4.2.2")</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+            <p class="left-align">#message("${_templatePrefix}.view.qr.screen-reader.outro")</p>
+        </details>
+    </div>
+    <div class="manuallink pb0 display-none">
+        <button id="cancelButton" type="button" class="button button-fullwidth button-danger-outline">
+            #message("${_templatePrefix}.view.button.cancel")</button>
+    </div>
+</form>
+    #parse("fragments/poller")
+    #parse("consentor/bankid-signing-consentor/handle-auto-start-uri")
+    #parse("fragments/consentor-signing-app-launcher")
+## if the cancel button is clicked then the form is posted with cancelled flag equal to true
+## then the backend handles the cancellation of the flow
+<script type="application/javascript" $nonceAttr>
+    jQuery(document).ready(function ($) {
+        $("#cancelButton").on('click', function (e) {
+            $("#cancelled").val("true");
+            $("#pollerForm").submit();
+        })
+    })
+</script>
+## NOTE: In case the user refreshes the page while this form is shown and polling for status, then any progress will be lost.
+## Depending on the context, the browser will show a default pop up message upon refresh, mentioning that any progress
+## will be lost if continuing with refresh. Otherwise, the relevant event upon refreshing should be handled in order to
+## inform the user that the flow will be restarted.
+#end
+#parse("layouts/default")

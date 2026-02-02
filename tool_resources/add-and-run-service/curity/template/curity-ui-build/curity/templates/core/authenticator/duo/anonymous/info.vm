@@ -1,0 +1,78 @@
+#*
+ * Copyright (C) 2020 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * This is an information page that is shown before registration. This can be useful when
+ * using a required authentication for registration, since the user will be required to authenticate
+ * after this and may need to know what is about to happen.
+ * It is also a good place to show the "download the app" uri
+ *
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+#set ($page_symbol = $page_symbol_authenticate_pair_device)
+###define($_body)
+#define($_leftColumn)
+<div class="area center">
+    <h1>#message("authenticator.duo.register.view.download-app-and-register")</h1>
+    <p>#message("authenticator.duo.register.view.download-app-and-register.description")</p>
+    <div>
+        <a href="https://apps.apple.com/us/app/duo-mobile/id422663827">
+            <img src="/assets/images/appstore.svg" alt="Apple App Store" title="Apple App Store" role="presentation">
+        </a>
+        <a href="https://play.google.com/store/apps/details?id=com.duosecurity.duomobile&hl=en">
+            <img src="/assets/images/googleplay.svg" alt="Google Play" title="Google Play" role="presentation">
+        </a>
+    </div>
+</div>
+<div class="area center">
+    #if ($_downloadUriDataUri)
+        #define($_qrCode)
+            <img src="$_downloadUriDataUri" class="mx-auto block" title="$!_downloadUri"
+                 alt="$!_downloadUri" onclick="document.getElementById('_downloadUri').select()">
+        #end
+    #end
+    <h3>#message("authenticator.duo.register.view.not-on-your-device")</h3>
+    <p>
+        #message("authenticator.duo.register.view.on-other-device")
+    #if ($_qrCode)
+        #if ($_downloadUri)
+            $!_qrCode
+        #end
+    #end
+    </p>
+</div>
+#end
+#define($_rightColumn)
+<form action="$_registerUrl" id="infoForm" method="post" class="p4">
+    <h3>#message("authenticator.duo.register.view.continue-registration")</h3>
+    <p>#message("authenticator.duo.register.view.app-installed")</p>
+    <button class="button button-fullwidth button-primary mt2">
+        #message("authenticator.duo.register.view.button")
+    </button>
+</form>
+#end
+#parse("layouts/wide")

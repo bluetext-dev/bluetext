@@ -1,0 +1,64 @@
+#
+# Copyright (C) 2022 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+page.problems-logging-in=Está tendo problemas para entrar?
+page.documentation=Documentação
+page.help-support=Ajuda e suporte
+system.error-contact=Você pode retornar à página inicial ou nos enviar uma mensagem se não conseguir encontrar o que está procurando.
+system.status.authentication.missing-authenticators=Ocorreu um erro interno irrecuperável que impediu que a solicitação fosse concluída.
+email.footer=Este e-mail foi enviado por Curity
+page.redirect.please-wait=Aguarde...
+error.identifier=Identificador de erro
+authentication.success=Você autenticou com sucesso
+view.title.cancel=Cancelar esta operação
+validation.error.username.required=Nome de usuário obrigatório
+error.password.update.failed=Não foi possível atualizar a senha
+
+error.too-many-attempts=Demasiadas tentativas. Você pode tentar novamente mais tarde.
+
+rejected.update.credential=Sua senha não foi aceite. Favor tentar com uma senha diferente.
+update-required.rejected.verification.credential=Você precisa atualizar a sua senha antes de prosseguir.
+
+password-in-dictionary.rejected.update.credential=Sua senha é demasiado comum e fácil de adivinhar.
+
+# invalid password built-in reasons,
+# see se.curity.identityserver.sdk.service.credential.results.InvalidPassword
+credential.invalid-password.reason.HISTORY=Você não pode reutilizar uma senha usada recentemente.
+credential.invalid-password.reason.MINIMUM_LENGTH=Sua senha é curta demais.
+credential.invalid-password.reason.MINIMUM_LOWER_CASE=Sua senha precisa incluir mais letras minúsculas.
+credential.invalid-password.reason.MINIMUM_UPPER_CASE=Sua senha precisa incluir mais letras maiúsculas.
+credential.invalid-password.reason.MINIMUM_DIGITS=Sua senha precisa incluir mais dígitos.
+credential.invalid-password.reason.MINIMUM_SPECIAL=Sua senha precisa incluir mais caracteres especiais (!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~).
+credential.invalid-password.reason.MINIMUM_UNIQUE=Sua senha precisa incluir mais caracteres únicos.
+credential.invalid-password.reason.MAXIMUM_SEQUENCE=Sua senha não pode conter sequência de caracteres fácil de adivinhar.
+
+# password rule requirements
+credential.password.rules=Requisitos da senha
+credential.password.rule.min-length=Comprimento mínimo
+credential.password.rule.min-length.details=Número mínimo de caracteres
+credential.password.rule.min-lower-case-characters=Mínimo de letras minúsculas
+credential.password.rule.min-lower-case-characters.details=Número mínimo de letras minúsculas
+credential.password.rule.min-upper-case-characters=Mínimo de letras maiúsculas
+credential.password.rule.min-upper-case-characters.details=Número mínimo de letras maiúsculas
+credential.password.rule.min-digits=Mínimo de digitos
+credential.password.rule.min-digits.details=Número mínimo de digitos
+credential.password.rule.min-special-characters=Mínimo de caracteres especiais
+credential.password.rule.min-special-characters.details=Número mínimo de caracteres especiais (ex. #@!-+)
+credential.password.rule.min-unique-characters=Mínimo de caracteres únicos
+credential.password.rule.min-unique-characters.details=Número mínimo de caracteres únicos
+credential.password.rule.max-sequence=Máximo de caracteres em sequências proibidas
+credential.password.rule.max-sequence.details=Número máximo de caracteres consecutivos pertencentes a sequências fáceis de adivinhar, tais como o alfabeto, digitos ou linhas do teclado (ex. abcd..., 1234...)
+
+# recover from an invalid action on the authentication flow
+invalid-action-recover.error-title=Operação não permitida
+invalid-action-recover.error-message=Navegação ou interação com esta página não é possível porque a página já não é válida. A autenticação pode ser continuada ou recomeçada.
+invalid-action-recover.resume-action=Continuar
+invalid-action-recover.retry-authenticator=Recomeçar

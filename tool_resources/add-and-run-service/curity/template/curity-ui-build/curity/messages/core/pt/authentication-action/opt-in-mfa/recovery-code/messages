@@ -1,0 +1,19 @@
+#
+# Copyright (C) 2022 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+page.title=Usar código de recuperação
+meta.title=Usar código de recuperação
+view.title=Usar código de recuperação
+view.sub-title=Use um código de recuperação para continuar.
+view.code.label=Código de recuperação
+view.code.placeholder=Insira código de recuperação
+view.code.action=Usar código de recuperação
+view.cancel=Cancelar

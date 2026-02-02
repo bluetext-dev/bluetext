@@ -1,0 +1,90 @@
+#
+# Copyright (C) 2017 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=Aktivera åtkomst för enheten
+page.title=Aktivera åtkomst för enheten
+
+enter-user-code=Ange kod
+enter-user-code-description=Skriv in koden som visas på din enhet
+enter-user-code-submit=Skicka
+enter-user-code-help=Fick du ingen kod?
+
+enter-user-code-invalid-code=Koden är inte giltig
+
+confirm=Bekräfta
+confirm-description=Genom att klicka bekräfta ger du enheten tillgång till ditt konto.
+confirm-submit=Bekräfta
+
+code-confirmed=Klart
+code-confirmed-description=Nu kan du stänga fönstret och fortsätta på din enhet.
+
+# "consent" related translations
+consent.meta.title=Begäran av samtycke från användare
+consent.page.title=Begäran av samtycke från användare
+
+consent=Samtycke krävs
+consent.info=Följande egenskaper och tillstånd begärs av klienten. Vänligen granska dessa och bekräfta ditt godkännande.
+consent.info-for-no-scopes=Ovan nämnda app begär ditt samtycke för användande. Tryck OK om du samtycker.
+consent.help=Ditt samtycke krävs för att tillåta listning av attribut och tillstånd. Vissa attribut kan ha en valmöjlighet som tillåter dig att stänga av den, vilket innebär att de inte kommer att skickas till appen som frågar efter det. Vänligen bekräfta förfrågan om du godkänner, eller avbryt för att stoppa appens förfrågan till åtkomst.
+consent.account-info=begär åtkomst till ditt konto
+
+consent.submit=Bekräfta samtycke
+consent.cancel=Avbryt
+consent.showAll=Visa Allt
+consent.hideAll=Göm Allt
+consent.policyDocument=Policy Dokument
+consent.termsOfService=Service Villkor
+
+consent.claim-names.sub=E-postadress
+consent.claim-names.name=Namn
+consent.claim-names.given_name=Tilltalsnamn
+consent.claim-names.family_name=Efternamn
+consent.claim-names.middle_name=Mellan Namn
+consent.claim-names.nickname=Smeknamn
+consent.claim-names.preferred_username=Föredraget E-postadress
+consent.claim-names.profile=Profil
+consent.claim-names.picture=Bild
+consent.claim-names.website=Webbsida
+consent.claim-names.email=E-postadress
+consent.claim-names.email_verified=Verifierat E-mejl
+consent.claim-names.gender=Kön
+consent.claim-names.birthdate=Födelsedatum
+consent.claim-names.zoneinfo=Tidszon
+consent.claim-names.locale=Locale
+consent.claim-names.phone_number=Telefonnummer
+consent.claim-names.phone_number_verified=Verifierat Telefonnummer
+consent.claim-names.address=Address
+consent.claim-names.updated_at=Senast Uppdaterad
+
+# Many of these are intentionally left blank because the name (above) adequately describes what they are.
+consent.claim-descriptions.sub=Ditt konto ID
+consent.claim-descriptions.name=
+consent.claim-descriptions.given_name=
+consent.claim-descriptions.family_name=
+consent.claim-descriptions.middle_name=
+consent.claim-descriptions.nickname=
+consent.claim-descriptions.preferred_username=
+consent.claim-descriptions.profile=Din användarinformation
+consent.claim-descriptions.picture=
+consent.claim-descriptions.website=
+consent.claim-descriptions.email=
+consent.claim-descriptions.email_verified=Din e-postadress som har kontrollerats
+consent.claim-descriptions.gender=
+consent.claim-descriptions.birthdate=
+consent.claim-descriptions.zoneinfo=Tidszonen du bor i
+consent.claim-descriptions.locale=Regionen, länet, kommunen, etc. du bor i
+consent.claim-descriptions.phone_number=
+consent.claim-descriptions.phone_number_verified=Ditt telefonnummer som har kontrollerats
+consent.claim-descriptions.address=
+consent.claim-descriptions.updated_at=När ditt konto senast uppdaterades
+
+logout.meta.title=Logga ut
+logout.page.title=Logga ut

@@ -1,0 +1,26 @@
+#
+# Copyright (C) 2023 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=Registrar nova passkey
+view.title=Registrar nova passkey
+view.register=Selecione a passkey a ser registrado
+view.button.try-again=Tentar novamente
+view.button.register=Continuar com uma passkeys
+view.error.title=Erro
+view.error.registration=Algo deu errado. Não foi possível registrar esta passkey.
+view.error.cancel-or-timeout=O registro do passkey foi cancelado ou o tempo esgotou.
+view.error.not-supported=Este navegador não suporta a utilização de passkeys
+view.error.user-not-found=Usuário não encontrado
+view.success.title=Sucesso!
+view.success.success=Sua passkey foi registrada!
+view.return-to-login=Retornar para login
+view.retry=Tentar novamente registrar a passkey
+view.register-additional-device=Registrar uma passkey adicional

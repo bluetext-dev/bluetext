@@ -1,0 +1,85 @@
+#*
+ * Copyright (C) 2018 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * This is the default authentication view in the html adapter. It collects the username and password from the user.
+ *
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+## The title of this page can be overridden by setting the $title variable here to a resource string or the actual value
+##set($title = "")
+#set ($page_symbol = $page_symbol_authenticate_htmlform)
+#define ($_body)
+#parse("fragments/credential-operation-details")
+<form method="post" action="$_actionUrl">
+    <p>#message("authentication-action.reset-password.view.p1")</p>
+    #if($_askCurrent)
+        <div class="form-password-reveal-form password-group">
+            <label for="currentPassword" class="$!_errorClass">#message("authentication-action.reset-password.view.currentPassword.label")</label>
+            <input type="password" id="currentPassword" name="currentPassword" class="block full-width mb1 field-light $!_errorClass" autofocus #if($!_allowSkip == false)required#end />
+            <i class="form-password-reveal-form-icon"></i>
+        </div>
+    #end
+    <div class="form-password-reveal-form password-group">
+        <label for="password">#message("authentication-action.reset-password.view.password.label")</label>
+        <input type="password" name="password" id="password" class="block full-width mb1 field-light $!_errorClass" autofocus #if($!_allowSkip == false)required#end />
+        <i class="form-password-reveal-form-icon"></i>
+        #if ($_hasCredentialPolicy == true)
+            #parse("fragments/credential-validation")
+        #else
+        <div class="progress progress-thin">
+            <div class="progress-warning" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+        #end
+    </div>
+    <div class="form-password-reveal-form password-group">
+        <label for="password2" class="$!_errorClass">#message("authentication-action.reset-password.view.authentication-action.reset-password.view.password2.label")</label>
+        <input type="password" name="password2" class="block full-width mb1 field-light $!_errorClass" #if($!_allowSkip == false)required#end />
+        <i class="form-password-reveal-form-icon"></i>
+    </div>
+    <button id="submit-button" type="submit" class="button button-fullwidth $!button_color mt2">#message("authentication-action.reset-password.view.button")</button>
+    #if($!_allowSkip == true)
+        #parse("fragments/jquery")
+        <div class="mt3 clearfix">
+            <div class="center py2 login-actions">
+                <a id="skip-button" href="#" $!nonceAttr >#message(
+                        "authentication-action.reset-password.view.skip")</a>
+            </div>
+        </div>
+        <input id="skip-field" type="hidden" name="_skip"/>
+        <script type="text/javascript" $!nonceAttr>
+            jQuery(document).ready(function ($) {
+                $("#skip-button").on("click", function (e) {
+                    $("form")[0].reset();
+                    $("#submit-button").click();
+                });
+            })
+        </script>
+    #end
+</form>
+#end
+#parse("layouts/default")

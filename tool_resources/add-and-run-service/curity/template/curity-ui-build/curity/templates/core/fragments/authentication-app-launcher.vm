@@ -1,0 +1,105 @@
+#*
+ * Copyright (C) 2017 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+## Calling template needs to include handle-auto-start-uri to create getAutoStartUri(autoStartToken)
+<script type="text/javascript" $!nonceAttr>
+    var launchCount = parseInt("$_launchCount");
+    // check what type of browser it is
+    var isIos = /iphone|ipod|ipad/i.test(navigator.userAgent);
+    var isIos9Plus = isIos && /.*OS [91].*/.test(navigator.userAgent);
+    var isChromeIos = /crios/i.test(navigator.userAgent);
+    var isFirefoxIos = /fxios/i.test(navigator.userAgent);
+    var isFirefox = isFirefoxIos || /rv:.*Gecko/.test(navigator.userAgent);
+    var isAndroid = /android/i.test(navigator.userAgent);
+    var stopFunction;
+    jQuery(document).ready(function () {
+        if (parseInt('$_context.get("_response_").getStatus()') != 200) {
+            // Cancel was pushed in the app, so cancel in this Web app as well
+            // These buttons are made visable, so they don't disappear right before a page changes
+            jQuery(".manuallink").removeClass("display-none");
+            jQuery("form[name='cancel']").submit(); // Do the actual cancellation
+            return;
+        }
+        launchCount = isNaN(launchCount) ? 1 : launchCount + 1;
+        var isFirstLaunch = launchCount == 1;
+        if (!isFirstLaunch) {
+            // The user has launched BankID already. What do they want to do? Cancel or start the app? Ask 'em.
+            jQuery(".manuallink").removeClass("display-none");
+        }
+        jQuery('#manualStart').click(function () {
+            if (jQuery(this).attr('disabled')) {
+                return false;
+            }
+            jQuery(this).attr('disabled', true);
+            jQuery(this).addClass('button-disabled');
+        });
+        var authnComplete = '$!authncomplete' === 'true';
+        if (authnComplete) {
+            jQuery('#pollingDone').submit();
+            return;
+        }
+        var autostartUri = getAutoStartUri("$_autostartToken");
+        if (isIos9Plus) {
+            if (window.self !== window.top) {
+                // We're framed. User will have to manually open the app. Univeral links in frames require
+                // user interaction
+                // *OBS* Cancel in the BankID app will break the user out of the frame because we can't access
+                // window.top.location across origins
+                jQuery("#manualStart").attr("target", "_top");
+            }
+            else if (isFirstLaunch) {
+                // Open the BankID app
+                jQuery('body').append('<a id="startBankIdApp" href="' + autostartUri + '">&nbsp;</a>');
+                jQuery('#startBankIdApp')[0].click();
+            }
+        }
+        if (isFirefox || /redirect=null$/.test(autostartUri)) {
+            if (se.curity.authenticator && se.curity.authenticator.polling) {
+                stopFunction = se.curity.authenticator.polling.start();
+            }
+            else {
+                stopFunction = function() { }
+            }
+            document.forms["cancel"].onsubmit = stopFunction;
+        }
+        if (isAndroid || isIos9Plus) {
+            // Android devices might not be able to autostart the bankid app, show the link right away.
+            jQuery(".manuallink:first").removeClass("display-none");
+        }
+        if (!isIos9Plus && isFirstLaunch) {
+            jQuery('#autoStart').attr('src', autostartUri);
+        }
+        jQuery('#manualStart').attr('href', autostartUri);
+        // Wait 5 seconds, if iframe did not start app, then display manual link
+        setTimeout(function () {
+            jQuery(".manuallink").removeClass("display-none");
+        }, 5000);
+    });
+</script>

@@ -1,0 +1,51 @@
+#*
+ * Copyright (C) 2021 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#parse("fragments/icon-mappings")
+#set($title = "#message('authentication-action.opt-in-mfa.recovery-codes-reset.page.title')")
+#set ($page_symbol = $page_symbol_authenticate_opt_in_mfa)
+#define ($_body)
+<div class="area center">
+    <h1>#message("${_templatePrefix}.recovery-codes-reset.view.warn")</h1>
+</div>
+<div class="area">
+    <h3>#message("${_templatePrefix}.recovery-codes-reset.view.title")</h3>
+    <p>#message("${_templatePrefix}.recovery-codes-reset.view.sub-title")</p>
+    <div class="backup-codes">
+        <ul class="list-reset m0 px2 py3">
+        #foreach($_recoveryCode in $_recoveryCodes)
+            <li><code>$_recoveryCode</code></li>
+        #end
+        </ul>
+    </div>
+        <div class="flex mt1" style="justify-content: flex-end">
+        <button class="button button-tiny button-link" onclick="window.print();">
+            <i class="icon ion-ios-printer-outline inlineicon"></i>#message("${_templatePrefix}.recovery-codes-reset.view.print")
+        </button>
+    </div>
+</div>
+<div class="area flex justify-between mxn1">
+    <div class="col-12 px1">
+        <form method="POST" name="reset-codes-confirm" class="no-padding">
+            #if($_recoveryCodesBatchId)
+                <input type="hidden" name="recoveryCodesBatchId" value="$_recoveryCodesBatchId"/>
+            #end
+            <input type="submit" value="#message("${_templatePrefix}.recovery-codes-reset.view.confirm")" class="button button-fullwidth button-primary"/>
+        </form>
+    </div>
+    <div class="col-12 px1">
+        <form method="POST" name="setup-confirm" class="no-padding">
+            <input type="hidden" name="cancel" value="true"/>
+            <input type="submit" value="#message("${_templatePrefix}.recovery-codes-reset.view.cancel")" class="button button-fullwidth button-primary-outline"/>
+        </form>
+    </div>
+</div>
+#end
+#parse("layouts/default")

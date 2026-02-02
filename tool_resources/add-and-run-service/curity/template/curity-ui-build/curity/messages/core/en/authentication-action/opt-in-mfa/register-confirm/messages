@@ -1,0 +1,20 @@
+#
+# Copyright (C) 2021 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+page.title=Confirm new 2-step method
+meta.title=Confirm new 2-step method
+view.title=Confirm new 2-step method
+view.detail=Are you sure you want to add the following additional 2-step method:
+view.detail.template=Are you sure you want to add the following additional 2-step method: %s
+view.detail.already-registered=Are you sure you want to update the following 2-step method (this will replace one previously registered):
+view.detail.already-registered.template=Are you sure you want to update the following 2-step method (this will replace one previously registered): %s
+view.confirm=Confirm
+view.cancel=Cancel

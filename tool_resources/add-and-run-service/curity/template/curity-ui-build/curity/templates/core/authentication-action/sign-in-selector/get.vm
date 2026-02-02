@@ -1,0 +1,24 @@
+#*
+* Copyright (C) 2024 Curity AB. All rights reserved.
+*
+* The contents of this file are the property of Curity AB.
+* You may not copy or use this file, in either source code
+* or executable form, except in compliance with terms
+* set by Curity AB.
+*
+* For further information, please contact Curity AB.
+*###
+#set ($page_symbol = $page_symbol_authenticate_desktop)
+#set ($_loginChooser_hide_selector_title = true)
+#define ($_body)
+    #if ($single_color_authenticator_chooser)
+        #parse("fragments/login-chooser-single-color")
+    #else
+        #parse("fragments/login-chooser")
+    #end
+<form class="center">
+    <h1 class="mt0 center">#message("protocol.simple-api.meta.title")</h1>
+    $!_loginChooser
+</form>
+#end
+#parse("layouts/default")

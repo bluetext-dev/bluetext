@@ -1,0 +1,28 @@
+#*
+ * Copyright (C) 2023 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+## To add additional browser detections, override this template and add a BrowserStrategy object to the `browsers` list.
+## Example:
+## browsers.push(new BrowserStrategy({
+##    browserName: 'default-android',
+##    platform: PLATFORM_ANDROID,
+##    detectCurrentBrowser: () => /android/i.test(navigator.userAgent)
+##}));
+##
+## Or, add a separate templatefor the new browser detection with the same javascript snippet. Make sure it is parsed below.
+##
+## Detection will run top to bottom, and end on first instance where the `detectCurrentBrowser` function returns `true`.
+## Order in this list matters
+#parse("authenticator/bankid/launch/browsers/chrome-ios.js")
+#parse("authenticator/bankid/launch/browsers/edge-ios.js")
+#parse("authenticator/bankid/launch/browsers/firefox-ios.js")
+#parse("authenticator/bankid/launch/browsers/safari-ipad.js")
+#parse("authenticator/bankid/launch/browsers/safari-iphone.js")
+#parse("authenticator/bankid/launch/browsers/default-android.js")

@@ -1,0 +1,37 @@
+meta.title=Skapa konto
+page.title=Skapa konto
+view.create-account=Skapa konto
+view.fill-form=Fyll i formuläret för att skapa ditt konto hos Curity
+view.description=Med ett konto hos Curity kan du logga in med stark autentisering.
+view.info-message=Fyll i alla fält
+view.firstName=Förnamn
+view.lastName=Efternamn
+view.email=E-post
+view.phone=Telefon
+view.username=E-postadress
+view.password=Lösenord
+view.repeatPassword=Upprepa lösenord
+view.button=Skapa konto
+view.terms=Jag godkänner villkoren
+view.success.further-instructions=Vidare instruktioner har skickats till din e-postadress
+view.success.success=Ditt konto har skapats!
+view.success.verify=Ett mail med instruktioner för hur du verifierar ditt konto har skickats till den e-postadress du angav.
+view.success.no-activation=Du kan nu gå vidare till inloggningen
+view.success.spam-folder=Om du inte har fått ett mail, kontrollera spam-korgen.
+view.success.return-to-login=Gå tillbaka till inloggningen
+
+error.duplicateAccountCheckFailed=Ett oväntat fel har uppstått
+error.validation.firstName.required=Du måste ange ditt förnamn
+error.validation.lastName.required=Du måste ange ditt efternamn
+error.validation.accountId.required=Du måste ange ett e-postadress
+error.validation.accountId.duplicate=E-postadressen är redan registrerat
+error.validation.email.required=Du måste ange en e-postadress
+error.validation.email.duplicate=E-postadressen är redan registrerad
+error.validation.email.invalid=E-postadressen du angav är inte giltig
+error.validation.phone.required=Du måste ange ditt telefonnummer
+error.validation.phone.duplicate=Telefonnummer är redan registrerad
+error.validation.password.required=Du måste ange ett lösenord
+error.validation.password.mismatch=Dina lösenord matchar inte
+error.validation.terms=Du måste godkänna villkoren
+
+validation.error.password.weak=Lösenordet är för svagt

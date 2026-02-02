@@ -1,0 +1,99 @@
+#*
+ * Copyright (C) 2020 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+#define($title)
+    #message("views.oauth.logout.meta.title")
+#end
+#set($_cspImgsrc = "img-src 'self' data:;") ##todo maybe remove this, if it is set from the backend
+#define($_body)
+<div class="center">
+    #parse("fragments/spinner")
+    <div class="p2">
+        <table id="client-table">
+            <tbody/>
+        </table>
+    </div>
+</div>
+    #parse("fragments/jquery")
+<script type="text/javascript" $!nonceAttr>
+    jQuery(document).ready(function ($) {
+        const checkIfAllDone = () => {
+            let done = true;
+            $(".table-spinner").each(function () {
+                if ($(this).hasClass('table-spinner-active')) {
+                    done = false
+                }
+            });
+            if (done) {
+                #if($_postLogoutRedirectUri)
+                    window.location.href = "$_postLogoutRedirectUri"
+                #end
+                $(".waiting-spinner").hide()
+                $(".login-symbol-circle").html('<div class="check_mark"><div class="check-mark-icon sa-success animate"><span class="check-mark-icon-line check-mark-icon-tip successtip"></span><span class="check-mark-icon-line check-mark-icon-long successlong"></span><div class="check-mark-icon-placeholder"></div><div class="check-mark-icon-fix"></div></div></div>');
+    			$(".login-symbol-circle").addClass('login-symbol-circle-done');
+            }
+        };
+        const setClientCheckbox = (clientId) => {
+            $(".table-spinner-" + clientId)
+                    .removeClass('table-spinner-active')
+                    .addClass('table-spinner-done');
+            $('<div class="check_mark"><div class="check-mark-icon sa-success animate"><span class="check-mark-icon-line check-mark-icon-tip successtip"></span><span class="check-mark-icon-line check-mark-icon-long successlong"></span><div class="check-mark-icon-placeholder"></div><div class="check-mark-icon-fix"></div></div></div>').insertAfter(".table-spinner-" + clientId);
+            checkIfAllDone();
+        };
+        var clientTable = $("#client-table").find('tbody');
+        var clientMap = {};
+        #foreach ($client in $_context['_clientsToNotify'].entrySet())
+            clientMap["$client.key"] = {
+                logoutUri: "$_context['_clientFrontchannelUris'][$client.key]",
+                clientName: "$_tr.encodeEcmaScript($_context['_clients'][$client.key]['name'])",
+                clientLogo: "$_context['_clients'][$client.key]['logo']",
+            }
+        #end
+        Object.keys(clientMap).forEach(clientId => {
+            clientTable.append(
+                // todo change what we add to the table
+                    $('<tr>')
+                            .append($('<td>').append($('<img>').attr('src', clientMap[clientId].clientLogo)
+                                    .addClass('login-logo-client')))
+                            .append($('<td>').text(clientMap[clientId].clientName))
+                            .append($('<td>').append($('<div>').attr('class', 'table-spinner table-spinner-active table-spinner-' + clientId)))
+            );
+            const iframe = document.createElement('iframe');
+            iframe.className = 'hide';
+            iframe.onload = function () {
+                setClientCheckbox(clientId);
+            };
+            iframe.src = clientMap[clientId].logoutUri;
+            document.body.appendChild(iframe);
+        });
+    });
+</script>
+#end
+#parse("layouts/default")

@@ -1,0 +1,46 @@
+#*
+ * Copyright (C) 2015 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+#set($_errorTitleKey = "${_templatePrefix}.page.title")
+#set($_errorTitle = "#message($_errorTitleKey) $!_errorCode")
+#set($_errorMessageKey = "${_templatePrefix}.page.system.status.error")
+#set($_errorMessage = "#message($_errorMessageKey)")
+#set ($page_symbol = $page_symbol_error_generic)
+#define($_errorDetailedMessage)
+    #if ($_errors)
+        #macro( messageForError $error )
+            #message("${_templatePrefix}.$error.message")
+        #end
+        #foreach ($error in $_errors)
+            $_tr.encodeHtml("#messageForError($error)")
+        #end
+    #end
+#end
+#parse("layouts/error")

@@ -1,0 +1,61 @@
+#set ($page_symbol = $page_symbol_authenticate_pair_device)
+#define($_body)
+<form action="$_action" method="post" class="poller-onsuccess">
+    <input type="hidden" id="moveOn" name="moveOn" value="true"/>
+    <h1 class="center">#message("authenticator.duo.register.view.link.device")</h1>
+    #parse("fragments/auto-login")
+    <div class="center">
+        <div class="alert alert-info">
+            Make sure and install the <a href="$_downloadAppUri">Duo app</a>
+        </div>
+        <fieldset>
+            <legend>Scan QR code</legend>
+            <img src="$!_activationBarcode" alt="duo barcode"/>
+        </fieldset>
+        <fieldset>
+            <legend>#message("authenticator.duo.register.view.register.device")</legend>
+            <a class="button button-fullwidth button-primary" href="#" id="open-link-in-app">#message(
+                "authenticator.duo.register.view.register.device.open.activation.link")</a>
+        </fieldset>
+        <a href="#" id="send-sms-button">
+            <i class="icon ion-iphone inlineicon"></i>
+            <span class="sms-button-text">
+                #message("authenticator.duo.register.view.register.device.via.sms")
+            </span>
+        </a>
+    </div>
+    <div class="center p2">
+        #parse("fragments/spinner")
+            #parse("fragments/poller")
+    </div>
+</form>
+<script type="application/javascript" $!nonceAttr>
+    jQuery(document).ready(function ($) {
+        const buttonText = $('.sms-button-text').text()
+        $("#send-sms-button").on('click', function (e) {
+            e.preventDefault()
+            $('.sms-button-text').text("Sending SMS...")
+            $.ajax({
+                type: "POST",
+                url: "$!_sendSmsEndpoint",
+                success: function () {
+                    setTimeout(function () {
+                        $('.sms-button-text').text("SMS sent").addClass('is-error is-error-success');
+                    }, 500)
+                },
+                error: function () {
+                    $('.sms-button-text').text("Sending SMS failed").addClass('is-error is-error-danger');
+                    setTimeout(function () {
+                        $('.sms-button-text').text(buttonText).removeClass('is-error is-error-danger');
+                    }, 2000)
+                }
+            });
+        });
+    });
+    $("#open-link-in-app").on('click', function (e) {
+        e.preventDefault();
+        window.open("$!_activationUrl", "_blank")
+    });
+</script>
+#end
+#parse("layouts/default")

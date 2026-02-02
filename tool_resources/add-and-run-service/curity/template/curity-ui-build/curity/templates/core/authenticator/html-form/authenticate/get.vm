@@ -1,0 +1,93 @@
+#*
+ * Copyright (C) 2015 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * This is the default authentication view in the html adapter. It collects the username and password from the user.
+ *
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+## The title of this page can be overridden by setting the $title variable here to a resource string or the actual value
+##set($title = "")
+#set ($page_symbol = $page_symbol_authenticate_htmlform)
+#if($_postBack && $_postBack.userName)
+    #set($userNameValue = $_postBack.userName)
+#elseif($_username)
+    #set($userNameValue = $_username)
+#end
+#define ($_body)
+#parse("fragments/credential-operation-details")
+<form method="post" action="$_authUrl">
+    #if ($_errors)
+        #set($_errorClassPassword = "is-error is-error-danger")
+        #if($_passwordOnly)
+            #set($_errorClassUsername = "")
+        #else
+            #set($_errorClassUsername = "is-error is-error-danger")
+        #end
+    #end
+    #if ($_binding_message)
+    <div id="context-info">
+        <div class="alert alert-info px4">
+            $_tr.encodeHtml($!_binding_message)
+        </div>
+    </div>
+    #end
+    <h1 class="mt0 center">#message("authenticator.html-form.authenticate.view.authenticate")</h1>
+    <div class="form-field">
+        <label for="userName" class="$!_errorClassUsername">#message("authenticator.html-form.authenticate.view.username")</label>
+        <input type="text" name="userName" id="userName" autocorrect="off" spellcheck="false" class="block full-width mb1 field-light $!_errorClassUsername" autocapitalize="none"
+        value="$!userNameValue" #if ($_passwordOnly)disabled="disabled" #else autofocus #end>
+        <i class="form-field-icon icon ion-ios-person"></i>
+    </div>
+    <div class="form-field">
+        <label for="password" class="$!_errorClassPassword">#message("authenticator.html-form.authenticate.view.password")</label>
+        <input type="password" name="password" id="password" autocomplete="current-password" class="block full-width mb1 field-light $!_errorClassPassword" #if ($_passwordOnly)autofocus#end>
+        <i class="form-field-icon icon ion-ios-locked"></i>
+    </div>
+    <button type="submit" class="button button-fullwidth $!button_color mt2">#message(
+        "authenticator.html-form.authenticate.view.authenticate")</button>
+    #if ($_registerUrl && !$_passwordOnly)
+    <a href="$_registerUrl" class="button button-fullwidth mt2">
+        <i class="icon ion-android-person-add mr1"></i>
+        #message("${_templatePrefix}.view.no-account")
+    </a>
+    #end
+#if ($_showRememberMe)
+      <div class="form-field flex flex-center mt1">
+        <input class="mr1" type="checkbox" id="rememberMe" name="rememberMe" value="true" checked />
+        <label for="rememberMe">#message("authenticator.html-form.authenticate.view.remember-me")</label>
+    </div>
+#end
+    <div class="mt3 clearfix">
+        <div class="center py2 login-actions">
+            <a href="$_authUrl/forgot-password">#message(
+                "authenticator.html-form.authenticate.view.forgot-password")</a>
+        </div>
+    </div>
+</form>
+#end
+#parse("layouts/default")

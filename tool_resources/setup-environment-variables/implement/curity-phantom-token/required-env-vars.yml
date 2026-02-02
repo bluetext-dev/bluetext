@@ -1,0 +1,37 @@
+env_vars:
+  - name: CURITY_PHANTOM_TOKEN_CLIENT_SECRET
+    key: curity-phantom-token-client-secret
+    secret: true
+  - name: KONG_OAUTH_PROXY_COOKIE_KEY
+    key: kong-oauth-proxy-cookie-key
+    secret: true
+  - name: OAUTH_PROXY_COOKIE_KEY_PEM
+    key: oauth-proxy-cookie-key-pem
+    secret: true
+  - name: WEB_APP_HOST
+    key: web-app-host
+    secret: false
+  - name: GATEWAY_BASE_URL
+    key: gateway-base-url
+    secret: false
+  - name: CURITY_HOST
+    key: curity-host
+    secret: false
+  - name: API_SERVICE_HOST
+    key: api-service-host
+    secret: false
+  - name: API_SERVICE_PATH
+    key: api-service-path
+    secret: false
+  - name: CURITY_INTROSPECTION_ENDPOINT
+    key: curity-introspection-endpoint
+    secret: false
+  - name: API_SERVICE_PORT
+    key: api-service-port
+    secret: false
+  - name: WEB_APP_PORT
+    key: web-app-port
+    secret: false
+  - name: CURITY_PORT
+    key: curity-port
+    secret: false

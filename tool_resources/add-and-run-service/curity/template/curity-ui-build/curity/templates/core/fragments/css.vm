@@ -1,0 +1,45 @@
+#*
+ * Copyright (C) 2015 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+#if ($_cacheBustingHash)
+    #set ($_cacheBustingQuery = "?v=" + $_cacheBustingHash)
+#end
+#if ($main_css_path)
+<link rel="stylesheet" type="text/css" href="${main_css_path}$!_cacheBustingQuery" />
+#end
+#if ($theme_css_path)
+<link rel="stylesheet" type="text/css" href="${theme_css_path}$!_cacheBustingQuery" />
+#end
+#if ($_configured_ui_theme_css_path)
+<link rel="stylesheet" type="text/css" href="$_configured_ui_theme_css_path" />
+#end
+#if ($_configured_ui_custom_theme_css_path)
+<link rel="stylesheet" type="text/css" href="$_configured_ui_custom_theme_css_path" />
+#end

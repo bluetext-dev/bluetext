@@ -1,0 +1,17 @@
+#*
+ * Copyright (C) 2019 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#if( $hasAutoLogin )
+<form id="form1" class="no-bottom-padding" method="post" action="${_anonymousUrl}/auto-login">
+    <input type="hidden" name="alsk" value="$!{alsk}"/>
+    <input type="submit" class="button button-primary button-fullwidth" id="autoLoginSubmitInput"
+            value="#message('authenticator.continue-to-login') $!{userName}">
+</form>
+#end

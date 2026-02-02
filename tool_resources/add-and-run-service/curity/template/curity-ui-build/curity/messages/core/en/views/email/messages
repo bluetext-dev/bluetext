@@ -1,0 +1,19 @@
+#
+# Copyright (C) 2024 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+enter-opt-in-browser=To complete your account activation, use the code below to verify your email
+your-otp=One Time Password
+verify=To verify your account, click the button below
+verify.button=Verify
+title=Verify Account
+account-activated=Your account has been activated
+thanks=Thank you!
+invalid.link=Invalid link. Note that account activation links are only valid for a short period of time.

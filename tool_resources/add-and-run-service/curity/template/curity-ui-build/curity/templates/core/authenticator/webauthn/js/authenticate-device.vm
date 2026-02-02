@@ -1,0 +1,104 @@
+#*
+ * Copyright (C) 2021 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#parse("authenticator/webauthn/js/common-js")
+<script $!nonceAttr>
+    if (!isWebauthnSupported) {
+        showError('#message("${_templatePrefix}.view.error.not-supported")');
+        $("#registerDiv").hideElement();
+        throw new Error('WebAuthn not supported');
+    }
+        #if($assertionRequest)
+        var assertionRequest = $!assertionRequest
+        #else
+        var assertionRequest = undefined
+        #end
+        #if($_promptForUsername)
+        let doPromptForUsername = true;
+        #else
+        let doPromptForUsername = false;
+        #end
+    const submitUsername = (event) => {
+        event.preventDefault();
+        let formValues = $('#usernameForm').serialize();
+        $.ajax({
+            url: '$_promptForUsername',
+            method: 'POST',
+            dataType: 'json',
+            data: formValues
+        }).done(function (data) {
+            if (data.hasOwnProperty('noDevices')) {
+                handleNoDevices();
+            } else if (data.hasOwnProperty('assertionRequest')) {
+                assertionRequest = JSON.parse(data['assertionRequest']);
+                getAssertion(assertionRequest);
+            }
+        }).fail(function (jqXHR) {
+            showInputError('usernameInput')
+            let data = JSON.parse(jqXHR.responseText);
+            let errorMessage = data.errors && data.errors[0];
+            if (errorMessage === undefined) {
+                errorMessage = '#message("${_templatePrefix}.view.error.authentication")'
+            }
+            showError(errorMessage);
+        });
+        return false;
+    }
+    const getAssertion = (assertionRequest) => {
+        $("#alertWrapper, #authenticateDiv, #usernameForm").hideElement();
+        $("#waitingDiv").showElement();
+        webauthnJSON.get(assertionRequest)
+                .then(async function (response) {
+                    let form = $("#assertionForm");
+                    form.find("input[name='json']").val(JSON.stringify(response));
+                    if (! await supportsPlatformAuthenticatorAttachment()) {
+                        form.find('input[name="platform_attachment_not_supported"]').val("true");
+                    }
+                    form.submit();
+                }).catch(handleError);
+    }
+    const retry = () => {
+        getAssertion(assertionRequest)
+    }
+    const handleError = (error) => {
+        if (error.name === webAuthnErrors.NOT_ALLOWED || error.name === webAuthnErrors.ABORTED) {
+            ## Probably cancel, but could be something else.
+            showInfo('#message("${_templatePrefix}.view.error.cancel-or-timeout")');
+        } else {
+            showError('#message("${_templatePrefix}.view.error.authentication")');
+        }
+        $("#waitingDiv").hideElement();
+        $("#authenticateDiv").showElement()
+        $("#authenticateButton").text('#message("${_templatePrefix}.view.try-again")');
+        console.error('Device assertion error', error)
+    }
+    const handleNoDevices = () => {
+        $('#noDevicesDiv').showElement();
+        $('#devicesDiv').hideElement();
+    }
+    const handleDevices = () => {
+        $('#devicesDiv').showElement();
+        $('#noDevicesDiv').hideElement();
+    }
+    $('#usernameForm').submit(submitUsername);
+    $("#authenticateButton").click(retry);
+    if ("$!noDevices".length > 0) {
+        handleNoDevices();
+    } else {
+        handleDevices();
+        if (requiresUserInteraction && !doPromptForUsername) {
+            $('#authenticateDiv').showElement();
+        } else if (assertionRequest !== undefined) {
+            getAssertion(assertionRequest);
+        } else if (!doPromptForUsername) {
+            showError('#message("${_templatePrefix}.view.error.could-not-start")');
+        }
+    }
+</script>

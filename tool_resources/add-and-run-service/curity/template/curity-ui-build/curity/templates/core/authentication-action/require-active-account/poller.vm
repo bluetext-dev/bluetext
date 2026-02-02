@@ -1,0 +1,33 @@
+#*
+* Copyright (C) 2024 Curity AB. All rights reserved.
+*
+* The contents of this file are the property of Curity AB.
+* You may not copy or use this file, in either source code
+* or executable form, except in compliance with terms
+* set by Curity AB.
+*
+* For further information, please contact Curity AB.
+*###
+#define($_body)
+<form action="$_action" method="post" class="poller-onsuccess">
+    #if ($_error == "newCode")
+        <div class="alert alert-info">#message("${_templatePrefix}.view.resend.code")</div>
+    #end
+    <h2 class="center">#message("${_templatePrefix}.view.use-email-link")</h2>
+    <div class="center p2">
+        #parse("fragments/spinner")
+        #parse("fragments/poller")
+        <div class="mt2">
+            <a href="$!_cancelEndpoint" class="button button-fullwidth button-danger-outline" id="cancel" name="cancel">
+                #message("${_templatePrefix}.view.cancel")
+            </a>
+        </div>
+        <div class="mt2">
+            <a href="$!_newEmailEndpoint" class="button button-fullwidth" id="newEmail" name="newEmail">
+                #message("${_templatePrefix}.view.new-totp")
+            </a>
+        </div>
+    </div>
+</form>
+#end
+#parse("layouts/default")

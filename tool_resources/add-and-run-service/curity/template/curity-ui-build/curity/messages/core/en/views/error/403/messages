@@ -1,0 +1,3 @@
+meta.title=403 - Forbidden
+page.title=Forbidden
+system.status.authentication.error=You are not authorized to execute this request.

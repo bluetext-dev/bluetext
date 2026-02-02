@@ -1,0 +1,133 @@
+tools:
+  setup-environment-variables:
+    info: |
+      Adds environment variables to a service's polytope.yml from a defined source.
+      The source file should be located at tool_resources/setup-environment-variables/{caller}/{source}/required-env-vars.yml.
+    params:
+      - id: caller
+        info: The tool calling this (e.g., setup-service-for-client, implement)
+        type: str
+      - id: source
+        info: The source of the environment variables (e.g., couchbase, curity-phantom-token, or a relative path component)
+        type: str
+      - id: target
+        info: The target service to update (e.g., api, frontend)
+        type: str
+    run:
+      - id: add-env-to-polytope
+        tool: pt/run-script
+        args:
+          repo: {type: host, path: .}
+          language: python
+          dependencies: [pyyaml]
+          mounts:
+            - path: /env-vars.yml
+              source:
+                type: repo
+                repo: "#pt-clj pt/module-repo-ref"
+                path: "#pt-clj (let [caller (:caller params) source (:source params) path (str \"setup-environment-variables/\" caller \"/\" source \"/required-env-vars.yml\")] path)"
+          script:
+            type: string
+            data: |
+              import yaml
+              import re
+              from pathlib import Path
+              import os
+
+              target = "{pt.param target}"
+              source = "{pt.param source}"
+              caller = "{pt.param caller}"
+
+              # Read env vars from mounted file
+              env_vars_path = Path("/env-vars.yml")
+
+              if not env_vars_path.exists():
+                  print(f"❌ Required env vars file not found at expected mount location.")
+                  exit(1)
+
+              with open(env_vars_path) as f:
+                  config = yaml.safe_load(f) or {}
+
+              # Handle both list format (simple names) and dict format (with details)
+              raw_env_vars = config if isinstance(config, list) else config.get('env_vars', [])
+              
+              # Normalize env vars to list of dicts
+              env_vars = []
+              for item in raw_env_vars:
+                  if isinstance(item, str):
+                      print(f"❌ Error: Implicit string format for env var '{item}' is no longer supported.")
+                      print("Please use the explicit format:\n  - name: ENV_VAR_NAME\n    key: config-key\n    secret: true/false")
+                      exit(1)
+                  else:
+                      env_vars.append(item)
+
+              # Read target service's polytope.yml
+              service_polytope_path = Path(f"/repo/services/{target}/polytope.yml")
+
+              if not service_polytope_path.exists():
+                  print(f"❌ Target service polytope.yml not found: {service_polytope_path}")
+                  exit(1)
+
+              with open(service_polytope_path) as f:
+                  content = f.read()
+
+              # Check which env vars already exist
+              vars_to_add = []
+              for var in env_vars:
+                  if var['name'] in content:
+                      print(f"ℹ️  {var['name']} already exists in {target}, skipping")
+                  else:
+                      vars_to_add.append(var)
+
+              if not vars_to_add:
+                  print(f"✅ All env vars already exist in services/{target}/polytope.yml")
+                  exit(0)
+
+              # Build env var entries
+              env_entries = []
+              for var in vars_to_add:
+                  name = var['name']
+                  key = var['key']
+                  is_secret = var['secret']
+
+                  # Reference the value/secret using pt.value or pt.secret
+                  if is_secret:
+                      env_entries.append(f'            - {{ name: {name}, value: "#pt-clj (pt/secret \\"{key}\\")" }}')
+                  else:
+                      env_entries.append(f'            - {{ name: {name}, value: "#pt-clj (pt/value \\"{key}\\")" }}')
+
+              env_block = '\n'.join(env_entries)
+
+              # Find the env: section and insert after the last env var
+              # Look for pattern: env:\n followed by lines starting with spaces and -
+              env_pattern = r'(env:\s*\n(?:\s+-[^\n]*\n)*)'
+
+              match = re.search(env_pattern, content)
+              if match:
+                  # Insert new env vars at the end of the existing env section
+                  env_section = match.group(1)
+                  new_env_section = env_section.rstrip('\n') + '\n' + env_block + '\n'
+                  new_content = content[:match.start()] + new_env_section + content[match.end():]
+              else:
+                  # Fallback: try to find 'run:' block and look if there is an env within it?
+                  # Or find args: and insert env:?
+                  print(f"⚠️  No 'env:' section found in {service_polytope_path}.")
+                  print(f"Please manually add the following environment variables:")
+                  print(env_block)
+                  exit(0)
+
+              # Write the updated content back
+              with open(service_polytope_path, 'w') as f:
+                  f.write(new_content)
+
+              print(f"✅ Added {len(vars_to_add)} env vars to services/{target}/polytope.yml")
+              for var in vars_to_add:
+                  print(f"   - {var['name']}")
+
+      - id: restart-service
+        after: {step: add-env-to-polytope}
+        code: |-
+          #pt-clj
+          (let [target (:target params)]
+            (pt/log (str "🔄 Restarting service to load new env vars: " target))
+            (pt/call-module target {}))

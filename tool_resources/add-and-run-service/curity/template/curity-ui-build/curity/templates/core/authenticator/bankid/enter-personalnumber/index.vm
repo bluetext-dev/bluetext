@@ -1,0 +1,204 @@
+#*
+ * Copyright (C) 2015 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+#if ($_postBack.get("personalnumber"))
+## This is a post back because the personal number wasn't valid. Use that rather than the username variable
+## (which came from the username cookie or isn't set).
+    #set ($_username = $_postBack.get("personalnumber"))
+#end
+#set ($page_symbol = $page_symbol_authenticate_bankid)
+#define($_body)
+<div class="area">
+    <div id="device-chooser" class="login-chooser mb2">
+        <div id="use-this-device-button">
+            <a href="#" accesskey="1" class="login-chooser-item">
+                <i class="icon ion-iphone"></i>
+                <p>
+                    <small>#message("${_templatePrefix}.view.samedevicetitle")</small>
+                </p>
+            </a>
+        </div>
+        <div id="use-other-device-button" class="other-device-header">
+            <a href="#" accesskey="2" class="login-chooser-item">
+                <i class="icon ion-laptop"></i>
+                <p>
+                    <small>#message("${_templatePrefix}.view.otherdevicetitle")</small>
+                </p>
+            </a>
+        </div>
+    </div>
+    <div id="device-chooser" class="login-chooser mb2">
+        <div id="use-other-device" class="other-device-header hidden">
+            <a href="#" accesskey="2" class="login-chooser-item login-chooser-item-selected">
+                <i class="icon ion-laptop"></i>
+                <p>
+                    <small>#message("${_templatePrefix}.view.otherdevicetitle")</small>
+                </p>
+            </a>
+        </div>
+    </div>
+</div>
+<div class="clearfix"></div>
+<div id="bankid-form" class="hidden">
+    <form method="post" id="bidForm">
+        <div class="alert alert-danger hidden" id="loginmessage">
+            #message("${_templatePrefix}.personal.number.invalid")
+        </div>
+        <label id="lblPersonalnumber">#message("${_templatePrefix}.view.personalnumber")</label>
+        <input type="text" name="personalnumber" id="personalnumber" class="block full-width mb1 field-light"
+               autofocus
+               value="$!_username" placeholder="#message("${_templatePrefix}.view.personalnumber_placeholder")"
+               maxlength="12">
+        <input type="hidden" name="usesamedevice" id="usesamedevice" value="false"/>
+        <button type="submit" class="button button-fullwidth button-primary">#message(
+            "${_templatePrefix}.view.challenge")</button>
+    </form>
+</div>
+#parse("fragments/jquery")
+<script type="text/javascript" $!nonceAttr>
+    (function () {
+        jQuery(document).ready(function () {
+            jQuery("#use-this-device-button").click(function () {
+                // Use the same device, no personal number
+                jQuery("#usesamedevice").val("true");
+                // Submit the form
+                jQuery("#bidForm").submit();
+            });
+            jQuery("#use-other-device-button").click(function () {
+                if ('$!_knownUserName' !== '') {
+                    ## username is known from previous authentication.
+                    ## Proceed to authentication
+                    jQuery("#bidForm").submit();
+                } else {
+                    showForm()
+                }
+            });
+            jQuery("#use-other-device").click(hideForm);
+        });
+        function validateSubmit(e) {
+            var personalNumber = jQuery("#personalnumber").val();
+            // Validate personalNumber
+            var result = validatePersonalNumber(personalNumber);
+            if (!result.valid) {
+                showError();
+                e.preventDefault();
+                return;
+            }
+            jQuery('#personalnumber').val(result.personalNumber);
+            hideError();
+        }
+        function showForm() {
+            jQuery("#device-chooser").fadeOut("fast", function (){
+                jQuery("#use-other-device, #bankid-form").slideDown();
+            });
+            jQuery("#bidForm").submit(validateSubmit);
+        }
+        function hideForm() {
+            jQuery("#use-other-device, #bankid-form").slideUp(function(){
+                jQuery("#device-chooser").fadeIn();
+            });
+            jQuery("#bidForm").off("submit");
+        }
+        function showError() {
+            jQuery("#loginmessage").show();
+            jQuery("#personalnumber, #lblPersonalnumber").addClass("is-error");
+        }
+        function hideError() {
+            jQuery("#loginmessage").hide();
+            jQuery("#personalnumber, #lblPersonalnumber").removeClass("is-error");
+        }
+    #*
+     * If 10 digit personalNumber is supplied, this function will automatically add either 19 or 20 depending on
+     * current year to form a 12 digit personalnunmber.
+     *
+     * After that it will validate the control digit, if valid the complete 12 digit personalNumber is returned.
+     *
+     * returns
+     * {
+     *   personalNumber: "ååååmmddsssc",
+     *   valid: true|false
+     * }
+     *###
+        function validatePersonalNumber(personalNumber) {
+            var result = {personalNumber: personalNumber, valid: false};
+            if (personalNumber == "") {
+                return result;
+            }
+            personalNumber = "" + personalNumber;
+            personalNumber = personalNumber.replace("-", "");
+            personalNumber = personalNumber.replace(" ", "");
+            if (personalNumber.length == 10) {
+                // Add century on a sliding scale
+                var century = "19";
+                var yearInt = parseInt(personalNumber.substring(0, 2));
+                if (isNaN(yearInt)) {
+                    return result;
+                }
+                var thisYear = parseInt(new Date().getFullYear().toString().substring(2, 4));
+                if (thisYear > yearInt) {
+                    century = "20";
+                }
+                personalNumber = century + personalNumber;
+            }
+            else if (personalNumber.length != 12) {
+                return result;
+            }
+            if (isNaN(personalNumber)) {
+                return result;
+            }
+            // Calculate control digit
+            var cd = calculate_control_digit(personalNumber.substring(2, 11));
+            if (cd == personalNumber.substring(11, 12)) {
+                result.personalNumber = personalNumber;
+                result.valid = true;
+                return result;
+            }
+            return result;
+        }
+        function calculate_control_digit(number) {
+            var k, sum, v, _i, _len, _ref;
+            number = "" + number;
+            sum = 0;
+            _ref = number.split('');
+            for (k = _i = 0, _len = _ref.length; _i < _len; k = ++_i) {
+                v = _ref[k];
+                v *= 2 - (k % 2);
+                if (v > 9) {
+                    v -= 9;
+                }
+                sum += v;
+            }
+            return Math.ceil(sum / 10) * 10 - sum;
+        }
+    })
+    ();
+</script>
+#end
+#parse("layouts/default")

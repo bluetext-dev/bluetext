@@ -1,0 +1,18 @@
+#
+# Copyright (C) 2025 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=Ange enhetens alias
+view.title=Ange enhetens alias
+view.hint=Skriv ett alias enheten. Detta kan vara användbart för att identifiera olika enheter senare.
+view.alias=Alias
+view.continue=Fortsätt
+
+validation.error.alias.size=Alias måste vara mellan 1 och 30 tecken långt.

@@ -1,0 +1,17 @@
+#
+# Copyright (C) 2022 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=Digite o nome do dispositivo
+view.title1=Digite o nome do dispositivo
+view.p1=Digite um nome para seu dispositivo. Isso pode ser útil se você tiver vários dispositivos registrados ou se usar seu aplicativo em vários sites.
+view.alias=Nome
+view.generate-code=Gerar código QR
+validation.error.alias.required=Nome necessário

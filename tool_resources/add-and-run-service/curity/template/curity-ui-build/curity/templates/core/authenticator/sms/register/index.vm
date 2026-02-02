@@ -1,0 +1,60 @@
+#*
+ * Copyright (C) 2016 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * This is the default register phone number view in the sms authenticator.
+ *
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+#set ($page_symbol = $page_symbol_authenticate_sms)
+#define($_body)
+<form method="post" action="$!_registerUrl">
+        <div class="center">
+            <h1>#message("authenticator.sms.register.view.update-phonenumber")</h1>
+            <p>#message("authenticator.sms.register.view.description")</p>
+        </div>
+        <div class="clearfix mxn1">
+            <div class="sm-col md-col-4 px1">
+                #parse("authenticator/sms/register/country-code-selector")
+            </div>
+            <div class="sm-col md-col-8 px1">
+                <input name="primaryPhoneNumber" id="primaryPhoneNumber" type="text"
+                        class="block full-width field-light"
+                        placeholder="#message("authenticator.sms.register.view.placeholder")" autofocus>
+            </div>
+        </div>
+            <button type="submit" class="button button-fullwidth button-primary mt2">#message(
+                "authenticator.sms.register.view.change-phonenumber")
+            </button>
+            <div class="center py2 login-actions">
+                <a href="$_authUrl" role="button">
+                    <i class="icon ion-refresh inlineicon"></i>#message(
+                    "authenticator.sms.register.view.restart")</a>
+            </div>
+    </form>
+#end
+#parse("layouts/default")

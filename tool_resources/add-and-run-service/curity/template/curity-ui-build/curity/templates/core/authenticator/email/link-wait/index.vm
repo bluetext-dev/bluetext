@@ -1,0 +1,65 @@
+#*
+ * Copyright (C) 2016 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * This is the waiting page when waiting for a user to click the link in their mobile device
+ *
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+#set ($page_symbol = $page_symbol_authenticate_email)
+#define($_body)
+## This needs to be here, to be able to fire when the poller script detects that
+## authentication is complete. This will cause the SSO session to be created
+## and the redirect to be completed.
+<form action="$_action" method="post" class="poller-onsuccess">
+    ## The moveOn is a flag that when set indicates that the page is ready to move on
+    ## the poller script will post to the server _without_ this flag, and when the script
+    ## detects that authentication is ready, this form is posted with moveOn true, to mark
+    ## that it's the page and not the scrip calling.
+    <input type="hidden"  id="moveOn" name="moveOn" value="true"/>
+    <div class="center">
+        <h1 id="recipient" class="recipient recipient-email">
+            #message("authenticator.email.link-wait.view.authenticate")
+            <span>
+            $RegexUtil.replaceGroups($_recipientOfCommunication,
+            "(.*?)([^@]{1,4})(@)(.*?)([^.]{1,4})(\\.)?(.*)?", [2, 5], "x")
+            </span>
+        </h1>
+    </div>
+    #if (!$_errors)
+    <div class="center p2">
+        #parse("fragments/spinner")
+    </div>
+    #end
+    <div class="center clearfix">
+        <a href="$_authUrl">
+        <i class="icon ion-refresh inlineicon"></i>#message("${_templatePrefix}.view.restart")</a>
+    </div>
+</form>
+#parse("fragments/poller")
+#end
+#parse("layouts/default")

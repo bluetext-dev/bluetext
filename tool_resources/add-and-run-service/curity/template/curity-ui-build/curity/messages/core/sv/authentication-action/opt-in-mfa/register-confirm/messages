@@ -1,0 +1,20 @@
+#
+# Copyright (C) 2021 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+page.title=Bekräfta metod för tvåstegsverifiering
+meta.title=Bekräfta metod för tvåstegsverifiering
+view.title=Bekräfta metod för tvåstegsverifiering
+view.detail=Är du säker på att du vill lägga till följande metod för tvåstegsverifiering?
+view.detail.template=Är du säker på att du vill lägga till följande metod för tvåstegsverifiering: %s?
+view.detail.already-registered=Är du säker på att du vill uppdatera följande 2-stegsmetod (detta kommer att ersätta en tidigare registrerad):
+view.detail.already-registered.template=Är du säker på att du vill uppdatera följande 2-stegsmetod (detta kommer att ersätta en tidigare registrerad): %s
+view.confirm=Bekräfta
+view.cancel=Avbryt

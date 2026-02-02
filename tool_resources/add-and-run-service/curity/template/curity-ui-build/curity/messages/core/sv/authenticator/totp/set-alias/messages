@@ -1,0 +1,18 @@
+#
+# Copyright (C) 2018 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=Ange enhetens alias
+view.title1=Ange enhetens alias
+view.p1=Ange ett alias för din enhet. Användbart främst om du har flera enheter, eller använder appen för flera webbsidor.
+view.alias=Alias
+view.generate-code=Generera QR-kod
+
+validation.error.alias.required=Alias är obligatoriskt

@@ -1,0 +1,20 @@
+#
+# Copyright (C) 2021 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+page.title=Confirm 2-step verification
+meta.title=Confirm 2-step verification
+view.title=Confirm setup of 2-step verification, using method:
+view.title.template=Confirm setup of 2-step verification, using method: %s
+view.codes.title=Your recovery codes
+view.codes.description=These recovery codes can be used to manage the 2-step verification methods. Keep these codes somewhere safe but accessible. Each code can be used only once. You can generate new codes at any point.
+view.codes.print=Print
+view.confirm=Confirm
+view.cancel=Cancel

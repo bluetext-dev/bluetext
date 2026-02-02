@@ -1,0 +1,81 @@
+#*
+ * Copyright (C) 2016 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * To find available icons, check http://ionicons.com/
+ *
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+#set($_defaultIcon = "ion-ios-person")
+#set ($_iconMappings = {
+    'facebook': 'ion-social-facebook',
+    'google': 'ion-google',
+    'sms': 'ion-android-textsms',
+    'email': 'ion-ios-email',
+    'html-form': 'ion-ios-person',
+    'bankid': 'ion-bankid',
+    'pingfederate': 'ion-ios-person',
+    'oidc': 'ion-openid',
+    'group': 'ion-grid',
+    'encap': 'ion-iphone',
+    'saml': 'ion-saml',
+    'saml2': 'ion-saml',
+    'windows': 'ion-social-windows',
+    'siths': 'ion-card',
+    'totp': 'ion-clock',
+    'github': 'ion-social-github',
+    'twitter': 'ion-x',
+    'linkedin': 'ion-social-linkedin',
+    'dropbox': 'ion-social-dropbox',
+    'aws': 'ion-aws',
+    'salesforce': 'ion-salesforce',
+    'windows-live': 'ion-social-windows',
+    'freja-eid': 'ion-freja',
+    'slack': 'ion-slack',
+    'box': 'ion-box',
+    'bitbucket': 'ion-bitbucket',
+    'instagram': 'ion-social-instagram',
+    'stackexchange': 'ion-stackexchange',
+    'signicat': 'ion-signicat',
+    'criipto': 'ion-criipto',
+    'username': 'ion-person',
+    'cgi': 'ion-cgi',
+    'duo': 'ion-duo',
+    'sign-in-with-apple': 'ion-social-apple',
+    'webauthn': 'ion-ios-world-outline',
+    'netidaccess-os': 'ion-netidaccess-os',
+    'passkeys': 'ion-passkeys',
+    'openid-wallet': 'ion-openid-wallet'
+})
+#macro( iconClassName $type )
+    #set($_className = false)
+    #set($_className = $_iconMappings.get($type))
+    #if(!$_className || $_className == "")
+        #set($_className = $_defaultIcon)
+    #end
+    $_className
+#end

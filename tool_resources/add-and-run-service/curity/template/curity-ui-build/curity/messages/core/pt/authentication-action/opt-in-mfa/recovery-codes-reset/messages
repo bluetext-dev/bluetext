@@ -1,0 +1,19 @@
+#
+# Copyright (C) 2022 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+page.title=Recriar códigos de recuperação
+meta.title=Recriar códigos de recuperação
+view.warn=Tem certeza que quer recriar todos os códigos de recuperação?
+view.title=Recriar Códigos de Recuperação
+view.sub-title=Mantenha estes códigos de recuperação em local seguro e accessível.
+view.print=Imprimir
+view.confirm=Confirmar
+view.cancel=Cancelar

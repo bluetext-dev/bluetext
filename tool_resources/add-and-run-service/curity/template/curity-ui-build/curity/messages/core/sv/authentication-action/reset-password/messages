@@ -1,0 +1,22 @@
+#
+# Copyright (C) 2018 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+view.p1=Lösenordet måste återställas.
+view.password.label=Lösenord
+view.password2.label=Verifiera lösenord
+view.currentPassword.label=Aktuell Password
+view.button=Verkställ
+view.skip=Hoppa över
+
+validation.error.password.required=Lösenord krävs
+validation.error.password.mismatch=Lösenorden överensstämmer inte
+validation.error.password.weak=Lösenordet är för svagt
+validation.error.incorrect.credentials=Fel aktuell lösenord

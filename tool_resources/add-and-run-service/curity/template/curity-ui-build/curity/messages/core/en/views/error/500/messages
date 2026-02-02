@@ -1,0 +1,4 @@
+meta.title=500 - Internal error
+page.title=Internal error
+system.status.internal.error=An internal server error occurred.
+system.status.configuration.error=An unrecoverable internal error occurred that prevented the request from being completed.

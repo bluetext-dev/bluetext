@@ -54,8 +54,8 @@ COUCHBASE_BUCKET=default
 
 To use a client in a service, the service must have the required environment variables configured. Use the `setup-service-for-client` tool to add them:
 
-```bash
-polytope run setup-service-for-client --service my-api --client couchbase-client
+```
+setup-service-for-client(service: "my-api", client: "couchbase-client")
 ```
 
 This adds the necessary environment variable definitions to the service's `polytope.yml`.
@@ -64,8 +64,8 @@ This adds the necessary environment variable definitions to the service's `polyt
 
 Use the `add-client` tool to scaffold a new client:
 
-```bash
-polytope run add-client --name couchbase --language python
+```
+add-client(name: "couchbase", language: "python")
 ```
 
 See the language-specific README in `clients/<language>/` for implementation details.

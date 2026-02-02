@@ -1,0 +1,70 @@
+#*
+ * Copyright (C) 2024 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * This fragment checks if a page is being loaded from the bfcache. If so, it checks if the page is still valid.
+ * This template MUST only called if $_authnRecoverInfo exist.
+ * If so, this key points to an object with the following fields:
+ *     - retryAuthenticatorUrl - URL to use to restart the flow on the used authenticator.
+ *     - resumeActionUrl - URL to use to resume the flow on the valid action.
+ *     - applicationUrl - OPTIONAL URL to go back to the application.
+ *###
+## This fragment is only applied if $enableDetectInvalidAuthnActionPage && $_authenticationActionId && $_authnRecoverInfo
+## It ASSUMES that the 'fragments/invalid-authn-action-dialog' fragment was added to the DOM
+<script type="text/javascript" $!nonceAttr>
+    ## get the current action ID from the server or `undefined` if that is not possible
+    async function getCurrentActionId() {
+        try {
+            const resp = await fetch("$_authBaseUrl?cai", {
+                headers: {
+                    "accept": "application/json",
+                }
+            })
+            ## Not a success response with a JSON payload, so nothing we can do
+            if (resp.status !== 200 || resp.headers.get("content-type") !== "application/json") {
+                return undefined
+            }
+            const payload = await resp.json()
+            return payload.actionId
+        } catch (err) {
+            ## Returning undefined in case of error
+            return undefined
+        }
+    }
+    addEventListener('pageshow', async (ev) => {
+        if (ev.persisted) {
+            ## If the page is obtained from cache, we need to check if its action is still valid.
+            ## For that, we get the current valid action ID from the server
+            ## and compare it with the action ID that produced the page
+            const currentActionId = await getCurrentActionId()
+            if (currentActionId && currentActionId !== "$_authenticationActionId") {
+                ## Incorrect action, show modal dialog
+                const dialog = document.getElementById("invalid-authn-action");
+                if(!dialog) {
+                    ## dialog is not present in the DOM, ending without any further action
+                    return
+                }
+                const resumeButton = document.getElementById("recover-resume-action")
+                const restartButton = document.getElementById("recover-restart-authenticator")
+                const closeButton = document.getElementById("recover-close")
+                dialog.showModal()
+                resumeButton.onclick = () => {
+                    window.location = "$_authnRecoverInfo.resumeActionUrl"
+                }
+                restartButton.onclick = () => {
+                    window.location = "$_authnRecoverInfo.retryAuthenticatorUrl"
+                }
+                closeButton.onclick = () => {
+                    dialog.close()
+                }
+            }
+        }
+    })
+</script>

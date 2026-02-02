@@ -1,0 +1,21 @@
+#
+# Copyright (C) 2021 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+page.title=Välj ett andra steg för att fortsätta
+meta.title=Välj ett andra steg för att fortsätta
+view.title=Välj ett andra steg för att fortsätta
+view.login-header=Logga in
+view.sub-title=Välj en av följande metoder för att fortsätta inloggningen
+view.available-methods=Tillgängliga metoder
+view.manage=Hantera
+view.manage-header=Hantera
+view.opt-out.description=Hoppa över konfigurering av tvåstegsverifiering. Detta gör ditt konto mindre säkert.
+view.login=Återgå till Login

@@ -1,0 +1,38 @@
+#*
+ * Copyright (C) 2024 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * This fragment adds user interface elements to help the user recover from an error, namely
+ * an error when an invalid authentication action was used due to a back-navigation.
+ * This template MUST only called if $_authnRecoverInfo exist.
+ * If so, this key points to an object with the following fields:
+ *     - retryAuthenticatorUrl - URL to use to restart the flow on the used authenticator.
+ *     - resumeActionUrl - URL to use to resume the flow on the valid action.
+ *     - applicationUrl - OPTIONAL URL to go back to the application.
+ *###
+## Defines messages used in the error body. Make sure these message keys do exist.
+#set ($_retryAuthenticatorMessage = "#message('invalid-action-recover.retry-authenticator')")
+#set ($_resumeActionMessage = "#message('invalid-action-recover.resume-action')")
+## Overrides the page title and message, used by the 'error' layout. Make sure these message keys do exist.
+#set($_errorTitle = "#message('invalid-action-recover.error-title')")
+#set($_errorMessage = "#message('invalid-action-recover.error-message')")
+## defines the _errorBody, used by the 'error' layout
+#define ($_errorBody)
+    <div class="flex flex-gap-2 justify-between py2">
+        #if ($_authnRecoverInfo.resumeActionUrl)
+            ## add link to resume from last valid action
+            <a class="button button-fullwidth button-primary" href="$_authnRecoverInfo.resumeActionUrl">$_resumeActionMessage</a>
+        #end
+        #if ($_authnRecoverInfo.retryAuthenticatorUrl)
+            ## add link to restart on the used authenticator
+            <a class="button button-fullwidth button-primary-outline" href="$_authnRecoverInfo.retryAuthenticatorUrl">$_retryAuthenticatorMessage</a>
+        #end
+    </div>
+#end

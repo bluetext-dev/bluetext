@@ -1,0 +1,55 @@
+#*
+* Copyright (C) 2024 Curity AB. All rights reserved.
+*
+* The contents of this file are the property of Curity AB.
+* You may not copy or use this file, in either source code
+* or executable form, except in compliance with terms
+* set by Curity AB.
+*
+* For further information, please contact Curity AB.
+*###
+#set ($page_symbol = $page_symbol_authenticate_htmlform)
+#define ($_body)
+<div class="center">
+    <h1 class="mt1">#message("${_templatePrefix}.view.activate-account")</h1>
+</div>
+<form method="post">
+    #if ($_error)
+        #if ($_error == "incorrectCode")
+            <div class="alert alert-danger" id="error">#message("${_templatePrefix}.view.incorrect.code")</div>
+        #elseif ($_error == "newCode")
+            <div class="alert alert-info" id="error">#message("${_templatePrefix}.view.resend.code")</div>
+        #end
+    #end
+    #if ($_activationInitiated)
+        #if ($_activationForm)
+            #if ($_activationForm == "totp")
+                <div class="form-field">
+                    <label for="accountActivationTotp">#message("${_templatePrefix}.view.enter-totp")</label>
+                    <input type="text" name="accountActivationTotp" id="accountActivationTotp" autocorrect="off" spellcheck="false"
+                           class="block full-width mb1 field-light" autofocus>
+                </div>
+                <button type="submit" id="activate" class="button button-fullwidth button-primary">
+                    #message("${_templatePrefix}.view.activate")
+                </button>
+                <button type="submit" value="resend" name="resend" id="resend" class="button button-fullwidth
+                    button-secondary button-info">
+                    #message("${_templatePrefix}.view.new-totp")
+                </button>
+            #elseif ($_activationForm == "email")
+                <div class="alert alert-danger">
+                    #message("${_templatePrefix}.view.error.user-cancelled")
+                </div>
+                <button type="submit" class="button button-fullwidth button-secondary">
+                    #message("${_templatePrefix}.view.activate")
+                </button>
+            #end
+        #end
+    #else
+        <button type="submit" class="button button-fullwidth button-secondary">
+            #message("${_templatePrefix}.view.activate")
+        </button>
+    #end
+</form>
+#end
+#parse("layouts/default")

@@ -1,0 +1,24 @@
+#
+# Copyright (C) 2018 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=Logga in med TOTP
+view.username=Användarnamn
+view.challenge=Skicka
+view.register=Registrera en ny enhet
+
+view.title1=Ange ditt användarnamn
+
+view.enter-totp.title1=Ange Engångskod
+view.enter-totp=Engångskod
+view.verify=Verifiera
+
+error.invalid-otp=Engångskoden är ogiltig. Om samma kod nyss är använd måste du vänta tills nästa kod genereras och prova igen.
+error.no-device=Det finns ingen enhet registrerad på användaren, eller så finns inte användaren.

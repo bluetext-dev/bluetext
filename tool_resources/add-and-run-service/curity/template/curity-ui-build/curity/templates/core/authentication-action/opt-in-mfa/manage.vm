@@ -1,0 +1,91 @@
+#*
+ * Copyright (C) 2021 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#parse("fragments/icon-mappings")
+#set($title = "#message('authentication-action.opt-in-mfa.manage.page.title')")
+#set ($page_symbol = $page_symbol_authenticate_opt_in_mfa)
+#define ($_body)
+    <div class="area center">
+        <h1>#message("${_templatePrefix}.manage.page.title")</h1>
+        <p>#message("${_templatePrefix}.manage.view.sub-title")</p>
+    </div>
+    #if(!${_deletableFactors.isEmpty()})
+        <h3>#message("${_templatePrefix}.manage.view.remove-methods")</h3>
+        #foreach($_factor in $_deletableFactors)
+        <form method="POST" name="delete-${_factor.acr}" class="no-bottom-padding no-top-padding">
+            <input type="hidden" name="acr" value="${_factor.acr}"/>
+            <input type="hidden" name="oper" value="delete"/>
+            <div class="flex flex-center justify-between mb1">
+                <div class="form-field flex-auto #if($icons_only_authenticator_chooser)form-field-social-icon#end">
+                    <button type="submit" value="${_factor.description}" class="button button-primary button-fullwidth button-social #if($icons_only_authenticator_chooser)button-social-icon#end #if($single_color_authenticator_chooser)button-social-single-color#end button-$_factor.type">
+                        <i class="icon #iconClassName($_factor.type)"></i>
+                        #if(!$icons_only_authenticator_chooser)
+                            #if($_factor.description)
+                                $_factor.description
+                            #else
+                                $_factor.authenticatorId
+                            #end
+                        #end
+                    </button>
+                </div>
+                <button class="button button-danger-outline ml1"><i class="icon ion-trash-a"></i></button>
+            </div>
+        </form>
+        #end
+    #end
+    #if(!${_registrableFactors.isEmpty()})
+        <h3>#message("${_templatePrefix}.manage.view.add-methods")</h3>
+        #foreach($_factor in $_registrableFactors)
+        <form method="POST" name="register-${_factor.acr}" class="no-bottom-padding no-top-padding">
+            <input type="hidden" name="acr" value="${_factor.acr}"/>
+            <input type="hidden" name="oper" value="register"/>
+            <div class="form-field flex-auto #if($icons_only_authenticator_chooser)form-field-social-icon#end mb1">
+                <button type="submit" value="${_factor.description}" class="button button-primary button-fullwidth button-social #if($icons_only_authenticator_chooser)button-social-icon#end button-$_factor.type">
+                    <i class="icon #iconClassName($_factor.type)"></i>
+                    #if(!$icons_only_authenticator_chooser)
+                        #if($_factor.description)
+                            $_factor.description
+                        #else
+                            $_factor.authenticatorId
+                        #end
+                    #end
+                </button>
+            </div>
+        </form>
+        #end
+    #end
+    #if($_canUseRecoveryCodes)
+        <h4 class="mt3">
+            #message("${_templatePrefix}.manage.view.available-recovery-codes") <strong id="available-recovery-codes">$_availableRecoveryCodes</strong>.
+        </h4>
+        <form method="POST" name="new-batch" class="no-bottom-padding no-top-padding">
+            <input type="hidden" name="oper" value="new-batch"/>
+            <input type="submit" value="#message("${_templatePrefix}.manage.view.recovery-codes.create")" class="button button-fullwidth button-primary-outline"/>
+        </form>
+    #end
+    <div class="area center">
+        #if($_canCompleteAuthentication)
+            <form method="POST" name="authenticate" class="no-bottom-padding no-top-padding">
+                <input type="hidden" name="oper" value="authenticate"/>
+                <button type="submit" value="Done" class="button button-tiny button-primary-outline">
+                    <i class="icon ion-checkmark inlineicon"></i>#message("${_templatePrefix}.manage.view.complete-authentication")
+                </button>
+            </form>
+        #else
+            <form method="POST" name="exit" class="no-bottom-padding no-top-padding">
+                <input type="hidden" name="oper" value="exit"/>
+                <button type="submit" value="Done" class="button button-tiny button-primary-outline">
+                    <i class="icon ion-checkmark inlineicon"></i>#message("${_templatePrefix}.manage.view.exit")
+                </button>
+            </form>
+        #end
+    </div>
+#end
+#parse("layouts/default")

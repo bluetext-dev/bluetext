@@ -1,0 +1,126 @@
+#*
+ a* Copyright (C) 2016 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * This template is used to add the poller, used by various authenticators, to query the server for the status of
+ * the authentication transaction state.
+ *
+ * This can be a useful extension point to quickly brand the site. Using this template in conjunction with the
+ * css.vm template, it is possible to completely redo the look and feel without changing any other templates.
+ *
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+## keyPrefix needs to be set in including template
+#if(!$!{keyPrefix})
+    ## fallback to bankid keyprefix for backwards compatability
+    #set($keyPrefix = "authenticator.bankid.service")
+#end
+#set($rfa1 = "$!{keyPrefix}.rfa1")
+#set($rfa9 = "$!{keyPrefix}.rfa9")
+#set($rfa13 = "$!{keyPrefix}.rfa13")
+#set($rfa14 = "$!{keyPrefix}.rfa14")
+#set($rfa15 = "$!{keyPrefix}.rfa15")
+#set($rfa23 = "$!{keyPrefix}.rfa23")
+#if ( !$_maxWaitTime )
+    #set ( $_maxWaitTime = 60 )
+#end
+#parse("fragments/jquery")
+<script src="$_staticResourceRootPath/assets/js/curity.js"></script>
+<script type="text/javascript" $!nonceAttr>
+    se.curity.authenticator = {polling : {}};
+    var messageMappings = {
+        "$rfa1": "#message($rfa1)",
+        "$rfa9": "#message($rfa9)",
+        "$rfa13": "#message($rfa13)",
+        "$rfa14": "#message($rfa14)",
+        "$rfa15": "#message($rfa15)",
+        "$rfa23": "#message($rfa23)"
+    };
+    se.curity.authenticator.polling.start = function ()
+    {
+        var failed = false;
+        var failure = function (error)
+        {
+            if (!failed) { // Needed to avoid extra call to onFailure event handler in FF after redirecting
+                failed = true;
+                if (error && error.readyState !== 0) {
+                    window.location.replace("${_failureUrl}?_errorMessage=" + error);
+                }
+            }
+        };
+        var timeout = function ()
+        {
+            failure("authTimeout");
+        };
+        var message = function (data)
+        {
+            if (!data)
+            {
+                jQuery('#poll_message').text("unknown error");
+                return;
+            }
+            if (data.userMessage)
+            {
+                jQuery('#poll_message').text(messageMappings["$!keyPrefix." + data.userMessage]);
+            }
+            else if (data.redirectUrl)
+            {
+                window.location.replace(data.redirectUrl);
+            }
+            if (document.getElementById('autostartTokenQr') && data.qrCode)
+            {
+                document.getElementById('autostartTokenQr').src = data.qrCode;
+            }
+            if (document.getElementById('manualStart') && data.autoStartToken && typeof getAutoStartUri !== 'undefined')
+            {
+                document.getElementById('manualStart').href = getAutoStartUri(data.autoStartToken);
+            }
+        };
+        var success = function ()
+        {
+            $('#pollingDone').submit();
+        }
+        var pollSettings = {
+            url: "$!_pollUrl",
+            pollInterval: 1,
+            maxWaitTime: $_maxWaitTime,
+            restartUrl: "$!_restartUrl",
+            onTimeout: timeout,
+            onMessage: message,
+            onFailure: failure,
+            onSuccess: success
+        };
+        try
+        {
+            return se.curity.utils.poller.startPolling(2, pollSettings);
+        }
+        catch (err)
+        {
+            pollSettings.onFailure(err);
+        }
+    }
+</script>

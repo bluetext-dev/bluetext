@@ -1,0 +1,78 @@
+#*
+ * Copyright (C) 2016 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * This view is only shown if SMS adapter is used standalone, i.e. as the first factor.
+ * It collects the username from the user.
+ *
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+#if($_postBack && $_postBack["userName"])
+    #set($userNameValue = $_postBack["userName"])
+#elseif($_username)
+    #set($userNameValue = $_username)
+#end
+#set ($nextPage = $_registerUrl)
+#if ($_showInfoBeforeRegistration)
+    #set ($nextPage = $_anonymousUrl)
+#end
+#set ($page_symbol = $page_symbol_authenticate_sms)
+#define($_body)
+    #if ($_singleFactor)
+        <form method="post">
+            #if ($_errors)
+                #set($_errorClass = "is-error is-error-danger")
+            #end
+            <h1 class="center">#message("authenticator.sms.enter-username.view.username")</h1>
+            <div class="form-field">
+              <label class="$!_errorClass">#message("authenticator.sms.enter-username.label.username")</label>
+                <input type="text" name="userName" id="userName" class="block full-width mb1 field-light $!_errorClass" autofocus
+                   required value="$!userNameValue" autocapitalize="none">
+                <i class="form-field-icon icon ion-person"></i>
+            </div>
+            <button type="submit" class="button button-fullwidth button-primary">#message(
+                "${_templatePrefix}.view.challenge")</button>
+        </form>
+    #end
+        #if ($_allowRegistrationDuringLogin)
+            <div class="center py2 login-actions">
+            <p>
+                    #message("authenticator.sms.enter-username.view.register-info")
+                    #if (!$_showInfoBeforeRegistration)
+                        ## The next thing the user will see is a login prompt (unless they've logged in before with
+                        ## an allowed authenticator), so we'll give them a bit of extra info before they're
+                        ## redirected.
+                        #message("authenticator.sms.enter-username.view.register-info-login")
+                    #end
+            </p>
+            <a href="$nextPage">
+                #message("authenticator.sms.enter-username.view.register-or-change")
+            </a>
+            </div>
+        #end
+#end
+#parse("layouts/default")

@@ -84,6 +84,5 @@ from models.operations.users import signup
 
 Use the `add-entity` tool to scaffold new entities:
 
-```bash
-polytope run add-entity --client couchbase --language python --entity-singular user --entity-plural users
 ```
+add-entity(client: "couchbase", language: "python", entity-singular: "user", entity-plural: "users")

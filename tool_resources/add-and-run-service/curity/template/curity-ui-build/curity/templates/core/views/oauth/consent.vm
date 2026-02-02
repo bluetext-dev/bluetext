@@ -1,0 +1,142 @@
+#*
+ * Copyright (C) 2017 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * Parameters provided to this template, are:
+ * _target : the URL where the consent can be processed
+ * _state : state value referencing the original request in the current session; can be used as CSRF token
+ * _client : a map with properties of the requesting client (e.g. 'id', 'name', 'description', etc.)
+ * _consentEntries : a map of entries that the used should be asked to consent for. An entry points to another
+ *          map with properties that relate to the consent question (e.g. [required: , value: , ...])
+ * _currentConsent : a list of entries that consent was (already) given for
+ * _consentInfo : configuration info regarding consent entries, a map of entries that point to a map of configuration
+ *          info of these entries (e.g. scope -> [description: , required: , ...])
+ *
+ * To find out what the value of a parameter is, you can use $_context.get('_consentInfo') to print out its contents.
+ *###
+#define($title)
+#message("views.oauth.consent.meta.title")
+#end
+#set ($show_symbol = false)
+#set ($override_logo = "fragments/logo-consent")
+#define($_body)
+<form method="post" action="$!_target" class="consent-form center">
+    <input type="hidden" name="state" value="$_tr.encodeHtmlAttribute($!_state)" />
+    <h1 id="clientName">$!_client.get("name")</h1>
+    <p>
+        #* Add the description conditionally so that `()` doesn't show up when no description is set *###
+        #if ($_client.get("description") && !$_client.get("description").empty)
+            <small id="clientDescription">
+                (#message($!_client.get("description")))
+            </small>
+        #end
+        #message("views.oauth.consent.account-info")
+        <strong id="authenticatedSubject">$_authenticatedSubject</strong>
+    </p>
+    #set($consentEntriesSetSize = $_consentEntries.entrySet().size())
+    <p>
+        #if ($consentEntriesSetSize > 0)
+            #message("views.oauth.consent.info")
+        #else
+            #message("views.oauth.consent.info-for-no-scopes")
+        #end
+    </p>
+    #if ($consentEntriesSetSize > 0)
+        <div class="consent-entries">
+            <ul class="consent-entries-list
+                #if ($consentEntriesSetSize <= 5)
+                    is-active
+                #end
+            ">
+                #foreach ($entry in $_consentEntries.entrySet())
+                    <li>
+                        #set ( $keyName = $entry.key )
+                        #set ( $parameterName = "consent.$keyName")
+                        #if ($entry.value.scopePrefix != "")
+                            #define($prefixName)#message("$entry.value.scopePrefix")#end
+                            #set ( $suffix = $entry.value.scopeSuffix )
+                            #set ( $claimLabel = "$prefixName$suffix" )
+                        #else
+                            #define($claimLabel)#message("$entry.value.displayName")#end
+                        #end
+                    <label class="block full-width relative"
+                        #if ($entry.value.required == "true")
+><input type="checkbox" name="$parameterName" id="$parameterName" checked disabled><label class="consent-entries-list-checkbox"></label><input type="hidden" name="$parameterName"
+                        #else
+                            ><input type="checkbox" name="$parameterName" id="$parameterName" checked
+                        #end
+>
+<label class="consent-entries-list-checkbox"></label>
+<span class="consent-entries-list-name">$claimLabel</span>
+                        #if ($entry.value.required == "true")
+                            <span class="consent-entries-list-value required">*</span>
+                        #end
+                        ## Hacky but necessary way of defining a variable using a directive that can be tested later
+                        ## to see if the result is blank.
+                        #define($localizedDescription)##
+#message($entry.value.description)##
+#end##
+                        #if ($localizedDescription != "")
+                            &mdash; <span class="consent-entries-list-description">$localizedDescription</span>
+                        #end
+                        #if ($entry.value.value != "")
+                            <span class="consent-entries-list-value">$_tr.encodeHtml($entry.value.value)</span>
+                        #end
+                    </label>
+                    </li>
+                #end
+            </ul>
+            #if ($consentEntriesSetSize > 5)
+                <a class="consent-entries-show" href="#"><i class="icon ion-chevron-down inlineicon"></i><span>#message("views.oauth.consent.showAll")</span></a>
+                <script $!nonceAttr>
+                    const showAllButton = document.querySelector('.consent-entries-show')
+                    const showAllButtonIcon = document.querySelector('.consent-entries-show .icon')
+                    const showAllButtonText = document.querySelector('.consent-entries-show span')
+                    const consentEntries = document.querySelector('.consent-entries-list')
+                    showAllButton.addEventListener('click', function(event) {
+                        if (this.querySelector('.icon').classList.contains('ion-chevron-down')) {
+                            this.querySelector('.icon').classList.remove('ion-chevron-down')
+                            showAllButtonIcon.classList.add('ion-chevron-up')
+                            showAllButtonText.innerHTML = '#message("views.oauth.consent.hideAll")'
+                            consentEntries.classList.add('is-active')
+                        } else {
+                            this.querySelector('.icon').classList.remove('ion-chevron-up')
+                            showAllButtonIcon.classList.add('ion-chevron-down')
+                            showAllButtonText.innerHTML = '#message("views.oauth.consent.showAll")'
+                            consentEntries.classList.remove('is-active')
+                        }
+                        event.preventDefault();
+                    })
+                </script>
+            #end
+        </div>
+    #end
+#* If all the required consent is given, enable the submit button *###
+    <input type="submit" class="button button-medium button-success button-fullwidth $!_errorClass $!successClass" value='#message("views.oauth.consent.submit")' name="submit_consent" id="cancel_button" />
+    <div class="login-actions center py2">
+        <input type="submit" name="cancel_consent" class="btn muted regular btn-link" value='#message("views.oauth.consent.cancel")' id="submit_button"/>
+        #if ($_client.get("policyUrl") || $_client.get("termsOfServiceUrl"))
+            <br/>
+        #end
+        #if ($_client.get("policyUrl"))
+            <a href="$!_client.get("policyUrl")">#message("views.oauth.consent.policyDocument")</a>
+        #end
+        #if ($_client.get("termsOfServiceUrl"))
+            <a href="$!_client.get("termsOfServiceUrl")">#message("views.oauth.consent.termsOfService")</a>
+        #end
+    </div>
+    <p>
+        <small>
+            #message("views.oauth.consent.help")
+        </small>
+    </p>
+</form>
+#end
+#parse("layouts/default")

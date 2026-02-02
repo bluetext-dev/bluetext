@@ -1,0 +1,30 @@
+#
+# Copyright (C) 2023 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=Login with passkeys
+page.title=Login with passkeys
+view.username=Username
+view.button.submit=Continue
+view.button.try-again=Restart authentication
+view.button.authenticate=Start
+view.register-additional=Register new device
+view.no-registered-devices=There are no devices registered for this user
+view.register-device=Register device
+view.error.authentication=Something went wrong. Could not authenticate
+view.error.cancel-or-timeout=Authentication was cancelled or timed out.
+view.error.not-supported=Passkeys are currently not supported in this browser
+validation.error.username.required=Username is required
+validation.error.could-not-start=Could not start device authentication
+view.signin=Sign in
+view.signin.passkey=Sign in with a passkey
+view.create.passkey=Create a passkey
+view.create.passkey.info=If you do not yet have a passkey, or if you are having trouble signing in, please create a new passkey.
+view.passkey.info=Passkeys are a user-friendly way to sign in without passwords, by providing a biometric or PIN. The security features of your platform then sign you in using strong cryptography, to protect your data.

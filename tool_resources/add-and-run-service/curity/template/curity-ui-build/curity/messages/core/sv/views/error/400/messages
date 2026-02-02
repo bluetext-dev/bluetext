@@ -1,0 +1,6 @@
+meta.title=400 - Felaktig begäran
+page.title=Felaktig begäran
+system.status.bad.request=Begäran kunde inte utföras
+system.status.authentication.no-authenticator=Ingen autentiseringsmetod hittades
+
+error.parameters.missing-or-invalid=Felaktiga eller otillräckliga parametrar

@@ -1,0 +1,33 @@
+#*
+ * Copyright (C) 2025 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#define($_body)
+<form method="post">
+    #if ($_errors)
+        #set($_errorClass = "is-error is-error-danger")
+    #end
+    <div id="enter-device-id">
+        <h1 class="center">#message("${_templatePrefix}.view.title")</h1>
+        <div class="center">
+            <p>#message("${_templatePrefix}.view.hint")</p>
+        </div>
+        <div class="form-field">
+            <label class="$!_errorClass">#message("${_templatePrefix}.view.alias")</label>
+            <input type="text" name="alias" id="alias" class="block full-width mb1 field-light $!_errorClass"
+                   autofocus required autocapitalize="none" maxlength="30">
+            <i class="form-field-icon icon ion-iphone"></i>
+        </div>
+        <button type="submit" class="button button-fullwidth button-primary mt2 ">
+            #message("${_templatePrefix}.view.continue")
+        </button>
+    </div>
+</form>
+#end
+#parse("layouts/default")

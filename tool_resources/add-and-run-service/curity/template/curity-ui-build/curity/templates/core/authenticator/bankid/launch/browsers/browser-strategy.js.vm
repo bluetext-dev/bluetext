@@ -1,0 +1,61 @@
+#*
+ * Copyright (C) 2023 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+const LAUNCH_DEEP_LINK = 'https://app.bankid.com/';
+const LAUNCH_PROTOCOL = 'bankid:///'
+const LAUNCH_STRATEGY_IFRAME = 'launch-with-iframe';
+const LAUNCH_STRATEGY_CLICK = 'launch-with-click';
+const PLATFORM_IOS = 'ios';
+const PLATFORM_ANDROID = 'android';
+const PLATFORM_OTHER = 'other';
+## Settings to use for the BankID flow. Can be overriden by adding a browser to browsers/available-browser-detections.vm
+const BrowserStrategy = function (settings) {
+    ## Name used in console debug log
+    this.browserName = settings.browserName || 'other-browser';
+    ## The launch method to use
+    this.launchStyle = settings.launchStyle || LAUNCH_PROTOCOL;
+    ## The redirect oto pass to the BankID App
+    this.redirect = settings.redirect || 'null';
+    ## The strategy to use for auto starting the BankID app
+    this.launchStrategy = settings.launchStrategy || LAUNCH_STRATEGY_IFRAME;
+    ## The platform the browser is running on
+    this.platform = settings.platform || PLATFORM_OTHER;
+    ## Never auto launch on this browser type
+    this.neverAutoLaunch = settings.neverAutoLaunch || false;
+    ## Function to detect if the current browser is matching. Return `true` if this strategy should be used
+    this.detectCurrentBrowser = settings.detectCurrentBrowser || (() => false);
+    ## Function to compute the URL to launch the BankID App with. Should not need to be overridden
+    this.launchUrl = settings.launchUrl || ((autoStartToken) => {
+        const autostartToken = autoStartToken || '$_autostartToken';
+        const launchUrl = this.launchStyle + '?autostarttoken=' + autostartToken + '&redirect=' + this.redirect;
+        logger.debug('Using autostart URI: ' + launchUrl)
+        return launchUrl
+    })
+    ## Function to launch the app. Only override if a custom method is necessary
+    this.launchApp = settings.launchApp || (() => {
+        if (this.launchStrategy === LAUNCH_STRATEGY_CLICK) {
+            launchWithClick(this.launchUrl());
+        } else {
+            launchWithIframe(this.launchUrl());
+        }
+    })
+}
+const DEFAULT_BROWSER_STRATEGY = new BrowserStrategy({});
+## Auto launch the app by loading the launchUrl in an iframe
+const launchWithIframe = (launchUrl) => {
+    logger.debug("Trying to auto launch the app by loading the autostart URI in an iframe");
+    $('#autoStart').attr('src', launchUrl);
+}
+## Auto launch the app by loading a link with the launchUrl and clicking it using javascript
+const launchWithClick = (launchUrl) => {
+    logger.debug("Trying to auto launch the app by clicking a start link");
+    $('body').append('<a id="startBankIdApp" href="' + launchUrl + '">&nbsp;</a>');
+    $('#startBankIdApp')[0].click();
+}

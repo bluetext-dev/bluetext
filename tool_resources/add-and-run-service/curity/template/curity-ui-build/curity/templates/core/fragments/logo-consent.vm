@@ -1,0 +1,55 @@
+#*
+ * Copyright (C) 2015 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * This template is used to add a logo to the page views.
+ *
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+<div class="logo-consent">
+	<div class="logo-consent-logo">
+		<div class="logo-consent-logo-circle">
+		#if ($body_background == 'body-dark' && $login_form_background == 'form-transparent')
+			<img class="login-logo" src="$!logo_white_path" alt="Logo" title="Logo" role="presentation">
+		#else
+			<img class="login-logo" src="$!logo_path" alt="Logo" title="Logo" role="presentation">
+		#end
+		</div>
+	</div>
+	<div class="logo-consent-checkmark">
+		<i class="icon ion-checkmark-circled"></I>
+	</div>
+	<div class="logo-consent-logo">
+		<div class="logo-consent-logo-circle">
+			#if( $_client.get("logo") && $!_client.get("logo") != '' )
+					<img class="login-logo-client" id="clientLogo" src="$!_client.get("logo")" />
+			#else
+				<span class="login-logo-client login-logo-client-default" id="clientLogo"></span>
+			#end
+		</div>
+	</div>
+</div>

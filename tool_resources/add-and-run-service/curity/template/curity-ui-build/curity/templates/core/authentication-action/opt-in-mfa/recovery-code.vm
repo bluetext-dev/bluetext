@@ -1,0 +1,32 @@
+#*
+ * Copyright (C) 2021 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#parse("fragments/icon-mappings")
+#set($title = "#message('authentication-action.opt-in-mfa.recovery-code.page.title')")
+#set ($page_symbol = $page_symbol_authenticate_opt_in_mfa)
+#define ($_body)
+<div class="area center">
+    <h1>#message("${_templatePrefix}.recovery-code.view.title")</h1>
+    <p>#message("${_templatePrefix}.recovery-code.view.sub-title")</p>
+</div>
+<form method="POST" class="no-bottom-padding no-top-padding">
+        <div class="form-field">
+            <label for="code">#message("${_templatePrefix}.recovery-code.view.code.label")</label>
+            <input type="text" name="code" id="code" placeholder="#message("${_templatePrefix}.recovery-code.view.code.placeholder")" class="block full-width mb1 field-light" autofocus spellcheck="false" required autocapitalize="none">
+            <i class="form-field-icon icon ion-android-create"></i>
+        </div>
+        <input type="submit" value="#message("${_templatePrefix}.recovery-code.view.code.action")" class="button button-fullwidth button-primary"/>
+</form>
+<form method="POST" name="setup-confirm" class="no-bottom-padding no-top-padding">
+    <input type="hidden" name="cancel" value="true"/>
+    <button type="submit" class="button button-fullwidth button-link">#message("${_templatePrefix}.recovery-code.view.cancel")</button>
+</form>
+#end
+#parse("layouts/default")

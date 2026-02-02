@@ -1,0 +1,26 @@
+services:
+- name: web-app
+  url: http://web-app:${WEB_APP_PORT}
+  routes:
+  - name: web-app-route
+    strip_path: false
+    paths:
+    - /
+  plugins:
+    - name: cors
+      config:
+        origins:
+        - ${WEB_APP_URL}
+        methods:
+        - GET
+        - POST
+        - OPTIONS
+        headers:
+        - Accept
+        - Authorization
+        - Content-Type
+        - x-curity-csrf
+        exposed_headers:
+        - Authorization
+        credentials: true
+        preflight_continue: false

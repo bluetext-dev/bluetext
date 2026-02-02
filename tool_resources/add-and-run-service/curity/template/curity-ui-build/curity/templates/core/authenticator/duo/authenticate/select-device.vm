@@ -1,0 +1,277 @@
+#*
+* Copyright (C) 2020 Curity AB. All rights reserved.
+*
+* The contents of this file are the property of Curity AB.
+* You may not copy or use this file, in either source code
+* or executable form, except in compliance with terms
+* set by Curity AB.
+*
+* For further information, please contact Curity AB.
+*###
+#* @vtlvariable name="_authDevicesMap" type="java.util.HashMap<java.lang.String, java.util.HashMap<java.lang.String, java.lang.Object>>" *###
+#set ($nextPage = $_registerUrl)
+#if ($_showInfoBeforeRegistration)
+    #set ($nextPage = $_anonymousUrl + "/info")
+#end
+#set ($page_symbol = $page_symbol_authenticate_pair_device)
+#set($_singleDevice = $_authDevicesMap.size() == 1)
+#if ($_singleDevice)
+    #set($_singleDeviceName = $_authDevicesMap.keySet().toArray()[0])
+    #set($_singleDeviceId = $_authDevicesMap.get($_singleDeviceName).get("deviceId"))
+#end
+#define($_body)
+<form id="select-device-form" method="post" action="$!_action">
+    <input type="hidden" name="device" id="selected-device-id" value="$!_singleDeviceId">
+    <input type="hidden" name="displayName" id="selected-device-displayName" value="$!_singleDeviceName">
+    <input type="hidden" name="factor" id="selected-factor">
+    <input type="hidden" name="passcode" id="submitted-passcode">
+    <div class="login-chooser mb2">
+        #if(!$_singleDevice)
+            <h1 class="center" id="select-device-title">#message(
+                "authenticator.duo.authenticate.select-device.page.title")</h1>
+        #end
+        #if ($_authDevicesMap.isEmpty())
+            <div class="alert alert-danger">
+                #if ($_username)
+                    #message("authenticator.duo.authenticate.no-devices-with-username") <span>$_username</span>
+                #else
+                    #message("authenticator.duo.authenticate.no-devices-with-this-user")
+                #end
+            </div>
+            <p>#message("authenticator.duo.authenticate.entered-wrong-username")</p>
+            ## This can be enabled seperatly in each of the authenticators that use this template. Some may
+            ## allow registration during login while other don't. As a best practice, create two different
+            ## authenticators -- one for cases where users will authenticate _inside_ a mobile app (i.e., in a
+            ## browser view) and one for apps where that won't be the case. Do not allow registration for all
+            ## apps/service providers where this will be viewed in an embedded view. This results in too much
+            ## context switching, and is best if the person uses a different device for this (e.g., their laptop).
+            ## When the app won't be empedding this view, registration can be quite helpful to allow even when
+            ## logging in.
+            #if ($_allowRegistrationDuringLogin)
+                <p class="center">
+                    <a href="$nextPage" class="button button-primary button-fullwidth" role="button">
+                        #message("authenticator.duo.authenticate.add-device")
+                    </a>
+                </p>
+                <p>
+                    #message("authenticator.duo.authenticate.click-to-add-device")
+                </p>
+                <p>
+                    #if (!$_showInfoBeforeRegistration)
+                                ## The next thing the user will see is a login prompt (unless they've logged in before with
+                                ## an allowed authenticator), so we'll give them a bit of extra info before they're
+                                ## redirected.
+                                #message("authenticator.duo.authenticate.login-to-add")
+                            #end
+                </p>
+            #else
+                <p class="center">
+                    <a href="#!" class="button button-small" role="button">#message(
+                        "authenticator.duo.authenticate.get-help-adding-a-device")</a>
+                </p>
+                <p>#message("authenticator.duo.authenticate.contact-help-desk")</p>
+            #end
+        #elseif (!$_singleDevice)
+            #foreach ($deviceDisplayName in $_authDevicesMap.keySet())
+                <div class="mb1 devices-${deviceDisplayName}">
+                    <div class="form-field mb1">
+                        <button type="button"
+                                data-id="$_authDevicesMap.get($deviceDisplayName).get("deviceId")"
+                                data-displayName="$deviceDisplayName"
+                                class="button button-primary button-fullwidth button-social button-social-single-color select-device">
+                            <i class="icon inlineicon ion-iphone"></i>$deviceDisplayName
+                        </button>
+                    </div>
+                </div>
+            #end
+            #if ($_allowRegistrationDuringLogin)
+                <div class="center py2 login-actions">
+                    <a href="$_registerUrl">
+                        <i class="icon ion-plus inlineicon"></i>#message(
+                        "authenticator.duo.authenticate.view.no-device.register")</a>
+                </div>
+            #end
+        #end
+        <div class="center #if (!$_singleDevice) hide #end">
+            <fieldset class="#if (!$_authDevicesMap.get($_singleDeviceName).get("capabilities").contains(
+                "push"))hide#end">
+                <legend>Send push notification</legend>
+                <button data-factor-push="push" class="button button-fullwidth set-factor-push">Send notification to
+                    device
+                </button>
+            </fieldset>
+            <fieldset class="#if (!$_authDevicesMap.get($_singleDeviceName).get("capabilities").contains(
+                "auto"))hide#end">
+                <legend>Or let Duo choose (push or phone)</legend>
+                <button data-factor-auto="auto" class="button button-fullwidth set-factor-auto">Auto
+                </button>
+            </fieldset>
+            <fieldset class="#if (!$_authDevicesMap.get($_singleDeviceName).get("capabilities").contains(
+                "mobile_otp"))hide#end">
+                <legend>Authenticate with Passcode</legend>
+                <label>Generate passcode using the Duo mobile app</label>
+                <input id="passcode1" type="number" name="passcode1" data-factor-passcode="passcode" autofocus
+                       pattern="[0-9]*" inputmode="numeric"
+                       class="block full-width mb1 field-light set-factor-passcode"
+                       placeholder="Enter passcode">
+                <button class="button button-fullwidth" id="passcode-button1" disabled>Submit</button>
+                <div class="#if (!$_authDevicesMap.get($_singleDeviceName).get("capabilities").contains(
+                    "sms"))hide#end">
+                    <label class="block center mt1 mb1">or</label>
+                    <a href="#" class="send-sms-link">
+                        <i class="icon ion-iphone inlineicon"></i>
+                        <span class="sms-button-text">Receive passcode via SMS</span>
+                    </a>
+                </div>
+            </fieldset>
+            <fieldset class="#if (!$_authDevicesMap.get($_singleDeviceName).get("capabilities").contains(
+                "phone"))hide#end">
+                <legend>Authenticate using phone callback</legend>
+                <div>
+                    <button id="phone-field" class="button button-loading send-phone-passcode button-fullwidth">
+                        <span class="phone-button-text">
+                            <i class="icon ion-iphone inlineicon"></i>Call me
+                        </span>
+                    </button>
+                </div>
+            </fieldset>
+            #if ($_allowRegistrationDuringLogin)
+                <div class="center py2 login-actions">
+                    <a href="$_registerUrl">
+                        <i class="icon ion-plus inlineicon"></i>#message(
+                        "authenticator.duo.authenticate.view.no-device.register")</a>
+                </div>
+            #end
+        </div>
+        <div class="center hide" id="select-auth-method">
+            <fieldset class="hide" id="push-fieldset">
+                <legend>Send push notification</legend>
+                <button data-factor-push="push" class="button button-fullwidth set-factor-push">Send notification to
+                    device
+                </button>
+            </fieldset>
+            <fieldset class="hide" id="auto-fieldset">
+                <legend>Or let Duo choose (push or phone)</legend>
+                <button data-factor-auto="auto" class="button button-fullwidth set-factor-auto">Auto
+                </button>
+            </fieldset>
+            <fieldset class="hide" id="passcode-fieldset">
+                <legend>Authenticate with Passcode</legend>
+                <label>Generate passcode using the Duo mobile app</label>
+                <input id="passcode2" type="number" name="passcode2" data-factor-passcode="passcode" autofocus
+                       pattern="[0-9]*" inputmode="numeric" class="block full-width mb1 field-light set-factor-passcode"
+                       placeholder="Enter passcode">
+                <button class="button button-fullwidth" id="passcode-button2" disabled>Submit</button>
+                <div class="hide" id="sms-passcode-field">
+                    <label class="block center mt1 mb1">or</label>
+                    <a href="#" class="send-sms-link">
+                        <i class="icon ion-iphone inlineicon"></i>
+                        <span class="sms-button-text">Receive passcode via SMS</span>
+                    </a>
+                </div>
+            </fieldset>
+            <fieldset class="hide" id="phone-fieldset">
+                <legend>Authenticate using phone callback</legend>
+                <div>
+                    <button class="button button-loading send-phone-passcode button-fullwidth">
+                        <span class="phone-button-text">
+                            <i class="icon ion-iphone inlineicon"></i>Call me
+                        </span>
+                    </button>
+                </div>
+            </fieldset>
+        </div>
+    </div>
+</form>
+    #parse("fragments/jquery")
+<script type="text/javascript" $!nonceAttr>
+    jQuery(document).ready(function ($) {
+        const buttonText = $('.sms-button-text').first().text()
+        $(".set-factor-passcode").on('change keyup', function (e) {
+            e.preventDefault();
+            $("#selected-factor").val("passcode")
+            const passcode1Length = document.getElementById('passcode1').value.length;
+            const passcode2Length = document.getElementById('passcode2').value.length;
+            if (passcode1Length >= 6) {
+                $("#submitted-passcode").val(document.getElementById('passcode1').value);
+                document.getElementById("passcode-button1").disabled = false;
+            } else if (passcode2Length >= 6) {
+                $("#submitted-passcode").val(document.getElementById('passcode2').value);
+                document.getElementById("passcode-button2").disabled = false;
+            } else {
+                document.getElementById("passcode-button1").disabled = true;
+                document.getElementById("passcode-button2").disabled = true;
+            }
+        });
+        $(".set-factor-push").on('click', function (e) {
+            e.preventDefault();
+            $("#selected-factor").val("push");
+            $("#select-device-form").submit();
+        });
+        $(".set-factor-auto").on('click', function (e) {
+            e.preventDefault();
+            $("#selected-factor").val("auto");
+            $("#select-device-form").submit();
+        });
+        $(".select-device").on('click', function (e) {
+            e.preventDefault();
+            document.getElementById("select-device-title").style.display = "none";
+            const deviceButtons = document.querySelectorAll('div[class*="devices-"]');
+            deviceButtons.forEach(deviceButton => {
+                deviceButton.style.display = 'none';
+            });
+            const deviceId = e.currentTarget.getAttribute('data-id');
+            const deviceDisplayName = e.currentTarget.getAttribute('data-displayName');
+            $("#selected-device-id").val(deviceId);
+            $("#selected-device-displayName").val(deviceDisplayName);
+            $("#select-auth-method").removeClass("hide");
+            const authDevicesMapAsJson = $_authDevicesMapAsJson;
+            if (authDevicesMapAsJson[deviceDisplayName].capabilities.includes("mobile_otp")) {
+                $("#passcode-fieldset").removeClass("hide");
+            }
+            if (authDevicesMapAsJson[deviceDisplayName].capabilities.includes("push")) {
+                $("#push-fieldset").removeClass("hide");
+            }
+            if (authDevicesMapAsJson[deviceDisplayName].capabilities.includes("auto")) {
+                $("#auto-fieldset").removeClass("hide");
+            }
+            if (authDevicesMapAsJson[deviceDisplayName].capabilities.includes("phone")) {
+                $("#phone-fieldset").removeClass("hide");
+            }
+            if (authDevicesMapAsJson[deviceDisplayName].capabilities.includes("sms")) {
+                $("#sms-passcode-field").removeClass("hide");
+            }
+        });
+        $(document).on('click', '.send-sms-link', function (e) {
+            e.preventDefault();
+            const _this = $(this);
+            $('.sms-button-text').text("Sending SMS...");
+            $.ajax({
+                type: "POST",
+                url: "$!_action",
+                data: {factor: "sms", device: $("#selected-device-id").val()},
+                success: function (data) {
+                    console.log(data);
+                    $('.sms-button-text').text("SMS sent").addClass('is-error is-error-success');
+                    setTimeout(function (e) {
+                        $('.sms-button-text').text(buttonText);
+                    }, 2000)
+                },
+                error: function (data) {
+                    console.log(data)
+                    $('.sms-button-text').text("Sending SMS failed").addClass('is-error is-error-danger');
+                    setTimeout(function (e) {
+                        $('.sms-button-text').text(buttonText).removeClass('is-error is-error-danger');
+                    }, 2000)
+                }
+            });
+        });
+        $(document).on('click', '.send-phone-passcode', function (e) {
+            e.preventDefault();
+            $("#selected-factor").val("phone");
+            $("#select-device-form").submit();
+        })
+    });
+</script>
+#end
+#parse("layouts/default")

@@ -1,0 +1,19 @@
+#
+# Copyright (C) 2021 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+view.bad-request=Bad request
+view.invalid-authenticator=Bad request
+view.invalid-recovery-code=Invalid recovery code
+view.too-many-attempt=Too many attempts
+view.need-to-confirm=Need to confirm
+view.opt-out-not-allowed=Bad request
+view.authn-from-manage-not-allowed=Bad request
+view.recovery-codes-not-allowed=Use of recovery codes is disabled

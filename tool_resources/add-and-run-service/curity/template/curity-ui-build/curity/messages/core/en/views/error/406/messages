@@ -1,0 +1,4 @@
+meta.title=406 - Not Acceptable
+page.title=Content-Type Not Acceptable
+system.status.content-type-not-acceptable=Not Acceptable
+available.contenttypes=The resource actual Content-Types are:

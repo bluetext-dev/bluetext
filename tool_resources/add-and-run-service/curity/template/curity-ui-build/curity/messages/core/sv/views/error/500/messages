@@ -1,0 +1,4 @@
+meta.title=500 - Internt fel
+page.title=Internt fel
+system.status.internal.error=Ett internt fel har inträffat
+system.status.configuration.error=Ett allvarligt internt fel har inträffat som förhindrar förfrågan att hanteras

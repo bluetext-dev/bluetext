@@ -1,0 +1,24 @@
+#
+# Copyright (C) 2018 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=Login with TOTP
+view.username=Username
+view.challenge=Submit
+view.register=Register new device
+
+view.title1=Enter your username
+
+view.enter-totp.title1=Enter one time password
+view.enter-totp=One Time Password 
+view.verify=Verify
+
+error.invalid-otp=One Time Password is invalid. If it was used recently wait for the next code and try again.
+error.no-device=No device registered on user, or user doesn't exist

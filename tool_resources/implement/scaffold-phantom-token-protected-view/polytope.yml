@@ -1,0 +1,56 @@
+tools:
+  scaffold-phantom-token-protected-view:
+    info: |
+      Scaffolds a React view protected by the Curity Phantom Token handler.
+      Adds a new route component to the specified service.
+    params:
+      - id: name
+        info: "The name of the view/route (e.g. 'admin')"
+        type: str
+      - id: service
+        info: "The service to add the view to (e.g. 'web-app')"
+        type: str
+    run:
+      - id: scaffold-view
+        tool: pt/run-script
+        args:
+          repo: {type: host, path: .}
+          language: python
+          script:
+            type: string
+            data: |
+              from pathlib import Path
+              import os
+
+              view_name = "{pt.param name}"
+              service_name = "{pt.param service}"
+
+              # Read the template file
+              template_path = Path("/template/protected-view.tsx.template")
+
+              if not template_path.exists():
+                  print(f"❌ Template not found: {template_path}")
+                  exit(1)
+
+              template_content = template_path.read_text()
+
+              # Simple replacement
+              content = template_content.replace("{{ view_name | capitalize }}", view_name.capitalize())
+              content = content.replace("{{ view_name }}", view_name)
+
+              # Determine output path
+              output_path = Path(f"/repo/services/{service_name}/app/routes/{view_name}.tsx")
+
+              # Ensure directory exists
+              output_path.parent.mkdir(parents=True, exist_ok=True)
+
+              # Write the file
+              output_path.write_text(content)
+
+              print(f"✅ Created protected view: services/{service_name}/app/routes/{view_name}.tsx")
+          mounts:
+            - path: /template
+              source:
+                type: repo
+                repo: "#pt-clj pt/module-repo-ref"
+                path: tool_resources/implement/scaffold-phantom-token-protected-view/template

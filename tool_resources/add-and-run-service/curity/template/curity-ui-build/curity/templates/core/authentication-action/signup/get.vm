@@ -1,0 +1,132 @@
+#*
+* Copyright (C) 2024 Curity AB. All rights reserved.
+*
+* The contents of this file are the property of Curity AB.
+* You may not copy or use this file, in either source code
+* or executable form, except in compliance with terms
+* set by Curity AB.
+*
+* For further information, please contact Curity AB.
+*###
+#set ($page_symbol = $page_symbol_authenticate_htmlform)
+#set ($_loginChooser_hide_selector_title = true)
+#if ($single_color_authenticator_chooser)
+    #parse("fragments/login-chooser-single-color")
+#else
+    #parse("fragments/login-chooser")
+#end
+#define ($_body)
+    #parse("fragments/credential-operation-details")
+    #if ($_error)
+        #if ($_error == "USERNAME_DUPLICATE")
+        <div class="alert alert-danger">#message("${_templatePrefix}.view.validation.username.duplicate")</div>
+        #elseif ($_error == "EMAIL_DUPLICATE")
+        <div class="alert alert-danger">#message("${_templatePrefix}.view.validation.email.duplicate")</div>
+        #elseif ($_error == "PHONE_DUPLICATE")
+        <div class="alert alert-danger">#message("${_templatePrefix}.view.validation.phone.duplicate")</div>
+        #elseif ($_error == "MISSING_INPUT")
+        <div class="alert alert-danger">#message("${_templatePrefix}.view.validation.missing.input")</div>
+        #end
+    #end
+<form method="post" action="$_actionUrl">
+    <div class="center">
+        #if ($_allowedAuthenticators)
+            <h3 class="mt1">#message("${_templatePrefix}.view.select-authenticator")</h3><br/>
+        #else
+            #if($_registrationCompleted)
+                <h1 class="mt1">#message("${_templatePrefix}.view.account-created")</h1>
+            #else
+                <h1 class="mt1">#message("${_templatePrefix}.view.create-account")</h1>
+            #end
+        #end
+    </div>
+    #if ($_allowedAuthenticators)
+        <form class="center">
+            $!_loginChooser
+        </form>
+    #end
+    #if ($_signUpFields)
+        <div class="form-field">
+            <label for="username">#message("${_templatePrefix}.view.username")</label>
+            <span class="red">*</span>
+            <input type="#if($_usernameIsEmail)email#{else}text#end" name="username" id="username" autocorrect="off" spellcheck="false"
+                   value="$!_registrationParameters["username"][0]" class="block full-width mb1 field-light" autofocus required>
+            <i class="form-field-icon icon ion-ios-person"></i>
+        </div>
+        #if ($_usernameIsEmail == false)
+            <div class="form-field">
+                <label for="primaryEmail">#message("${_templatePrefix}.view.email")</label>
+                <span class="red">*</span>
+                <input type="email" name="primaryEmail" id="primaryEmail" autocorrect="off" spellcheck="false"
+                       value="$!_registrationParameters["primaryEmail"][0]" class="block full-width mb1 field-light" autofocus required>
+                <i class="form-field-icon icon ion-ios-person"></i>
+            </div>
+        #end
+        #foreach ($field in $_signUpFields)
+            <div class="form-field">
+                <label for="$field.name">$field.name</label>
+                #if($field.required) <span class="red">*</span> #end
+                <input type="text" name="$field.name" id="$field.name" autocorrect="off" spellcheck="false"
+                       value="$!_registrationParameters["$field.name"][0]"
+                       class="block full-width mb1 field-light" #if($field.required) required #end autofocus>
+                <i class="form-field-icon icon ion-ios-person"></i>
+            </div>
+        #end
+        #if ($_promptForFirstName)
+            <div class="form-field">
+                <label for="name.givenName">#message("${_templatePrefix}.view.firstName")</label>
+                #if($_promptForFirstNameRequired) <span class="red">*</span> #end
+                <input type="text" name="name.givenName" id="name.givenName" autocorrect="off" spellcheck="false"
+                       value="$!_registrationParameters["name.givenName"][0]"
+                       class="block full-width mb1 field-light" #if ($_promptForFirstNameRequired) required #end
+                       autofocus>
+                <i class="form-field-icon icon ion-ios-person"></i>
+            </div>
+        #end
+        #if ($_promptForLastName)
+            <div class="form-field">
+                <label for="name.familyName">#message("${_templatePrefix}.view.lastName")</label>
+                #if($_promptForLastNameRequired) <span class="red">*</span> #end
+                <input type="text" name="name.familyName" id="name.familyName" autocorrect="off" spellcheck="false"
+                       value="$!_registrationParameters["name.familyName"][0]"
+                       class="block full-width mb1 field-light" #if ($_promptForLastNameRequired) required #end
+                       autofocus>
+                <i class="form-field-icon icon ion-ios-person"></i>
+            </div>
+        #end
+        #if ($_promptForPhone)
+            <div class="form-field">
+                <label for="primaryPhoneNumber">#message("${_templatePrefix}.view.phone")</label>
+                #if($_promptForPhoneRequired) <span class="red">*</span> #end
+                <input type="text" name="primaryPhoneNumber" id="primaryPhoneNumber" autocorrect="off" spellcheck="false"
+                       value="$!_registrationParameters["primaryPhoneNumber"][0]"
+                       class="block full-width mb1 field-light" #if ($_promptForPhoneRequired) required #end autofocus>
+                <i class="form-field-icon icon ion-ios-person"></i>
+            </div>
+        #end
+        #if ($_promptForPassword)
+            <div class="form-field">
+                <label for="password">#message("${_templatePrefix}.view.password")</label>
+                <span class="red">*</span>
+                <input type="password" name="password" id="password" autocorrect="off" spellcheck="false"
+                       class="block full-width mb1 field-light" required autofocus>
+                <i class="form-field-icon icon ion-ios-person"></i>
+            </div>
+        #end
+        #if ($_hasCredentialPolicy == true)
+            #parse("fragments/credential-validation")
+        #end
+        <button type="submit" class="button button-fullwidth button-primary">
+            #message("${_templatePrefix}.view.create-account")
+        </button>
+    #end
+    #if ($_registrationCompleted)
+        <div class="center">
+            <button type="submit" value="complete" name="complete" class="button button-fullwidth button-secondary">
+                #message("${_templatePrefix}.view.continue")
+            </button>
+        </div>
+    #end
+</form>
+#end
+#parse("layouts/default")

@@ -1,0 +1,7 @@
+meta.title=Ange ditt e-postadress
+view.username=Ange ditt e-postadress
+view.button=Skicka
+view.register=Registrera
+view.challenge=Nästa
+error.account.not.found=Inga enheter associerade med användaren. För att lägga till en enhet, kontakta kundtjänst. Alternativt, gå tillbaka för att använda en annan inloggningsmetod,
+error.account.not.found.in.account.manager=Kan inte utföra förfrågan. Var god försök igen.

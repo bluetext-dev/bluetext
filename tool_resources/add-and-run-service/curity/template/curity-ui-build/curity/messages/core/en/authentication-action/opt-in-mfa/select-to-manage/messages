@@ -1,0 +1,18 @@
+#
+# Copyright (C) 2021 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+page.title=Select a second factor to continue
+meta.title=Select a second factor to continue
+view.title=Manage
+view.sub-title=Select a method to continue to additional factor management.
+view.available-methods=Available methods
+view.or=Or
+view.use-recovery-code=Use a Recovery Code

@@ -1,0 +1,5 @@
+meta.title=400 - Bad request
+page.title=Bad request
+system.status.bad.request=The request could not be processed.
+
+error.parameters.missing-or-invalid=Missing or invalid input parameters

@@ -1,0 +1,15 @@
+#*
+ * Copyright (C) 2018 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+<div class="waiting-spinner loader-inner ball-pulse">
+    <div class="waiting-spinner-child waiting-spinner-bounce1"></div>
+    <div class="waiting-spinner-child waiting-spinner-bounce2"></div>
+    <div class="waiting-spinner-child waiting-spinner-bounce3"></div>
+</div>

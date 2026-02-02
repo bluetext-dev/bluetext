@@ -1,0 +1,34 @@
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router';
+import { AuthProvider, useAuth } from './AuthContext';
+import { LoadingSpinner } from '../components/LoadingSpinner';
+
+function {{ view_name | capitalize }}View() {
+    const { isLoggedIn, userInfo, isPageLoaded } = useAuth();
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        if (isPageLoaded && !isLoggedIn) {
+            navigate('/');
+        }
+    }, [isPageLoaded, isLoggedIn, navigate]);
+
+    if (!isPageLoaded || !isLoggedIn) {
+        return <LoadingSpinner />;
+    }
+
+    return (
+        <div>
+            <h1>Welcome, {userInfo.name}</h1>
+            {/* {{ view_name | capitalize }} content */}
+        </div>
+    );
+}
+
+export default function {{ view_name | capitalize }}Route() {
+    return (
+        <AuthProvider>
+            <{{ view_name | capitalize }}View />
+        </AuthProvider>
+    );
+}

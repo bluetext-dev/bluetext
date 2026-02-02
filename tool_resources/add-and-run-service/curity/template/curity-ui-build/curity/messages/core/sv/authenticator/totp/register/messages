@@ -1,0 +1,24 @@
+#
+# Copyright (C) 2018 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=Registrera ny enhet
+view.title1=Registrera ny enhet
+view.register=Registrera
+view.next=Nästa
+view.deviceId=Serienummer
+view.totp=Engångskod
+view.device-expiration=Giltighetstid (tid i sekunder)
+view.p1=Skanna QR-koden, eller klicka på bilden för att skanna den i samma enhet.
+
+validation.error.totp.required=Ange engångskod
+validation.error.deviceId.required=Ange enhetens serienummer
+error.device-already-registered=Något har gått fel. Det gick inte registrera enheten.
+error.invalid-otp=Kan inte verifiera engångskod

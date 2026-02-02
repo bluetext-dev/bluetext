@@ -1,0 +1,7 @@
+meta.title=Enter your username
+view.username=Enter your username
+view.button=Submit
+view.register=Register
+view.challenge=Next
+error.account.not.found=No devices have been associated with this user. To add one, please contact an administrator or use your browser’s back button to login using a different option (if available).
+error.account.not.found.in.account.manager=Unable to process the request. Please try again.

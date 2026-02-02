@@ -1,0 +1,30 @@
+#
+# Copyright (C) 2023 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=Login com passkeys
+page.title=Login com passkeys
+view.username=Nome de usuário
+view.button.submit=Enviar
+view.button.try-again=Reiniciar a autenticação
+view.button.authenticate=Iniciar
+view.register-additional=Registrar novo dispositivo
+view.no-registered-devices=Não há dispositivos registrados para este usuário
+view.register-device=Registrar dispositivo
+view.error.authentication=Algo deu errado. Não foi possível autenticar
+view.error.cancel-or-timeout=A autenticação foi cancelada ou o tempo esgotou.
+view.error.not-supported=Este navegador não suporta a utilização de passkeys
+validation.error.username.required=Nome de usuário obrigatório
+validation.error.could-not-start=Não foi possível iniciar a autenticação do dispositivo
+view.signin=Iniciar sessão
+view.signin.passkey=Iniciar sessão com passkey
+view.create.passkey=Criar passkey
+view.create.passkey.info=Se ainda não tiver uma passkey ou estiver com problemas para iniciar sessão, crie uma nova passkey.
+view.passkey.info=Passkeys são uma nova forma fácil de fazer login sem palavras-passe, utilizando um PIN ou dados biométricos (por exemplo, reconhecimento facial ou digital). As funcionalidades de segurança da sua plataforma autenticam-no usando criptografia forte para proteger os seus dados.
