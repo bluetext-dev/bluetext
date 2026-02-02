@@ -23,6 +23,11 @@ tools:
 
             - { name: REDPANDA_HOST, value: pt.value service-config-manager-redpanda-host }
             - { name: REDPANDA_PORT, value: pt.value service-config-manager-redpanda-port }
+
+            - { name: POSTGRES_HOST, value: pt.value service-config-manager-postgres-host }
+            - { name: POSTGRES_DB, value: pt.value service-config-manager-postgres-db }
+            - { name: POSTGRES_USER, value: pt.secret service-config-manager-postgres-user }
+            - { name: POSTGRES_PASSWORD, value: pt.secret service-config-manager-postgres-password }
           mounts:
             - { path: /config/, source: { type: repo, path: config }}
             - { path: /root/.cache/, source: { type: volume, scope: project, id: dependency-cache } }
