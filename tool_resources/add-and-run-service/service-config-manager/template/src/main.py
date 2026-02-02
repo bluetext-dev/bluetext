@@ -31,18 +31,11 @@ def main():
         environment = get_env_var('ENVIRONMENT')
         logger.info(f"📊 Environment: {environment}")
 
-        # Initialize config manager with hardcoded config path
-        config_file_path = Path('conf/config.yaml')
-        logger.info(f"📁 Config file path: {config_file_path}")
+        # Initialize config manager with config directory
+        config_dir = Path('config')
+        logger.info(f"📁 Config directory: {config_dir}")
 
-        config = Config(config_file_path, environment)
-
-        # Validate environment
-        if not config.is_valid_environment(environment):
-            logger.error(f"❌ Invalid environment '{environment}' - not found in config file")
-            sys.exit(1)
-
-        logger.info(f"✅ Environment '{environment}' validated successfully")
+        config = Config(config_dir, environment)
 
         # Get available targets by detecting config files
         targets = config.get_targets()
@@ -70,6 +63,14 @@ def main():
             redpanda_controller.run_ops()
             processed_count += 1
             logger.info("✅ Redpanda processing completed")
+
+        if 'postgres' in target_ids:
+            logger.info("🔄 Found Postgres configuration, but PostgresController is not yet implemented.")
+            # TODO: Implement PostgresController
+            # postgres_controller = PostgresController(environment, config)
+            # postgres_controller.run_ops()
+            processed_count += 1
+            logger.info("ℹ️  Skipping Postgres processing")
 
         if target_ids:
             logger.info(f"🎉 Configuration processing completed! Completed {processed_count}/{len(target_ids)} targets")
