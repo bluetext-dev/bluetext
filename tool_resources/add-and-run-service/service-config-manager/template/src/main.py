@@ -8,6 +8,7 @@ from pathlib import Path
 from config import Config
 from controllers.couchbase_controller import CouchbaseController
 from controllers.redpanda_controller import RedpandaController
+from controllers.postgres_controller import PostgresController
 from utils.logger import get_logger
 
 def get_env_var(name, default=None):
@@ -65,12 +66,11 @@ def main():
             logger.info("✅ Redpanda processing completed")
 
         if 'postgres' in target_ids:
-            logger.info("🔄 Found Postgres configuration, but PostgresController is not yet implemented.")
-            # TODO: Implement PostgresController
-            # postgres_controller = PostgresController(environment, config)
-            # postgres_controller.run_ops()
+            logger.info("🔄 Processing Postgres configuration...")
+            postgres_controller = PostgresController(environment, config)
+            postgres_controller.run_ops()
             processed_count += 1
-            logger.info("ℹ️  Skipping Postgres processing")
+            logger.info("✅ Postgres processing completed")
 
         if target_ids:
             logger.info(f"🎉 Configuration processing completed! Completed {processed_count}/{len(target_ids)} targets")
