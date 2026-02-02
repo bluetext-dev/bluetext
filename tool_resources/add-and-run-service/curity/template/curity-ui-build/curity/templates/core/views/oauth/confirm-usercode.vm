@@ -1,0 +1,22 @@
+#*
+ * Copyright (C) 2017 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#set ($page_symbol = $page_symbol_authenticate_desktop)
+#define($_body)
+<form method="post" class="center">
+    ## The value here is set set to "on" so that checkbox inputs can be used if desired
+    ## By default the user simply clicks the button to confirm
+    <input type="hidden" name="confirmUsercode" value="on" />
+    <h1>#message("views.oauth.confirm")</h1>
+    <p>#message("views.oauth.confirm-description")</p>
+    <button type="submit" class="button button-fullwidth button-success button-medium mt2">#message("views.oauth.confirm-submit")</button>
+</form>
+#end
+#parse("layouts/default")

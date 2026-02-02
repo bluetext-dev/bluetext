@@ -1,0 +1,95 @@
+#*
+ * Copyright (C) 2023 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+## When enabled the additional authentication screen will be presented to the
+## user to provide extra context on Passkeys
+#set($showAdditionalPasskeyInfo = true)
+#set ($page_symbol = $page_symbol_authenticate_passkeys)
+#define($_body)
+    #set($showRegistration = $_registrationEndpoint && $_allowRegistrationDuringLogin)
+    #if ($showAdditionalPasskeyInfo)
+    <div class="center">
+        <h1>#message("${_templatePrefix}.view.signin")</h1>
+    </div>
+    #end
+<div id="waitingDiv" class="hidden">
+    #parse("fragments/spinner")
+</div>
+<form id="assertionForm" method="post" class="login-form hidden">
+    <input type="hidden" name="json"/>
+    <input type="hidden" name="platform_attachment_not_supported"/>
+</form>
+    #parse("authenticator/passkeys/fragments/alerts")
+<div id="noDevicesDiv" class="hidden">
+    <div class="alert-wrapper">
+        <div class="alert alert-info">
+            <span>#message("${_templatePrefix}.view.no-registered-devices")</span>
+        </div>
+    </div>
+    #if ($showRegistration)
+        <div id="registerDiv" class="area center register">
+            <a href="$_registrationEndpoint" class="button button-fullwidth button-primary register">#message("${_templatePrefix}.view.register-device")</a>
+        </div>
+    #end
+</div>
+<div id="devicesDiv" class="hidden">
+    #if ($showAdditionalPasskeyInfo)
+        <div class="container center">
+            <p>#message("${_templatePrefix}.view.passkey.info")</p>
+        </div>
+    #end
+    #if ($_promptForUsername)
+        <form id="usernameForm">
+            <div class="form-field">
+                <label for="userName">#message("${_templatePrefix}.view.username")</label>
+                <input type="text" name="userName" class="block full-width mb1 field-light" autocapitalize="none"
+                       value="$!_userName" autofocus required>
+                <i class="form-field-icon icon ion-ios-person"></i>
+            </div>
+            <button type="submit" class="button button-fullwidth button-primary">
+                #message("${_templatePrefix}.view.button.submit")
+            </button>
+        </form>
+    #end ## ($_promptForUsername)
+    <div class="area">
+    <div id="additionalDialog" class="hidden">
+        #set($showRegistration = $_registrationEndpoint && $_allowRegistrationDuringLogin)
+        <div id="authenticateDiv" class="center">
+            <button id="authenticateButton" class="button button-fullwidth button-primary">
+                #message("${_templatePrefix}.view.signin.passkey")
+            </button>
+        </div>
+        #if ($showRegistration)
+            <div id="createPasskeyDiv" class="mt2">
+                <a class="register btn button-link " href="$_registrationEndpoint">#message("${_templatePrefix}.view.create.passkey")</a>
+            </div>
+        #end
+    </div>
+    <div id="authenticateDiv" class="hidden">
+        <button id="authenticateButton" class="button button-fullwidth button-primary">
+            #message("${_templatePrefix}.view.button.authenticate")
+        </button>
+    </div>
+    #if (!$showAdditionalPasskeyInfo)
+        #if ($showRegistration)
+            <div id="registerDiv">
+                <a class="register" href="$_registrationEndpoint">#message("${_templatePrefix}.view.register-additional")</a>
+            </div>
+        #end
+    #else
+        <div class="">
+            <p>#message("${_templatePrefix}.view.create.passkey.info")</p>
+        </div>
+    #end
+    </div>
+</div>
+    #parse("authenticator/passkeys/js/authenticate-device")
+#end ## /body
+#parse("layouts/default")

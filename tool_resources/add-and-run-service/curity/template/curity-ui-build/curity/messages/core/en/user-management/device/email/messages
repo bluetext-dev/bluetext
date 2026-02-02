@@ -1,0 +1,15 @@
+#
+# Copyright (C) 2025 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+email.subject=Verify your email address
+email.title=Verify your email address
+email.head1=To verify your email address, use the one time password below
+email.button=Verify

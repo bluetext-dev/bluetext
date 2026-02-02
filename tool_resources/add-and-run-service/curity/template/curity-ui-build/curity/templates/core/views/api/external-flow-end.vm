@@ -1,0 +1,45 @@
+#*
+ * Copyright (C) 2020 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#define($_body)
+<script type="text/javascript" $!nonceAttr>
+    var channel = undefined;
+    //It's undefined in IE and null in Chrome...
+    if ((window.opener !== undefined) && (window.opener !== null)) {
+        channel = window.opener;
+    } else {
+        channel = window.parent;
+    }
+    if (channel && channel !== window) {
+        channel.postMessage("$!_resume_nonce", "$!_resume_origin");
+    } else {
+        handleError()
+    }
+    var marker = document.createElement('div');
+    marker.id = 'external-flow-done';
+    marker.style.display = "none";
+    document.body.append(marker);
+    function handleError() {
+        var msg = '#message("${_templatePrefix}.error.parent")'
+        var elements = document.getElementsByClassName("login-symbol-circle login-symbol-circle-done")
+        if (elements.length !== 1) {
+            return
+        }
+        var current = elements[0]
+        var parent = current.parentElement
+        var error = document.createElement('div')
+        error.className = "alert alert-danger"
+        error.innerText = msg
+        parent.replaceChild(error, current)
+    }
+</script>
+#end
+#set ($page_symbol = $page_symbol_done)
+#parse("layouts/default")

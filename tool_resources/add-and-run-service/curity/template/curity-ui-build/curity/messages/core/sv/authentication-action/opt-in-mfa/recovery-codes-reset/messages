@@ -1,0 +1,19 @@
+#
+# Copyright (C) 2021 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+page.title=Återställ reservkoder
+meta.title=Återställ reservkoder
+view.warn=Är du säker på att du vill återställa dina reservkoder?
+view.title=Återställ reservkoder
+view.sub-title=Förvara reservkoderna på ett säkert men lättillgängligt ställe.
+view.print=Skriv ut koder
+view.confirm=Bekräfta
+view.cancel=Avbryt

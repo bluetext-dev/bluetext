@@ -1,0 +1,28 @@
+meta.title=Bekräfta konto
+page.title=Bekräfta konto
+view.title1=Tack!
+view.paragraph1=Ditt konto har bekräftats
+view.back.to.login=Ta mig till inloggningssidan
+
+view.error.head1=Ett fel inträffade
+view.set-password.head=Bekräfta konto genom att sätta ett lösenord
+view.error.p1=Ditt konto har inte bekräftats
+
+validation.error.token.invalid=Ogiltig länk. Länken som användes är för gammal.
+validation.error.token.required=Begäran saknade token.
+validation.error.email.invalid=Ogiltig e-postadress.
+validation.error.missing-email-or-phone=Fyll i din e-postadress
+validation.error.password.required=Du måste ange ett lösenord
+validation.error.password.weak=Lösenordet är för svagt
+
+view.newToken.head1=Skicka ett nytt bekräftelsemail
+view.newToken.p1=Ange e-postadressen du angav när du skapade ditt konto så kommer ett nytt bekräftelsemail till din e-postadress.
+view.newToken.email=E-post
+view.newToken.button=Skicka nytt bekräftelsemail
+
+view.newTokenSent.h1=Ett nytt bekräftelsemail har skickats
+view.newTokenSent.p1=Ett mail med instruktioner för hur du verifierar ditt konto har skickats till den e-postadress du angav.
+
+view.newPassword=Ange ett lösenord
+
+view.button=Aktivera

@@ -1,0 +1,22 @@
+#
+# Copyright (C) 2021 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+page.title=Manage 2-step Verification
+meta.title=Manage 2-step Verification
+view.title=Manage 2-step Verification
+view.sub-title=Manage your 2-step verification methods.
+view.remove-methods=Remove methods
+view.add-methods=Available Methods to add
+view.available-recovery-codes=Recovery codes still available:
+view.available-recovery-codes.template=Recovery codes still available: %s
+view.recovery-codes.create=Create new recovery codes
+view.complete-authentication=Done
+view.exit=Exit

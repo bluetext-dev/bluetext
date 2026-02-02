@@ -1,2 +1,10 @@
 include:
-  - tool_resources
+  - path: tool_resources
+    # only:
+    #   - add-and-run-service
+    #   - add-client
+    #   - add-entity
+    #   - initialize_session
+    #   - setup-project-structure
+    #   - setup-service-for-client
+    #   - stack

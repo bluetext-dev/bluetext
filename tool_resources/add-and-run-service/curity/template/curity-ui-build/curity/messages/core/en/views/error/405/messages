@@ -1,0 +1,4 @@
+meta.title=405 - Method not allowed
+page.title=Method not allowed
+system.status.method-not-allowed=The HTTP method you requested is not allowed.
+what.to.do.next=Please retry the request using a different method

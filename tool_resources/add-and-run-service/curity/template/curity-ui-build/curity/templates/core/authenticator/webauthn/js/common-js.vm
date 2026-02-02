@@ -1,0 +1,36 @@
+#*
+ * Copyright (C) 2021 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#parse("fragments/jquery")
+<script src="$!_staticResourceRootPath/assets/js/lib/webauthn-json.js"></script>
+<script $!nonceAttr>
+    const webAuthnErrors = {
+        NOT_ALLOWED: "NotAllowedError",
+        ABORTED: "AbortError"
+    }
+    const isWebauthnSupported = typeof PublicKeyCredential !== "undefined";
+    // Chrome and Chromium also has "Safari" in the user agent
+    const requiresUserInteraction = navigator.userAgent.indexOf("Safari") > -1 &&
+            navigator.userAgent.indexOf("Chrom") === -1;
+    const supportsPlatformAuthenticatorAttachment = async () => {
+        try {
+            return PublicKeyCredential && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+        } catch (e) {
+            return false;
+        }
+    }
+    $.fn.showElement = function() {
+        return this.show();
+    }
+    $.fn.hideElement = function() {
+        return this.hide();
+    }
+    const showInputError = (elementId) => $(`#${elementId}`).addClass('is-error is-error-danger');
+</script>

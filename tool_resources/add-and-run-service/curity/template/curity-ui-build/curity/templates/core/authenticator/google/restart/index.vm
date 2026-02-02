@@ -1,0 +1,49 @@
+#*
+ * Copyright (C) 2017 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * This is the waiting page when waiting for a user to click the link in their mobile device
+ *
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+#define($_body)
+<div class="area">
+    <div class="alert alert-warning"> #message("${_templatePrefix}.view.message")</div>
+    #if ($_hostedDomain)
+        <div class="alert alert-warning" id="recipient">
+            <h3>$_hostedDomain</h3>
+            #message("${_templatePrefix}.error.wrong-home-domain") $_hostedDomain
+        </div>
+    #end
+    <div class="center py2 login-actions">
+        <a href="$_restartUrl">
+            <i class="icon ion-refresh inlineicon"></i>#message("${_templatePrefix}.button.restart")
+        </a>
+    </div>
+</div>
+#end
+#parse("layouts/default")

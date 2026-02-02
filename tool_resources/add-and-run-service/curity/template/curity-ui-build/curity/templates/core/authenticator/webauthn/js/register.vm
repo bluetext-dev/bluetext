@@ -1,0 +1,85 @@
+#*
+ * Copyright (C) 2021 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#parse("authenticator/webauthn/js/common-js")
+<script $!nonceAttr>
+    if (!isWebauthnSupported) {
+        showError('#message("${_templatePrefix}.view.error.not-supported")');
+        $("#registerDiv").hideElement();
+        throw new Error('WebAuthn not supported');
+    }
+    ## Either _credentialCreationOptionsJson or _platformJson/_crossPlatformJson are set
+    const credentialCreationOptions = #if($_credentialCreationOptionsJson) $!_credentialCreationOptionsJson #else undefined #end;
+    const platformCredentialCreationOptions = #if($_platformJson) $!_platformJson #else undefined #end;
+    const crossPlatformCredentialCreationOptions = #if($_crossPlatformJson) $!_crossPlatformJson #else undefined #end;
+    ## Values: { start: () => void; selector: String; }
+    const options = [];
+    const registerDevice = (request, responseFormInputName) => {
+        $("#waitingDiv").showElement();
+        $("#registerDiv, #retryRegistration, #alertWrapper").hideElement();
+        webauthnJSON.create(request).then(response => {
+            delete response["rawId"];
+            $("#registrationForm input[name='" + responseFormInputName + "']").val(JSON.stringify(response));
+            $("#registrationForm").submit();
+        }).catch(handleError);
+    };
+    const retry = () => {
+        options[0].start();
+    };
+    const handleError = async (error) => {
+        let userCancelOrTimeout = error.name === webAuthnErrors.NOT_ALLOWED || error.name === webAuthnErrors.ABORTED
+        console.error("Device registration error", error);
+        if (userCancelOrTimeout) {
+            ## Probably cancel, but could be something else.
+            showInfo('#message("${_templatePrefix}.view.error.cancel-or-timeout")');
+        } else {
+            showError('#message("${_templatePrefix}.view.error.registration")');
+        }
+        $("#waitingDiv").hideElement();
+        if (options.length > 1) {
+            $("#registerDiv").showElement();
+        } else {
+            $("#retryRegistration").showElement();
+        }
+    }
+    (async () => {
+        const registerButton = "#registerButton";
+        const registerPlatformButton = "#registerPlatformButton";
+        const registerCrossPlatformButton = "#registerCrossPlatformButton";
+        if (credentialCreationOptions) {
+            options.push({
+                start: () => registerDevice(credentialCreationOptions, 'credential_json'),
+                selector: registerButton
+            });
+        } else {
+            if (platformCredentialCreationOptions && await supportsPlatformAuthenticatorAttachment()) {
+                options.push({
+                    start: () => registerDevice(platformCredentialCreationOptions, 'platform_json'),
+                    selector: registerPlatformButton
+                });
+            } else {
+                $(registerPlatformButton).remove();
+            }
+            options.push({
+                start: () => registerDevice(crossPlatformCredentialCreationOptions, 'cross_platform_json'),
+                selector: registerCrossPlatformButton
+            });
+        }
+        if (options.length > 1 || requiresUserInteraction) {
+            ## If both types of devices are enabled, the user has to select
+            ## or, if user interaction is required, always present a button to click
+            options.forEach(it => $(it.selector).click(it.start).showElement());
+            $("#registerDiv").showElement();
+        } else {
+            options[0].start();
+        }
+        $("#retryRegistration").click(retry);
+    })();
+</script>

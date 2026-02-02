@@ -1,0 +1,19 @@
+#
+# Copyright (C) 2024 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+enter-opt-in-browser=Para concluir a ativação da sua conta, use o código abaixo para verificar seu e-mail
+your-otp=Senha única
+verify=Para verificar sua conta, clique no botão abaixo
+verify.button=Verificar
+title=Verificação de conta
+account-activated=Sua conta foi ativada
+thanks=Obrigado!
+invalid.link=Link inválido. Observe que os links de ativação de conta são válidos apenas por um curto período de tempo.

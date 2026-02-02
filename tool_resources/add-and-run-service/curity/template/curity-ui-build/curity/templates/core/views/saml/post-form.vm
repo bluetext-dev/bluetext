@@ -1,0 +1,28 @@
+<!--
+  ~ Copyright (C) 2025 Curity AB. All rights reserved.
+  ~
+  ~ The contents of this file are the property of Curity AB.
+  ~ You may not copy or use this file, in either source code
+  ~ or executable form, except in compliance with terms
+  ~ set by Curity AB.
+  ~
+  ~ For further information, please contact Curity AB.
+  -->
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>SAML POST</title>
+    </head>
+    <body onload="document.forms[0].submit()" > <!---->
+        <form action="$_destination" method="post">
+            <input type="hidden" name="SAMLResponse" value="$_encodedResponse"/>
+            #if($_relayState)
+                <input type="hidden" name="RelayState" value="$_relayState"/>
+            #end
+            <noscript>
+                <input type="submit" value="Submit"/>
+            </noscript>
+        </form>
+    </body>
+</html>

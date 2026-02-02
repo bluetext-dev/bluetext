@@ -1,0 +1,40 @@
+#*
+ * Copyright (C) 2023 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#set ($page_symbol = $page_symbol_authenticate_passkeys)
+#define($_body)
+<form id="registrationForm" method="post" class="login-form hidden">
+    <input type="hidden" name="credential_json" />
+    <input type="hidden" name="platform_json" />
+    <input type="hidden" name="cross_platform_json" />
+</form>
+<div id="waitingDiv" class="hidden">
+    #parse("fragments/spinner")
+</div>
+#parse("authenticator/passkeys/fragments/alerts")
+<div id="retryRegistration" class="area center hidden">
+    <button class="button button-fullwidth button-primary">
+        #message("${_templatePrefix}.view.button.try-again")</button>
+</div>
+<div id="registerDiv" class="area center hidden">
+    <button id="registerButton" type="submit" class="button button-fullwidth button-primary">
+        #message("${_templatePrefix}.view.button.register")
+    </button>
+</div>
+<div class="center py2 login-actions">
+    <a href="$_authUrl">
+        <i class="icon ion-android-arrow-back inlineicon"></i>#message("${_templatePrefix}.view.return-to-login")
+    </a>
+</div>
+#if ($_credentialCreationOptionsJson)
+    #parse("authenticator/passkeys/js/register")
+#end
+#end ## /body
+#parse("layouts/default")

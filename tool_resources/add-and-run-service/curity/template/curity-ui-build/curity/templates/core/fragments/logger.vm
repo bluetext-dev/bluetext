@@ -1,0 +1,32 @@
+#*
+ * Copyright (C) 2023 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+## Guard multiple imports
+#if(!$!loggerCreated)
+<script type="text/javascript" $!nonceAttr>
+    const logger = {
+        debug: (message) => {
+            #if ($!enableClientSideDebugLog)
+                console.debug(message);
+            #end
+        },
+        info: (message) => {
+            console.info(message);
+        },
+        warn: (message) => {
+            console.warn(message);
+        },
+        error: (message) => {
+            console.error(message);
+        }
+    }
+</script>
+    #set($loggerCreated = true)
+#end

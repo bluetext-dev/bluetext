@@ -1,0 +1,27 @@
+#*
+ * Copyright (C) 2022 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#if(!$!title)
+    #set($title = "${_templatePrefix}.view.title")
+#end
+#set($title = "#message($title)")
+#define ($_body)
+<h1 class="center">$title</h1>
+<form method="post" action="$_actionUrl">
+    #foreach( $option in $options )
+        <div class="form-field mb1">
+            <button name="selectedId" value="$option.id" class="button button-primary-outline button-fullwidth">
+                #message($option.title)
+            </button>
+        </div>
+    #end
+</form>
+#end
+#parse("layouts/default")

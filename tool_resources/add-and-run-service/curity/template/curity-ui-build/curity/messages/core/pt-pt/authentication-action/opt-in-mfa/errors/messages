@@ -1,0 +1,19 @@
+#
+# Copyright (C) 2022 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+view.bad-request=Operação inválida
+view.invalid-authenticator=Operação inválida
+view.invalid-recovery-code=Código de recuperação inválido
+view.too-many-attempt=Demasiadas tentativas
+view.need-to-confirm=Confirmação necessária
+view.opt-out-not-allowed=Operação inválida
+view.authn-from-manage-not-allowed=Operação inválida
+view.recovery-codes-not-allowed=O uso de códigos de recuperação está desativado

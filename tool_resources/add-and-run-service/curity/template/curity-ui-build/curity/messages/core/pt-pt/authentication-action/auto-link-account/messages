@@ -1,0 +1,19 @@
+#
+# Copyright (C) 2022 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+view.allow=Aceitar
+view.deny=Recusar
+view.info=Deseja ligar estas duas contas?
+view.prev=Usada previamente
+view.current=Atual
+view.question-template=Deseja ligar a conta '%s' com a conta '%s' pertencente a '%s'?
+view.text=Acabou de usar uma nova conta. Se desejar, pode ligar estas duas contas. Caso recuse, as contas não ficam ligadas.
+validation.error.invalid-response-value=Parâmetros de entrada ausentes ou inválidos

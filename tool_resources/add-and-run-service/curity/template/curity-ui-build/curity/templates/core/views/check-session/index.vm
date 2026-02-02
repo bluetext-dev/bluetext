@@ -1,0 +1,103 @@
+#*
+ * Copyright (C) 2020 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#if($_language)
+    #set($_langAttr = ' lang="' + ${_language} + '"')
+#else
+    #set($_langAttr = '')
+#end
+<!DOCTYPE html>
+<html itemscope itemtype="http://schema.org/WebPage"$!_langAttr>
+<head>
+    #parse("fragments/csp")
+    <script type="text/javascript" $!nonceAttr>
+        window.addEventListener("message", receiveMessage, false);
+        //handle request to check session
+        async function receiveMessage(sessionDetails) { // sessionDetails.data has client_id and session_state
+            ## Some browser extensions may inject script that post messages to the window itself
+            if (sessionDetails.source === window) {
+                console.log('Received message from self window; ignoring.');
+                return;
+            }
+            var stat = "error";
+            try {
+                validateMessage(sessionDetails.data);
+                var sessionDetailsArray = sessionDetails.data.split(' ');
+                var client_id = sessionDetailsArray[0];
+                var session_state = sessionDetailsArray[1];
+                var salt = session_state.split('.')[1];
+                var browserState = getCookie("browserState");
+                var calcSessionState = await calculateState(client_id, sessionDetails.origin, browserState, salt);
+                stat = session_state == calcSessionState ? "unchanged" : "changed";
+            } catch (error) {
+                console.error(error.message);
+                stat = "error";
+            } finally {
+                sessionDetails.source.postMessage(stat, sessionDetails.origin);
+            }
+        }
+        //validate if message is well formatted.
+        function validateMessage(message) {
+            var messageArray;
+            var sessionStateArray;
+            var sessionState;
+            var clientId;
+            var salt;
+            try {
+                if (typeof message != "string") {
+                    throw "Message must be a string";
+                }
+                validateParameter(message, "Message data");
+                messageArray  = message.split(' ', 2);
+                if (messageArray.length !== 2) {
+                    throw "Message must be of format 'client_id' + ' ' + 'session_state'.";
+                }
+                clientId = messageArray[0];
+                validateParameter(clientId, "client_id");
+                sessionState = messageArray[1];
+                validateParameter(sessionState, "session_state");
+                sessionStateArray = sessionState.split('.', 2);
+                if (sessionStateArray.length !== 2) {
+                    throw "Invalid 'session_state'.";
+                }
+                salt = sessionStateArray[1];
+                validateParameter(salt, "salt");
+            } catch(error) {
+                throw new Error("Validation error. Invalid message: " + (error.message || error));
+            }
+        }
+        //check for null, undefined or blank parameter
+        function validateParameter(paramValue, paramName) {
+            if (!paramValue || !paramValue.trim()) {
+                throw paramName + " must not be empty or blank.";
+            }
+        }
+        function getCookie(cookieName) {
+            var name = cookieName + "=";
+            var decodedCookie = decodeURIComponent(document.cookie);
+            var allCookies = decodedCookie.split(';');
+            for(var i = 0; i <allCookies.length; i++) {
+                var tempCookie = allCookies[i].trim();
+                if (tempCookie.indexOf(name) == 0) {
+                    return tempCookie.substring(name.length, tempCookie.length);
+                }
+            }
+            return "";
+        }
+        async function calculateState(clientId, origin, browserState, salt) {
+            var hashInputStr = clientId + ' ' + origin + ' ' + browserState + ' ' + salt;
+            // won't work with IE. TextEncoder not supported
+            var digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(hashInputStr));
+            var b64hash = btoa(String.fromCharCode(...new Uint8Array(digest)));
+            return b64hash + "." + salt;
+        }
+    </script>
+</head>
+</html>

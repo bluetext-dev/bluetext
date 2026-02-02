@@ -1,0 +1,112 @@
+#*
+ * Copyright (C) 2016 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+#if (!$page_symbol)
+    #set ($page_symbol = $page_error_symbol)
+#end
+#if($_systemErrorDetailedMessage)
+    #set($_postmessage = '{"status":"error", "error_description":"' + ${_tr.encodeEcmaScript($_systemErrorDetailedMessage)} + '"}')
+#elseif($_errorCode)
+    #set($_postmessage = '{"status":"error", "error_description":"' + ${_tr.encodeEcmaScript($_errorCode)} + '"}')
+#end
+#if($_language)
+    #set($_langAttr = ' lang="' + ${_language} + '"')
+#else
+    #set($_langAttr = '')
+#end
+#if ($SessionId)
+    #set($_errorIdentifier = ${RequestId} + ' - ' + ${SessionId} )
+#else
+    #set($_errorIdentifier = ${RequestId} )
+#end
+#if($override_logo)
+    #set($logo_fragment = $override_logo)
+#else
+    #set($logo_fragment = "fragments/logo")
+#end
+#if (!$logo_inside)
+    #set($_logo_placement_body_class = "body-logo-outside")
+#end
+<!DOCTYPE html>
+<html itemscope itemtype="http://schema.org/WebPage"$!_langAttr>
+    <head>
+        #parse("fragments/head")
+    </head>
+<body class="login $!body_background $_logo_placement_body_class">
+    <main class="container clearfix" role="main">
+    #if (!$logo_inside)
+        #parse($logo_fragment)
+    #end
+        <div class="login-well $!login_form_background">
+        #if ($logo_inside)
+            #parse($logo_fragment)
+        #end
+            #parse("fragments/symbol")
+            <div class="area center">
+                <h1>$!_errorTitle</h1>
+                <pre>$!_errorMessage</pre>
+                #if($_systemErrorDetailedMessage)
+                    <p class="detailed-error">$_tr.encodeHtml("#message($_systemErrorDetailedMessage)")</p>
+                #end
+                #if ($_errorDetailedMessage)
+                    <script $!nonceAttr>
+                        document.addEventListener("DOMContentLoaded", function () {
+                            const expandButton = document.querySelector(".button-expand-detailed-error-message")
+                            if(expandButton) {
+                                expandButton.addEventListener("click", (event) => {
+                                    event.preventDefault();
+                                    if(document.querySelector('.detailed-error-message').classList.contains('expanded')) {
+                                        document.querySelector('.detailed-error-message').classList.remove('expanded')
+                                        event.currentTarget.querySelector('span').textContent = 'Expand';
+                                    } else {
+                                        document.querySelector('.detailed-error-message').classList.add('expanded')
+                                        event.currentTarget.querySelector('span').textContent = 'Collapse';
+                                    }
+                                });
+                            }
+                        });
+                    </script>
+                    <div class="flex justify-center mb1">
+                        <button class="button-tiny button-primary-outline button-expand-detailed-error-message"> <i class="icon ion-arrow-expand inlineicon"></i><span>Expand</span></button>
+                    </div>
+                    <pre class="detailed-error-message">$!_errorDetailedMessage</pre>
+                #end
+                #if ($_errorBody)
+                    $!_errorBody
+                #end
+                <p class="detailed-error">#message("error.identifier")<code>$_errorIdentifier</code></p>
+            </div>
+        #if ($powered_by)
+            #parse("fragments/poweredby")
+        #end
+        </div>
+    </main>
+</body>
+</html>

@@ -1,0 +1,26 @@
+#
+# Copyright (C) 2021 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=Logga in med WebAuthn-enhet
+page.title=Logga in med WebAuthn-enhet
+view.username=Användarnamn
+view.submit=Skicka
+view.register-additional=Registrera fler enheter
+view.try-again=Starta om
+view.authenticate=Starta
+view.user-verification=Användarverifiering 
+view.no-registered-devices=Inga enheter registrerade för kontot
+view.register-device=Registrera enhet
+view.error.authentication=Något gick fel. Kunde inte autentisera
+view.error.cancel-or-timeout=Inloggningen avbröts, eller tog för lång tid.
+view.error.not-supported=WebAuthn stöds för närvarande inte av webbläsaren
+validation.error.username.required=Du måste fylla i användarnamn
+validation.error.could-not-start=Kunde inte starta inloggning

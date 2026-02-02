@@ -1,0 +1,30 @@
+#
+# Copyright (C) 2021 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=Registrera ny enhet
+view.title=Registrera ny enhet
+view.register=Välj enhet att registrera
+view.try-again=Försök igen
+view.button.any-attachment=Fortsätt med en passkey
+view.button.platform=Inbyggd
+view.button.cross-platform=Säkerhetsnyckel
+view.authenticator-attachment.platform=En inbyggd enhet, såsom ansiktsigenkänning eller fingeravtrycksläsare.
+view.authenticator-attachment.cross-platform=En säkerhetsnyckel, såsom en portabel nyckel som ansluts via USB eller trådlöst via NFC.
+view.error.title=Fel
+view.error.registration=Något gick fel. Kunde inte registrera enheten.
+view.error.cancel-or-timeout=Registrering av enheten avbröts, eller tog för lång tid.
+view.error.user-not-found=Ingen användare hittades
+view.error.not-supported=WebAuthn stöds för närvarande inte av webbläsaren
+view.success.title=Registrering slutförd!
+view.success.success=Din enhet är registrerad!
+view.return-to-login=Återgå till inloggning
+view.retry=Försök registrera din enhet igen
+view.register-additional-device=Registrera ytterligare en enhet

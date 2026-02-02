@@ -1,0 +1,61 @@
+#*
+ * Copyright (C) 2021 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+## This template is not indended to work in the UI-Builder
+#set ($page_symbol = $page_symbol_authenticate_webauthn)
+#define($_body)
+#set($showRegistration = $_registrationEndpoint && $_allowRegistrationDuringLogin)
+<div id="waitingDiv" class="hidden">
+    #parse("fragments/spinner")
+</div>
+<form id="assertionForm" method="post" class="login-form hidden">
+    <input type="hidden" name="json"/>
+    <input type="hidden" name="platform_attachment_not_supported"/>
+</form>
+#parse("authenticator/webauthn/fragments/alerts")
+<div id="noDevicesDiv" class="hidden">
+    <div class="alert-wrapper">
+        <div class="alert alert-info">
+            <span>#message("${_templatePrefix}.view.no-registered-devices")</span>
+        </div>
+    </div>
+    #if ($showRegistration)
+    <div id="registerDiv" class="area center register">
+        <a href="$_registrationEndpoint" class="button button-fullwidth button-primary register">#message("${_templatePrefix}.view.register-device")</a>
+    </div>
+    #end
+</div>
+<div id="devicesDiv" class="hidden">
+    #if ($_promptForUsername)
+        <form id="usernameForm">
+            <div class="form-field">
+                <label for="userName">#message("${_templatePrefix}.view.username")</label>
+                <input type="text" name="userName" class="block full-width mb1 field-light" autocapitalize="none"
+                       value="$!_userName" autofocus required>
+                <i class="form-field-icon icon ion-ios-person"></i>
+            </div>
+            <button type="submit" class="button button-fullwidth button-primary">#message(
+                    "${_templatePrefix}.view.submit")</button>
+        </form>
+    #end ## ($_promptForUsername)
+    <div id="authenticateDiv" class="area center hidden">
+        <button id="authenticateButton" class="button button-fullwidth button-primary">
+            #message("${_templatePrefix}.view.authenticate")
+        </button>
+    </div>
+    #if ($showRegistration)
+    <div id="registerDiv" class="area center">
+        <a class="register" href="$_registrationEndpoint">#message("${_templatePrefix}.view.register-additional")</a>
+    </div>
+    #end
+</div>
+#parse("authenticator/webauthn/js/authenticate-device")
+#end ## /body
+#parse("layouts/default")

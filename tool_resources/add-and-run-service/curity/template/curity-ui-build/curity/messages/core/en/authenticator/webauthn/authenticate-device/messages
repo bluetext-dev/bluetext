@@ -1,0 +1,26 @@
+#
+# Copyright (C) 2021 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=Login with WebAuthn
+page.title=Login with WebAuthn
+view.username=Username
+view.user-verification=User Verification
+view.submit=Submit
+view.register-additional=Register new device
+view.try-again=Restart authentication
+view.authenticate=Start
+view.no-registered-devices=There are no devices registered for this user
+view.register-device=Register device
+view.error.authentication=Something went wrong. Could not authenticate
+view.error.cancel-or-timeout=Authentication was cancelled or timed out.
+view.error.not-supported=WebAuthn is currently not supported in this browser
+validation.error.username.required=Username is required
+validation.error.could-not-start=Could not start device authentication

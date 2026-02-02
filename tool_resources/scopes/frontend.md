@@ -77,7 +77,7 @@ import { Button } from "~/components/ui/button";
 <button className="px-4 py-2 bg-primary...">Delete</button>
 ```
 
-Available: Button, Card, Input, Dialog, Sheet, Tabs, Badge, Avatar, Table, and 40+ more.
+Available: Accordion, AlertDialog, Alert, AspectRatio, Avatar, Badge, Breadcrumb, Button, Calendar, Card, Carousel, Chart, Checkbox, Collapsible, Command, ContextMenu, Dialog, Drawer, DropdownMenu, Form, HoverCard, InputOTP, Input, Label, Menubar, NavigationMenu, Pagination, Popover, Progress, RadioGroup, Resizable, ScrollArea, Select, Separator, Sheet, Sidebar, Skeleton, Slider, Sonner, Switch, Table, Tabs, Textarea, ToggleGroup, Toggle, Tooltip.
 
 ## API Integration
 
@@ -94,21 +94,22 @@ export async function loader({ params }: Route.LoaderArgs) {
 ```
 
 If using models that depend on clients, configure env vars:
-```bash
-polytope run setup-service-for-client --service <frontend> --client couchbase-client
+```
+setup-service-for-client(service: "<frontend>", client: "couchbase-client")
 ```
 
 ## Adding Dependencies
 
+Call the service-specific tool:
 ```
-polytope run <service-name>-add --packages "axios react-query"
+<service-name>-add-dependencies(packages: "axios react-query")
 ```
 
 ## After Code Changes
 
 Hot reload is enabled. Check logs if something breaks:
 ```
-get-container-logs(container: <frontend-name>, limit: 25)
+get-container-logs(container: "<frontend-name>", limit: 25)
 ```
 
 ## Key Rules

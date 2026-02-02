@@ -1,0 +1,58 @@
+#*
+ * Copyright (C) 2023 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#parse("authenticator/webauthn/js/common-js")
+<script $!nonceAttr>
+    if (!isWebauthnSupported) {
+        showError('#message("${_templatePrefix}.view.error.not-supported")');
+        $("#registerDiv").hideElement();
+        throw new Error('WebAuthn not supported');
+    }
+    const registerDevice = (isUserInteraction) => {
+        $("#waitingDiv").showElement();
+        $("#registerDiv, #retryRegistration, #alertWrapper").hideElement();
+        webauthnJSON.create($!_credentialCreationOptionsJson).then(response => {
+            delete response["rawId"];
+            $("#registrationForm input[name='credential_json']").val(JSON.stringify(response));
+            $("#registrationForm").submit();
+        }).catch(e => handleError(e, isUserInteraction));
+    };
+    const retry = () => registerDevice(true);
+    const handleError = async (error, isUserInteraction) => {
+        ## There are some cases where the browser may have disallowed an auto-initiated API call. This happens
+        ## (at least) in Safari when there is a popover (document is not focused). The user may also, in any case,
+        ## cancel the registration on the native form, but the error codes don't allow distinguishing these two cases.
+        ##
+        ## To avoid using heuristics (probably time-based)) to determine if the error was caused by the user, any error
+        ## after an auto-initiated API call is not considered the user's fault, and a "start" button is displayed.
+        ## This means that a user will see a "start" button after cancelling an auto-initiated registration, instead of
+        ## the "retry" button. This is slightly better than the heuristic failing and showing “retry” when the user
+        ## didn’t do anything.
+        if (isUserInteraction) {
+            let userCancelOrTimeout = error.name === webAuthnErrors.NOT_ALLOWED || error.name === webAuthnErrors.ABORTED
+            if (userCancelOrTimeout) {
+                ## Probably cancel, but could be something else.
+                showInfo('#message("${_templatePrefix}.view.error.cancel-or-timeout")');
+            } else {
+                showError('#message("${_templatePrefix}.view.error.registration")');
+            }
+            $("#retryRegistration").showElement();
+        } else {
+            $("#registerDiv").showElement();
+        }
+        $("#waitingDiv").hideElement();
+        console.error("Device registration error", error);
+    }
+    (async () => {
+        $("#registerButton").click(retry);
+        $("#retryRegistration").click(retry);
+        registerDevice(false);
+    })();
+</script>

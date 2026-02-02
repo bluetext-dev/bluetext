@@ -1,0 +1,3 @@
+See "License agreement for Curity software" available at
+https://curity.io/legal/ for the legally binding terms that 
+govern your usage of the Software, as defined therein.

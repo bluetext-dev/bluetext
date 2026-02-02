@@ -1,0 +1,42 @@
+#
+# Copyright (C) 2022 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+page.title=Ativação
+meta.title=Ativação
+view.waiting.title=Autenticar com seu dispositivo
+view.device.cancel=Cancelar
+view.success.title=Seu dispositivo foi registrado com sucesso!
+view.success.return-to-login=Retornar para login
+view.continue=Continuar
+view.username=Digite o nome de usuário
+view.button=Registrar
+view.authenticate=Autenticar com o dispositivo existente
+view.register.device=Ou abrir o link de ativação neste dispositivo
+view.register.device.open.activation.link=Abrir link no aplicativo
+view.register.device.via.sms=Enviar link via SMS
+view.download-app-and-register=Registrar um dispositivo com segurança Duo
+view.download-app-and-register.description=Baixe o aplicativo de autenticação antes de registrar um novo dispositivo.
+view.not-on-your-device=Não está em seu dispositivo celular?
+view.on-other-device=Se você estiver acessando esta página a partir de outro dispositivo diferente daquele em que você gostaria de instalar o aplicativo de autenticação, navegue até o URL com os links de download ao digitalizar o código Qr abaixo no seu dispositivo.
+view.continue-registration=Prosseguir com o registro
+view.app-installed=Uma vez instalado o aplicativo, clique em 'Registrar' para prosseguir com o processo de registro.
+device.phoneNumber=Número de telefone
+device.alias=Alias do dispositivo
+device.type=Tipo
+device.platform=Plataforma
+view.register.device.information=Informações do dispositivo
+view.register.device.button=Registrar dispositivo
+error.validation.phoneNumber.required=É necessário o número de telefone
+view.activate.device=Ativar dispositivo
+view.device.type=Tipo de dispositivo
+view.activate=Ativar
+view.link.device=Vincular dispositivo
+error.validation.phoneNumber.missing.country.prefix=O número de telefone precisa incluir o prefixo do país

@@ -1,0 +1,26 @@
+#*
+ * Copyright (C) 2023 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#parse("authenticator/bankid/launch/browsers/browser-strategy.js")
+const getBrowserStrategy = () => {
+    const browsers = [];
+    ## The parsed templates will add browsers to the list
+    #parse("authenticator/bankid/launch/browsers/available-browser-detections")
+    logger.debug("Testing user-agent: " + navigator.userAgent);
+    let detectedBrowser = browsers.find((browser) => browser.detectCurrentBrowser())
+    if (!detectedBrowser) {
+        ## Use default browser strategies
+        logger.debug('Using default browser settings with following capabilities: ' + JSON.stringify(DEFAULT_BROWSER_STRATEGY));
+        return DEFAULT_BROWSER_STRATEGY;
+    } else {
+        logger.debug('Found browser with following capabilities: ' + JSON.stringify(detectedBrowser));
+        return detectedBrowser;
+    }
+};

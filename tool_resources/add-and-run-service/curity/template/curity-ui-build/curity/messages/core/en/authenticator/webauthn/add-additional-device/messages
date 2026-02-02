@@ -1,0 +1,18 @@
+#
+# Copyright (C) 2021 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+view.description=You just authenticated with a security key. Do you want to register an additional built-in device, such as face recognition or an embedded fingerprint reader?
+view.button.dont-ask-again-for-browser=Don't ask me again for this browser
+view.button.dont-ask-again-for-account=Don't ask me again for any browser
+view.button.yes=Yes
+view.button.no=No, not now
+view.error.registration=Something went wrong. Could not register this device.
+view.error.cancel-or-timeout=Registration of device was cancelled or timed out.

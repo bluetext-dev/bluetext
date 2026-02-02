@@ -1,0 +1,105 @@
+#*
+ * Copyright (C) 2021 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#parse("fragments/icon-mappings")
+#set($title = "#message('authentication-action.opt-in-mfa.select.page.title')")
+#set ($page_symbol = $page_symbol_authenticate_opt_in_mfa)
+#define ($_body)
+    <div class="area">
+    <div class="box box-login active" aria-label="#message("${_templatePrefix}.select.view.title")">
+        <header class="box-header">
+            <h1>#message("${_templatePrefix}.select.view.login-header")</h1>
+            <button class="button button-tiny button-transparent box-close">
+                <i class="icon ion-chevron-down"></i>
+            </button>
+        </header>
+    <div class="area center">
+        <h1>#message("${_templatePrefix}.select.view.title")</h1>
+        <p>#message("${_templatePrefix}.select.view.sub-title")</p>
+    </div>
+    <h3>#message("${_templatePrefix}.select.view.available-methods")</h3>
+    #foreach($_factor in $_availableFactors)
+    <form method="POST" name="${_factor.acr}" class="no-bottom-padding no-top-padding">
+        <input type="hidden" name="acr" value="${_factor.acr}"/>
+        <div class="form-field #if($icons_only_authenticator_chooser)form-field-social-icon#end mb1">
+            <button type="submit" value="${_factor.description}" class="button button-primary button-fullwidth button-social #if($icons_only_authenticator_chooser)button-social-icon#end #if($single_color_authenticator_chooser)button-social-single-color#end button-$_factor.type">
+                <i class="icon #iconClassName($_factor.type)"></i>
+                #if(!$icons_only_authenticator_chooser)
+                    #if($_factor.description)
+                        $_factor.description
+                    #else
+                        $_factor.authenticatorId
+                    #end
+                #end
+            </button>
+        </div>
+    </form>
+    #end
+    </div>
+    <div class="box box-manage" id="manage-div" aria-label="#message("${_templatePrefix}.select.view.manage")" >
+        <header class="box-header">
+            <h1><i class="icon ion-gear-a inlineicon"></i>#message("${_templatePrefix}.select.view.manage-header")</h1>
+            <button class="button button-tiny button-transparent box-close">
+                <i class="icon ion-chevron-down"></i>
+            </button>
+        </header>
+        <div class="p1 center">
+            <h1>#message("${_templatePrefix}.select-to-manage.view.title")</h1>
+            <p>#message("${_templatePrefix}.select-to-manage.view.sub-title")</p>
+        </div>
+        <h3>#message("${_templatePrefix}.select-to-manage.view.available-methods")</h3>
+        #foreach($_factor in $_availableFactors)
+            <form method="POST" name="${_factor.acr}" class="no-bottom-padding no-top-padding">
+                <input type="hidden" name="acr" value="${_factor.acr}"/>
+                <input type="hidden" name="manage" value="true" />
+                <div class="form-field #if($icons_only_authenticator_chooser)form-field-social-icon#end mb1">
+                    <button type="submit" value="${_factor.description}" class="button button-primary button-fullwidth button-social #if($icons_only_authenticator_chooser)button-social-icon#end #if($single_color_authenticator_chooser)button-social-single-color#end button-$_factor.type">
+                        <i class="icon #iconClassName($_factor.type)"></i>
+                        #if(!$icons_only_authenticator_chooser)
+                            #if($_factor.description)
+                                $_factor.description
+                            #else
+                                $_factor.authenticatorId
+                            #end
+                        #end
+                    </button>
+                </div>
+            </form>
+        #end
+        #if($_canUseRecoveryCodes)
+            <div class="area center">
+                <p class="or"><small class="grey">#message("${_templatePrefix}.select-to-manage.view.or")</small></p>
+                <a class="button button-fullwidth button-primary-outline" href="$_recoveryCodeUri" id="recovery-code">
+                    #message("${_templatePrefix}.select-to-manage.view.use-recovery-code")
+                </a>
+            </div>
+        #end
+    </div>
+    </div>
+    <script $!nonceAttr>
+        (function () {
+            const manageSection = document.querySelector('.box-manage');
+            const loginSection = document.querySelector('.box-login');
+            const loginHeader = document.querySelector('.box-login header');
+            const manageHeader = document.querySelector('.box-manage header');
+            loginHeader.addEventListener('click', event => {
+                event.preventDefault();
+                loginSection.classList.toggle('active');
+                manageSection.classList.remove('active');
+            })
+            manageHeader.addEventListener('click', event => {
+                event.preventDefault();
+                manageSection.classList.toggle('active');
+                loginSection.classList.remove('active');
+            })
+        })()
+    </script>
+#end
+#parse("layouts/default")

@@ -1,0 +1,25 @@
+#
+# Copyright (C) 2024 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+view.title=Criar conta
+meta.title=Ativar conta
+view.create-account=Criar conta
+view.enter-totp=Digite a senha única
+view.new-totp=Enviar um novo e-mail de ativação
+view.activate=Ativar
+view.activate-account=Ativar conta
+view.incorrect.code=Código incorreto ou expirado. Por favor, tente de novo.
+view.resend.code=Um novo e-mail de ativação foi enviado
+view.cancel=Cancelar
+view.use-email-link=Por favor, siga o link de verificação no e-mail para ativar a sua conta
+view.error.user-cancelled=Operação cancelada pelo usuário
+email.your-otp.email.title=Verificação de conta
+email.verify-account.email.subject=Verifique a sua conta

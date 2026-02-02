@@ -1,0 +1,33 @@
+#
+# Copyright (C) 2022 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=Login
+page.title=Login
+view.authenticate=Login
+view.username=Nome de usuário
+view.password=Senha
+view.no-account=Criar conta
+view.forgot-password=Esqueceu sua senha?
+view.forgot-account-id=Esqueceu seu nome de usuário?
+view.remember-me=Manter-me conectado neste dispositivo
+
+view.success=Você foi autenticado com sucesso
+
+validation.error.authentication.failed=Ocorreu um erro ao autenticar sua conta. Tente novamente.
+validation.error.incorrect.credentials=Credenciais incorretas
+validation.error.accountId.required=Você tem que digitar seu nome de usuário
+validation.error.password.required=Você tem que digitar sua senha
+error.too-many-attempts=Número máximo de tentativas excedido. Você pode tentar novamente mais tarde.
+subject-not-found.rejected.credential=Credenciais incorretas
+
+rejected.verification.credential=Verificação não foi permitida.
+locked-out.rejected.verification.credential=Número máximo de tentativas excedido. Você pode tentar novamente mais tarde.
+remaining-attempts.rejected.verification.credential=Tentativas sobrando:

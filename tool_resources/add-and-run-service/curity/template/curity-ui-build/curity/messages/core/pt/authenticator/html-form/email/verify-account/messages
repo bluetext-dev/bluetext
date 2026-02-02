@@ -1,0 +1,15 @@
+#
+# Copyright (C) 2022 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+email.subject=Verifique sua conta
+email.title=Verificação de conta
+email.head1=Para verificar sua conta, clique no botão abaixo
+email.button=Verificar

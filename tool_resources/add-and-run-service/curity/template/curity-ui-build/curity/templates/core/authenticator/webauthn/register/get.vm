@@ -1,0 +1,67 @@
+#*
+ * Copyright (C) 2021 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+## This template is not indended to work in the UI-Builder
+#set ($page_symbol = $page_symbol_authenticate_webauthn)
+#define($_body)
+<form id="registrationForm" method="post" class="login-form hidden">
+    <input type="hidden" name="credential_json" />
+    <input type="hidden" name="platform_json" />
+    <input type="hidden" name="cross_platform_json" />
+</form>
+<div id="waitingDiv" class="hidden">
+    #parse("fragments/spinner")
+</div>
+#parse("authenticator/webauthn/fragments/alerts")
+<div id="retryRegistration" class="area center hidden">
+    <button class="button button-fullwidth button-primary">
+        #message("${_templatePrefix}.view.try-again")</button>
+</div>
+<div id="registerDiv" class="area center hidden">
+    <div class="login-chooser login-chooser-webauthn mb2">
+        #if($_credentialCreationOptionsJson)
+        <button id="registerButton" type="submit" class="button button-fullwidth button-primary">
+            #message("${_templatePrefix}.view.button.any-attachment")
+        </button>
+        #end
+        #if($_platformJson)
+        <button id="registerPlatformButton" type="submit" class="button button-transparent login-chooser-item" name="authenticator-attachment" value="platform">
+            <figure><img src="$!_staticResourceRootPath/assets/images/webauthn-platform.svg" alt="#message("${_templatePrefix}.view.button.platform")"></figure>
+            <p class="m0">
+                <small>
+                    <strong class="m0 inline-block bold mr1">#message("${_templatePrefix}.view.button.platform")</strong>
+                    #message("${_templatePrefix}.view.authenticator-attachment.platform")
+                </small>
+            </p>
+        </button>
+        #end
+        #if($_crossPlatformJson)
+        <button id="registerCrossPlatformButton" type="submit" class="button button-transparent login-chooser-item" name="authenticator-attachment" value="cross-platform">
+            <figure><img src="$!_staticResourceRootPath/assets/images/webauthn-cross-platform.svg" alt="#message("${_templatePrefix}.view.button.cross-platform")"></figure>
+            <p class="m0">
+                <small>
+                    <strong class="m0 inline-block bold mr1">#message("${_templatePrefix}.view.button.cross-platform")</strong>
+                    #message("${_templatePrefix}.view.authenticator-attachment.cross-platform")
+                </small>
+            </p>
+        </button>
+        #end
+    </div>
+</div>
+<div class="center py2 login-actions">
+    <a href="$_authUrl">
+        <i class="icon ion-android-arrow-back inlineicon"></i>#message("${_templatePrefix}.view.return-to-login")
+    </a>
+</div>
+#if ($_credentialCreationOptionsJson || $_platformJson || $_crossPlatformJson)
+    #parse("authenticator/webauthn/js/register")
+#end
+#end ## /body
+#parse("layouts/default")

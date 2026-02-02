@@ -1,0 +1,19 @@
+#
+# Copyright (C) 2021 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+page.title=Reset Recovery Codes
+meta.title=Reset Recovery Codes
+view.warn=Are you sure you want to reset the recovery codes?
+view.title=Reset Recovery Codes
+view.sub-title=Keep these recovery codes somewhere safe but accessible.
+view.print=Print
+view.confirm=Confirm
+view.cancel=Cancel

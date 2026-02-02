@@ -1,0 +1,17 @@
+#*
+ * Copyright (C) 2023 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#set ($page_symbol = $page_symbol_authenticate_email)
+#define($_body)
+<div class="area">
+    <div class="alert alert-success">#message("${_templatePrefix}.view.success")</div>
+</div>
+#end
+#parse("layouts/default")

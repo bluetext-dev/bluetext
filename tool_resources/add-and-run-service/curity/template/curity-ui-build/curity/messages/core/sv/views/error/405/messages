@@ -1,0 +1,4 @@
+meta.title=405 - Metod inte tillåten
+page.title=Metod inte tillåten
+system.status.method-not-allowed=HTTP metoden du efterfrågade är inte tillåten.
+what.to.do.next=Försök igen med en annan metod

@@ -1,0 +1,21 @@
+#
+# Copyright (C) 2022 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+page.title=Selecione um método de autenticação adicional para continuar
+meta.title=Selecione um método de autenticação adicional para continuar
+view.title=Entrar
+view.login-header=Entrar
+view.sub-title=Selecione um método de autenticação adicional para continuar.
+view.available-methods=Métodos disponíveis
+view.manage=Selecione um método de autenticação adicional para continuar
+view.manage-header=Gerir
+view.opt-out.description=Saltar definição de método de autenticação adicional. A sua conta será menos segura.
+view.login=Regressar

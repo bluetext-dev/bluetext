@@ -1,0 +1,18 @@
+meta.title=Glömt lösenord
+page.title=Glömt lösenord
+view.head1=Glömt lösenord?
+view.p1=Ange den e-postadress eller det e-postadress du angav när du skapade kontot. Ett mail kommer att skickas till dig med instruktioner för hur du kan ändra ditt lösenord.
+view.email=E-post
+view.username=E-postadress
+view.or=eller
+view.button=Skicka återställningsinstruktioner
+view.cancel=Ta mig till inloggningssidan
+view.success.success=Kolla din inkorg!
+view.success.further-instructions=Ett mail med instruktioner har skickats till följande e-postadress:
+view.success.email-sent=E-post skickat. Klicka på länken i meddelandt för att skapa ett nytt lösenord.
+view.success.no-email=Ingen e-post inom 15 minuter?
+view.success.check-your-spam-folder=Kolla din spam-korg
+view.success.return-to-login=Ta mig till inloggningssidan
+
+error.email.or.accountId.required=Du måste ange din e-postadress eller ditt e-postadress
+error.email.invalid=Du måste ange en giltig e-postadress

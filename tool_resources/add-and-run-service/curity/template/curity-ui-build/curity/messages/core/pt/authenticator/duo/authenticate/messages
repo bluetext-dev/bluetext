@@ -1,0 +1,43 @@
+#
+# Copyright (C) 2022 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=Autenticar com segurança Duo
+view.device.waiting=Autenticar com seu dispositivo
+view.device.cancel=Cancelar
+view.success.title=Pronto!
+view.continue=Continuar
+select-device.page.title=Seleção do dispositivo
+view.no-device.register=Registrar novo dispositivo
+view.passcode.placeholder=Digite o código de acesso
+view.button.submit=Enviar
+view.button.send.sms=Enviar SMS
+select-factor.page.title=Selecione o fator de autenticação
+enter-passcode.page.title=Digite o código de acesso
+view.no-device.back=Selecione outra conta
+view.no-device.description=Nenhum dispositivo encontrado para esta conta
+error.account.not.found=Conta não encontrada
+view.button.send.push=Enviar notificação por push ao dispositivo
+no-devices-with-username=Nenhum dispositivo associado ao nome de usuário
+no-devices-with-this-user=Nenhum dispositivo foi associado a este usuário.
+entered-wrong-username=Se você digitou o nome de usuário errado, clique no botão voltar em seu navegador e insira o nome correto.
+add-device=Adicionar um novo dispositivo
+click-to-add-device=Para adicionar um novo dispositivo, clique em 'Adicionar outro dispositivo'.
+login-to-add=Você precisa fazer o login para adicionar seu dispositivo.
+get-help-adding-a-device=Obter ajuda para adicionar um dispositivo
+contact-help-desk=Para adicionar um novo dispositivo, <a href="#">entre em contato com o nosso Atendimento.</a>
+error.validation.username.required=O campo do nome de usuário é obrigatório
+error.validation.ipAddress.required=O endereço IP não foi encontrado na solicitação
+error.unknown.authentication.status=Status de autenticação desconhecido do Duo
+error.authentication.denied=A autenticação foi negada
+error.validation.factor.required=A variável de fator não foi definida na solicitação
+error.validation.device.required=A variável do dispositivo não foi definida na solicitação
+view.factor=Fator
+view.passcode=Código de acesso

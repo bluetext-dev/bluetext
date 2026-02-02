@@ -1,0 +1,90 @@
+#
+# Copyright (C) 2017 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=Enable device access
+page.title=Enable device access
+
+enter-user-code=Enter Code
+enter-user-code-description=A verification code is shown on your device. Enter code to continue.
+enter-user-code-submit=Submit
+enter-user-code-help=Didn't get a verification code?
+
+enter-user-code-invalid-code=The code was invalid
+
+confirm=Confirm device
+confirm-description=By confirming you allow the device access to your account.
+confirm-submit=Confirm
+
+code-confirmed=Done
+code-confirmed-description=Now check your device, and follow instructions
+
+# "consent" related translations
+consent.meta.title=Request for user consent
+consent.page.title=Request for user consent
+
+consent=Consent needed
+consent.info=The following permissions are requested by the above app. Please review these and consent if it is OK.
+consent.info-for-no-scopes=The app above is requesting your consent. If this is OK, please confirm.
+consent.help=Your consent to provide access is required. If you do not approve, click Cancel, in which case no information will be shared with the app.
+consent.account-info=wants to access your account:
+
+consent.submit=Submit Consent
+consent.cancel=Cancel
+consent.showAll=Show All
+consent.hideAll=Hide All
+consent.policyDocument=Policy Document
+consent.termsOfService=Terms of Service
+
+consent.claim-names.sub=User ID
+consent.claim-names.name=Full Name
+consent.claim-names.given_name=First Name
+consent.claim-names.family_name=Last Name
+consent.claim-names.middle_name=Middle Name
+consent.claim-names.nickname=Nickname
+consent.claim-names.preferred_username=Preferred Username
+consent.claim-names.profile=Profile
+consent.claim-names.picture=Picture
+consent.claim-names.website=Website
+consent.claim-names.email=Email
+consent.claim-names.email_verified=Verified Email
+consent.claim-names.gender=Gender
+consent.claim-names.birthdate=Date of Birth
+consent.claim-names.zoneinfo=Timezone
+consent.claim-names.locale=Locale
+consent.claim-names.phone_number=Phone Number
+consent.claim-names.phone_number_verified=Verified Phone Number
+consent.claim-names.address=Address
+consent.claim-names.updated_at=Last Updated
+
+# Many of these are intentionally left blank because the name (above) adequately describes what they are.
+consent.claim-descriptions.sub=Your user account ID
+consent.claim-descriptions.name=
+consent.claim-descriptions.given_name=
+consent.claim-descriptions.family_name=
+consent.claim-descriptions.middle_name=
+consent.claim-descriptions.nickname=
+consent.claim-descriptions.preferred_username=
+consent.claim-descriptions.profile=Your user data
+consent.claim-descriptions.picture=
+consent.claim-descriptions.website=
+consent.claim-descriptions.email=
+consent.claim-descriptions.email_verified=Your email address that has been checked
+consent.claim-descriptions.gender=
+consent.claim-descriptions.birthdate=
+consent.claim-descriptions.zoneinfo=The timezone in which you live
+consent.claim-descriptions.locale=The region, state, area, etc. you live in
+consent.claim-descriptions.phone_number=
+consent.claim-descriptions.phone_number_verified=Your phone number that has been checked
+consent.claim-descriptions.address=
+consent.claim-descriptions.updated_at=When your account was updated last
+
+logout.meta.title=Logout
+logout.page.title=Logout

@@ -1,0 +1,21 @@
+#
+# Copyright (C) 2021 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+page.title=Select a second step to continue
+meta.title=Select a second step to continue
+view.title=Login
+view.login-header=Login
+view.sub-title=Choose one of the methods below to continue login.
+view.available-methods=Available methods
+view.manage=Select a second step to continue
+view.manage-header=Manage
+view.opt-out.description=Skip setting up 2-step verification. This will make your account less secure.
+view.login=Return to Login

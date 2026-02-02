@@ -1,0 +1,57 @@
+#*
+ * Copyright (C) 2022 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+## The title of this page can be overridden by setting the $title variable here to a resource string or the actual value
+##set($title = "")
+#set ($page_symbol = $page_symbol_authenticate_desktop)
+#define ($_body)
+<form method="post" action="$_actionUrl">
+    <div class="area center">
+        <h1>#message("authentication-action.auto-link-account.view.info")</h1>
+        <ul class="account-linking-link">
+            #foreach($permission in $_responseModel.linkPermissions)
+                <li>
+                    <div class="account-linking-link-item">
+                        <div class="account-linking-link-item-subject-and-target">
+                            <header>#message("authentication-action.auto-link-account.view.prev")</header>
+                            <div class="account-linking-link-item-identifier">
+                                $permission.localIdentifier
+                            </div>
+                        </div>
+                    </div>
+                    <div class="account-linking-link-item">
+                        <div class="account-linking-link-item-subject-and-target">
+                            <header>#message("authentication-action.auto-link-account.view.current")</header>
+                            <div class="account-linking-link-item-identifier">
+                                $permission.foreignIdentifier
+                            </div>
+                        </div>
+                        <span class="account-linking-link-item-account-domain">$permission.foreignDomain</span>
+                    </div>
+                </li>
+            #end
+        </ul>
+        <p>#message("authentication-action.auto-link-account.view.text")</p>
+    </div>
+    <div class="sm-grid-container" sm-columns="2" gap="1">
+        <div>
+            <button id="submit-button" name="response" type="submit"
+                    class="button button-fullwidth button-primary $!button_color mt2"
+                    value="true">#message("authentication-action.auto-link-account.view.allow")</button>
+        </div>
+        <div>
+            <button id="cancel-button" name="response" type="submit"
+                    class="button button-fullwidth button-primary-outline $!button_color mt2"
+                    value="false">#message("authentication-action.auto-link-account.view.deny")</button>
+        </div>
+    </div>
+</form>
+#end
+#parse("layouts/default")

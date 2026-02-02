@@ -1,0 +1,85 @@
+#*
+ * Copyright (C) 2015 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+#if($_language)
+    #set($_langAttr = ' lang="' + ${_language} + '"')
+#else
+    #set($_langAttr = '')
+#end
+#if($_rtlLanguages.contains($_language))
+    #set($_directionAttr = ' dir="rtl"')
+#end
+#if($override_logo)
+    #set($logo_fragment = $override_logo)
+#else
+    #set($logo_fragment = "fragments/logo")
+#end
+#if (!$logo_inside && $logo_fragment != "fragments/logo-consent")
+    #set($_logo_placement_body_class = "body-logo-outside")
+#else
+    #set($_logo_placement_body_class = "")
+#end
+<!DOCTYPE html>
+<html itemscope itemtype="http://schema.org/WebPage"$!_langAttr $!_directionAttr>
+<head>
+    #parse("fragments/head")
+</head>
+<body class="login $!body_background $_logo_placement_body_class">
+<main class="container clearfix" role="main">
+    #if (!$logo_inside && $logo_fragment != "fragments/logo-consent")
+        #parse($logo_fragment)
+    #end
+    #if ($_errors || $_warnings || $_infoMessages)
+        <div class="login-well $!login_form_background login-well-errors">
+    #else
+        <div class="login-well $!login_form_background">
+    #end
+        #if ($logo_inside || $logo_fragment == "fragments/logo-consent")
+            #parse($logo_fragment)
+        #end
+        #parse("fragments/symbol")
+        #if ($_errors || $_warnings || $_infoMessages)
+            <div class="alert-wrapper">
+                #parse("fragments/alerts")
+            </div>
+        #end
+        #if ($enableDetectInvalidAuthnActionPage && $_authenticationActionId && $_authnRecoverInfo)
+            ## include the invalid action dialog, used by the 'fragments/detect-invalid-authn-action-page'
+            #parse("fragments/invalid-authn-action-dialog")
+        #end
+        $!_body
+
+    </div> ##login-well
+</main>
+    #parse("fragments/footer")
+    #parse("fragments/jquery")
+    #parse("fragments/curity-ui")
+</body>
+</html>

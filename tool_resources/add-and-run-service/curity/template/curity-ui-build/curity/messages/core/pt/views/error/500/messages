@@ -1,0 +1,15 @@
+#
+# Copyright (C) 2022 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=500 - Erro interno
+page.title=Erro interno
+system.status.internal.error=Ocorreu um erro interno no servidor.
+system.status.configuration.error=Ocorreu um erro interno irrecuperável que impediu que a solicitação fosse concluída.

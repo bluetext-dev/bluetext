@@ -1,0 +1,47 @@
+#
+# Copyright (C) 2022 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=Criar conta
+page.title=Criar conta
+view.create-account=Criar conta
+view.fill-form=Preencha o formulário para criar sua conta Curity
+view.description=Com uma conta Curity, você pode fazer login usando métodos de autenticação seguros.
+view.info-message=Certifique-se de preencher todos os campos
+view.firstName=Nome
+view.lastName=Sobrenome
+view.email=E-mail
+view.phone=Telefone
+view.username=Nome de usuário
+view.password=Senha
+view.repeatPassword=Repita a senha
+view.button=Criar conta
+view.terms=Eu concordo com os termos de serviço
+view.success.further-instructions=Outras instruções foram enviadas por e-mail para o seu endereço
+view.success.success=Sua conta foi criada!
+view.success.verify=Um e-mail com um link de verificação foi enviado a você.
+view.success.no-activation=Agora, você pode prosseguir para a página de login
+view.success.spam-folder=Se você não recebeu um e-mail, verifique sua pasta de spam.
+view.success.return-to-login=Retornar para login
+error.duplicateAccountCheckFailed=Ocorreu um erro inesperado
+error.validation.firstName.required=Você precisa digitar seu nome
+error.validation.lastName.required=Você precisa digitar seu sobrenome
+error.validation.accountId.required=Você precisa digitar um nome de usuário
+error.validation.accountId.duplicate=O nome de usuário que você forneceu já está registrado
+error.validation.email.required=Você precisa inserir um endereço de e-mail
+error.validation.email.duplicate=O endereço de e-mail que você forneceu já está registrado
+error.validation.email.invalid=O e-mail não é válido
+error.validation.phone.required=Você precisa digitar seu número de telefone
+error.validation.phone.duplicate=O número de telefone que você forneceu já está registrado
+error.validation.password.required=Você precisa digitar uma senha
+error.validation.password.mismatch=Suas senhas não correspondem
+error.validation.terms=Você precisa aceitar os termos de serviço
+
+validation.error.password.weak=A senha não é forte o suficiente

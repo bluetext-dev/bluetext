@@ -1,0 +1,9 @@
+web-app-host: http://web-app
+gateway-base-url: http://localhost
+curity-host: http://curity
+api-service-host: http://api
+api-service-path: /api
+curity-introspection-endpoint: http://curity:${curity-port}/oauth/v2/oauth-introspect
+api-service-port: 3030
+web-app-port: 51732
+curity-port: 8443

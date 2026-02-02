@@ -1,0 +1,22 @@
+#
+# Copyright (C) 2022 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+page.title=Gestão dos métodos de verificação em dois passos
+meta.title=Gestão dos métodos de verificação em dois passos
+view.title=Gestão dos métodos de verificação em dois passos
+view.sub-title=Gestão dos métodos de verificação em dois passos.
+view.remove-methods=Remoção de métodos de verificação
+view.add-methods=Métodos disponíveis para adição
+view.available-recovery-codes=Códigos de recuperação disponíveis:
+view.available-recovery-codes.template=Códigos de recuperação disponíveis: %s
+view.recovery-codes.create=Criar novo código de recuperação
+view.complete-authentication=Realizado
+view.exit=Sair

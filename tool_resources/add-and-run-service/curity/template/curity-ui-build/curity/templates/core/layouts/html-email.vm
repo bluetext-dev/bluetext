@@ -1,0 +1,206 @@
+#*
+ * Copyright (C) 2015 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * This template stipulates the layout of email messages that will be sent to users. The result will be a multi-part
+ * MIME message (https://en.wikipedia.org/wiki/MIME#Multipart_messages).
+ *
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta name="viewport" content="width=device-width">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <style>
+      body {
+        color: #333;
+      }
+      .alarm table td {
+        padding: 5px 10px;
+      }
+      h1, h2, h3, h4, h5, p, ul, ol, li {
+        color: #333;
+      }
+      h1, h2, h3, h4, h5 {
+        font-weight: 500;
+      }
+      span.severity {
+        display: inline-flex;
+        text-align: center;
+        color: white;
+        padding: 0.1rem 1rem;
+        border-radius: 2rem;
+        border: 1px solid #626c87;
+        text-transform: uppercase;
+        letter-spacing: 0.01em;
+        pointer-events: none;
+        font-size: .85rem;
+        font-weight: 500;
+      }
+      span.severity-WARNING {
+        border: 1px solid #e1c118;
+        color: #e1c118;
+      }
+      span.severity-MAJOR {
+        border: 1px solid #ca2e2b;
+        color: #ca2e2b;
+      }
+      span.severity-MINOR {
+        border: 1px solid salmon;
+        color: salmon;
+      }
+      span.severity-CRITICAL {
+        border: 1px solid #ca2e2b;
+        background-color: #ca2e2b;
+        color: white;
+      }
+      span.severity-CLEAR {
+        border: 1px solid #57C75C;
+        color: #57C75C;
+      }
+    @media only screen and (max-width: 620px) {
+      table[class=body] h1 {
+        font-size: 28px !important;
+        margin-bottom: 10px !important;
+      }
+      table[class=body] .wrapper,
+            table[class=body] .article {
+        padding: 10px !important;
+      }
+      table[class=body] .content {
+        padding: 0 !important;
+      }
+      table[class=body] .container {
+        padding: 0 !important;
+        width: 100% !important;
+      }
+      table[class=body] .main {
+        border-left-width: 0 !important;
+        border-radius: 0 !important;
+        border-right-width: 0 !important;
+      }
+      table[class=body] .btn table {
+        width: 100% !important;
+      }
+      table[class=body] .btn a {
+        width: 100% !important;
+      }
+      table[class=body] .img-responsive {
+        height: auto !important;
+        max-width: 100% !important;
+        width: auto !important;
+      }
+    }
+    @media all {
+      .login-logo {
+        width: 200px;
+        height: 72px;
+      }
+      .ExternalClass {
+        width: 100%;
+      }
+      .ExternalClass,
+            .ExternalClass p,
+            .ExternalClass span,
+            .ExternalClass font,
+            .ExternalClass td,
+            .ExternalClass div {
+        line-height: 100%;
+      }
+      .apple-link a {
+        color: inherit !important;
+        font-family: inherit !important;
+        font-size: inherit !important;
+        font-weight: inherit !important;
+        line-height: inherit !important;
+        text-decoration: none !important;
+      }
+      .btn-primary table td:hover {
+        background-color: #34495e !important;
+      }
+      .btn-primary a:hover {
+        background-color: #34495e !important;
+        border-color: #34495e !important;
+      }
+    }
+    </style>
+  </head>
+  #if ($alarmEmail)
+    <body class="alarm" style="background-color: $alarmEmailBgColor; font-family: Roboto-Regular, Roboto, sans-serif; -webkit-font-smoothing: antialiased; font-size: 14px; line-height: 1.4; margin: 0; padding: 0; -ms-text-size-adjust: 100%; -webkit-text-size-adjust: 100%;">
+  #else
+    <body style="background-color: #f6f6f6; font-family: Roboto-Regular, Roboto, sans-serif; -webkit-font-smoothing: antialiased; font-size: 14px; line-height: 1.4; margin: 0; padding: 0; -ms-text-size-adjust: 100%; -webkit-text-size-adjust: 100%;">
+  #end
+      <table border="0" cellpadding="0" cellspacing="0" class="body" style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; width: 100%;">
+      <tr>
+        <td style="font-family: Roboto-Regular, Roboto, sans-serif; font-size: 14px; vertical-align: top;">&nbsp;</td>
+        #if ($alarmEmail)
+          <td class="container" style="font-family: Roboto-Regular, Roboto, sans-serif; font-size: 14px; vertical-align: top; display: block; Margin: 0 auto; max-width: 580px; background-color: white; width: 580px; border-radius: 8px; border: 1px solid #ccd9df; box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 8px; margin-top: 40px;">
+        #else
+          <td class="container" style="font-family: Roboto-Regular, Roboto, sans-serif; font-size: 14px; vertical-align: top; display: block; Margin: 0 auto; max-width: 580px; padding: 10px; width: 580px;">
+        #end
+          <div class="content" style="box-sizing: border-box; display: block; Margin: 0 auto; max-width: 580px; padding: 10px;">
+            <table class="main" style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; width: 100%; background: #ffffff; border-radius: 26px;border: 1px solid #dbdbdb;">
+              <tr>
+                <td class="wrapper" style="font-family: Roboto-Regular, Roboto, sans-serif; font-size: 14px; vertical-align: top; box-sizing: border-box; padding: 30px;">
+                  <table border="0" cellpadding="0" cellspacing="0" style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; width: 100%;">
+                    <tr>
+                      <td style="font-family: Roboto-Regular, Roboto, sans-serif; font-size: 14px; vertical-align: top;">
+                        #if ($alarmEmail && $logo_email_path.toString().contains("localhost"))
+                          <h4 style="margin-top: 0; text-transform: uppercase; font-size: .85rem; text-align: center; margin-bottom: 20px; letter-spacing: .085em; -webkit-font-smoothing: antialiased; color: #79839e">Curity Identity Server</h4>
+                        #else
+                          <div style="text-align: center; margin-bottom: 20px;">#parse("fragments/logo-email")</div>
+                        #end
+                        <h1 style="font-family: Roboto-Regular, Roboto, sans-serif; font-size: 24px; font-weight: normal; margin: 0; Margin-bottom: 15px;">
+                          #if(${title})
+                            ${title}
+                          #else
+                            #message("${_templatePrefix}.email.title")
+                          #end
+                        </h1>
+                        <p style="font-family: Roboto-Regular, Roboto, sans-serif; font-size: 14px; font-weight: normal; margin: 0; Margin-bottom: 15px;">$_body</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </div>
+        </td>
+      </tr>
+    </table>
+    <div class="footer" style="clear: both; text-align: center; width: 100%;">
+      <table border="0" cellpadding="0" cellspacing="0" style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; width: 100%;">
+        <tr>
+          <td class="content-block powered-by" style="font-family: Roboto-Regular, Roboto, sans-serif; vertical-align: top; padding-bottom: 10px; padding-top: 10px; font-size: 12px; color: #999999; text-align: center;">
+            #message("${_templatePrefix}.email.footer")
+          </td>
+        </tr>
+      </table>
+    </div>
+  </body>
+</html>

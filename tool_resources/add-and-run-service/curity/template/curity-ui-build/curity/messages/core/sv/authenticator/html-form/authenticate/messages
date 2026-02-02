@@ -1,0 +1,33 @@
+#
+# Copyright (C) 2022 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=Logga in
+page.title=Logga in
+view.authenticate=Logga in
+view.username=E-postadress
+view.password=Lösenord
+view.no-account=Har du inget konto?
+view.forgot-password=Har du glömt ditt lösenord?
+view.forgot-account-id=Har du glömt ditt e-postadress?
+view.remember-me=Håll mig inloggad på denna enheten
+
+view.success=Du är inloggad
+
+validation.error.authentication.failed=Något gick fel under inloggnigen, var vänlig försök igen
+validation.error.incorrect.credentials=Fel e-postadress och/eller lösenord
+validation.error.accountId.required=Du måste ange ditt e-postadress
+validation.error.password.required=Du måste ange ditt lösenord
+error.too-many-attempts=För många försök. Du måste vänta ett tag innan du får försöka igen.
+subject-not-found.rejected.credential=Fel e-postadress och/eller lösenord
+
+rejected.verification.credential=Lösenordet kan inte veriferas.
+locked-out.rejected.verification.credential=För många försök. Du måste vänta ett tag innan du får försöka igen.
+remaining-attempts.rejected.verification.credential=Försök kvar:

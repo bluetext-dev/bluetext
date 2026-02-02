@@ -1,0 +1,55 @@
+#*
+ * Copyright (C) 2016 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * This is the default register phone number view in the sms adapter.
+ *
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+#set ($page_symbol = $page_symbol_authenticate_sms)
+#define($_body)
+<form action="$!_action" method="post" autocomplete="off">
+    #if (!$!_hideForm)
+        <div class="center">
+            <h1>#message("authenticator.sms.confirm.view.enterotp")</h1>
+        </div>
+        <div class="form-field">
+            <label class="$!_errorClass">Enter one time code</label>
+            <input type="text" name="otp" id="otp" value="$!_postBack.get('otp')" class="block full-width mb1 field-light" autofocus required>
+            <button type="submit" class="button button-fullwidth button-primary">#message(
+                    "authenticator.sms.confirm.view.verfiy")</button>
+            <i class="form-field-icon icon ion-grid"></i>
+        </div>
+    #end
+    <div class="center py2 login-actions">
+        <a href="$_registerUrl">
+            <i class="icon ion-refresh inlineicon"></i>#message("authenticator.sms.confirm.view.restart")
+        </a>
+    </div>
+</form>
+#end
+#parse("layouts/default")

@@ -1,0 +1,65 @@
+#
+# Copyright (C) 2016 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+page.problems-logging-in=Problem att logga in?
+page.documentation=Dokumentation
+page.help-support=Hjälp och Support
+system.error-contact=Du kan <a href="#">gå till vår startsida</a>, eller <a href="#">skicka oss ett mail</a> om du inte an hitta det du söker.
+system.status.authentication.missing-authenticators=Ett allvarligt internt fel har inträffat som förhindrar förfrågan att hanteras
+email.footer=Detta mail skickades av Curity
+page.redirect.please-wait=Vänligen vänta...
+error.identifier=Felidentifierare:
+authentication.success=Du är inloggad
+view.title.cancel=Avbryt åtgärden
+
+validation.error.username.required=E-post måste anges
+error.password.update.failed=Misslyckades att uppdatera lösenordet
+
+error.too-many-attempts=För många försök. Du måste vänta ett tag innan du får försöka igen.
+
+rejected.update.credential=Ditt lösenord accepterades inte. Försök igen med ett annat.
+update-required.rejected.verification.credential=Du måste ange ett nytt lösenord
+
+password-in-dictionary.rejected.update.credential=Ditt lösenord är för vanligt och lätt att gissa.
+
+# invalid password built-in reasons
+# see se.curity.identityserver.sdk.service.credential.results.InvalidPassword
+credential.invalid-password.reason.HISTORY=Du får inte återanvända lösenord.
+credential.invalid-password.reason.MINIMUM_LENGTH=Ditt lösenord är för kort. För din säkerhet, välj ett längre lösenord.
+credential.invalid-password.reason.MINIMUM_LOWER_CASE=Ditt lösenord behöver fler små bokstäver.
+credential.invalid-password.reason.MINIMUM_UPPER_CASE=Ditt lösenord behöver fler stora bokstäver.
+credential.invalid-password.reason.MINIMUM_DIGITS=Ditt lösenord behöver fler siffror.
+credential.invalid-password.reason.MINIMUM_SPECIAL=Ditt lösenord behöver fler specialtecken (!"#$%&'()*+,-./:;<=>?@[]^_`{|}~).
+credential.invalid-password.reason.MINIMUM_UNIQUE=Ditt lösenord behöver fler unika tecken.
+credential.invalid-password.reason.MAXIMUM_SEQUENCE=Ditt lösenord får inte innehålla välkända teckensekvenser som är lätta att gissa.
+
+# password rule requirements
+credential.password.rules=Lösenordskrav
+credential.password.rule.min-length=Lägsta lösenordslängd
+credential.password.rule.min-length.details=Lägst antal tecken
+credential.password.rule.min-lower-case-characters=Lägst antal små bokstäver
+credential.password.rule.min-lower-case-characters.details=Lägst antal små bokstäver (t.ex. a-ö)
+credential.password.rule.min-upper-case-characters=Lägst antal stora bokstäver
+credential.password.rule.min-upper-case-characters.details=Lägst antal stora bokstäver (t.ex. A-Ö)
+credential.password.rule.min-digits=Lägst antal siffror
+credential.password.rule.min-digits.details=Lägst antal siffror (0-9)
+credential.password.rule.min-special-characters=Lägst antal specialtecken
+credential.password.rule.min-special-characters.details=Lägst antal specialtecken (t.ex. #@!-+)
+credential.password.rule.min-unique-characters=Lägst antal unika tecken
+credential.password.rule.min-unique-characters.details=Lägst antal unika tecken
+credential.password.rule.max-sequence=Högst antal tecken från välkända teckensekvenser
+credential.password.rule.max-sequence.details=Högst antal tecken från välkända teckensekvenser såsom alfabet, siffror eller tangentbordsrader (t.ex. abcd..., 1234..., qwerty....)
+
+# recover from an invalid action on the authentication flow
+invalid-action-recover.error-title=Åtgärd ej tillåten
+invalid-action-recover.error-message=Navigering till eller interaktion med den här sidan är inte möjlig eftersom den inte längre är giltig. Autentiseringen kan återupptas eller startas om.
+invalid-action-recover.resume-action=Återuppta
+invalid-action-recover.retry-authenticator=Starta om

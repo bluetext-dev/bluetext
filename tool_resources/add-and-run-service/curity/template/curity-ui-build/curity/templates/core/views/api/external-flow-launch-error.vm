@@ -1,0 +1,21 @@
+#*
+ * Copyright (C) 2020 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+This template is used when the initial request to launch an HAAPI external browser flow fails because the link is
+expired. This may happen in rare situations where the browser asks for user interaction before actually following the
+link (e.g. creating a new account on the device).
+*###
+#set($title = "#message('views.error.meta.title')")
+#set($_errorTitle = "#message('views.error.400.page.title')")
+#set($_errorMessageKey = "${_templatePrefix}.error.launch.expired")
+#set($_errorMessage = "#message($_errorMessageKey)")
+#set($page_symbol = $page_symbol_error_400)
+#parse("layouts/error")

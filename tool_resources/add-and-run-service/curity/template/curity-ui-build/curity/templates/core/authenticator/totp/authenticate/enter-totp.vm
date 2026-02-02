@@ -1,0 +1,59 @@
+#*
+ * Copyright (C) 2018 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * This is the view where the user enters an OTP.
+ *
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+#set ($page_symbol = $page_symbol_authenticate_totp)
+#define($_body)
+<form action="$_action" method="post" autocomplete="off">
+    <h1 class="center">#message("authenticator.totp.authenticate.view.enter-totp.title1")</h1>
+    <div class="form-field">
+        <label>#message("authenticator.totp.authenticate.view.enter-totp")</label>
+        <input type="text" name="otp" id="otp" class="block full-width mb1 field-light" required autofocus>
+        <i class="form-field-icon icon ion-grid"></i>
+    </div>
+        <button type="submit" class="button button-fullwidth button-primary">#message(
+            "authenticator.totp.authenticate.view.verify")</button>
+## This can be enabled seperatly in each of the authenticators that use this template. Some may
+## allow registration during login while other don't. As a best practice, create two different
+## authenticators -- one for cases where users will authenticate _inside_ a mobile app (i.e., in a
+## browser view) and one for apps where that won't be the case. Do not allow registration for all
+## apps/service providers where this will be viewed in an embedded view. This results in too much
+## context switching, and is best if the person uses a different device for this (e.g., their laptop).
+## When the app won't be empedding this view, registration can be quite helpful to allow even when
+## logging in.
+    #if ($_allowRegistrationDuringLogin)
+        <div class="center py2 login-actions">
+            <a href="$_registrationEndpoint">#message("authenticator.totp.authenticate.view.register")</a>
+        </div>
+    #end
+</form>
+#end
+#parse("layouts/default")

@@ -1,0 +1,27 @@
+#
+# Copyright (C) 2022 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=Sätt lösenord
+page.title=Sätt lösenord
+view.head1=Sätt lösenord
+view.newPassword=Nytt lösenord
+view.repeatNewPassword=Repetera lösenord
+view.button=Ändra lösenord
+view.cancel=Avbryt
+view.success.head1=Ditt lösenord har ändrats
+view.success.done=Du kan stänga detta fönster.
+view.back.to.login=Ta mig till inloggningssidan
+
+validation.error.token.invalid=Ogiltig länk. Länken som användes är för gammal.
+validation.error.token.required=Begäran saknade token
+validation.error.password.required=Du måste ange ett nytt lösenord
+validation.error.password.mismatch=Dina lösenord matchar inte
+validation.error.password.weak=Lösenordet är för svagt

@@ -1,0 +1,49 @@
+#*
+ * Copyright (C) 2021 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#parse("fragments/icon-mappings")
+#set ($page_symbol = $page_symbol_authenticate_opt_in_mfa)
+#set($title = "#message('authentication-action.opt-in-mfa.setup.page.title')")
+#define ($_body)
+    <div class="area center">
+        <h1>#message("${_templatePrefix}.setup.view.title")</h1>
+        <p>#message("${_templatePrefix}.setup.view.sub-title")</p>
+    </div>
+    <h3>#message("${_templatePrefix}.setup.view.available-methods")</h3>
+    #foreach($_factor in $_availableFactors)
+        <form method="POST" name="${_factor.acr}" class="no-bottom-padding no-top-padding">
+            <input type="hidden" name="acr" value="${_factor.acr}"/>
+            <div class="form-field #if($icons_only_authenticator_chooser)form-field-social-icon#end mb1">
+                <button type="submit" value="${_factor.description}" class="button button-primary button-fullwidth button-social #if($icons_only_authenticator_chooser)button-social-icon#end #if($single_color_authenticator_chooser)button-social-single-color#end button-$_factor.type">
+                    <i class="icon #iconClassName($_factor.type)"></i>
+                    #if(!$icons_only_authenticator_chooser)
+                        #if($_factor.description)
+                            $_factor.description
+                        #else
+                            $_factor.authenticatorId
+                        #end
+                    #end
+                </button>
+            </div>
+        </form>
+    #end
+    #if($_isOptOutAllowed)
+        <form method="POST" name="optOut" class="no-bottom-padding no-top-padding">
+            <input type="hidden" name="optOut" value="true"/>
+            <div class="flex flex-column">
+                <button type="submit" value="Opt-out of second factor" class="button button-link">
+                    #message("${_templatePrefix}.setup.view.opt-out.action")
+                </button>
+                <p>#message("${_templatePrefix}.setup.view.opt-out.description")</p>
+            </div>
+        </form>
+    #end
+#end
+#parse("layouts/default")

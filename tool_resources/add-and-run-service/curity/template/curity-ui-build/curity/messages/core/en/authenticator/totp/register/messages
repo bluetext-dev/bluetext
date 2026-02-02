@@ -1,0 +1,24 @@
+#
+# Copyright (C) 2018 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=Register new device
+view.title1=Register new device
+view.register=Register
+view.next=Next
+view.deviceId=Device Serial Number
+view.totp=One time Password
+view.device-expiration=Expiration (time in seconds)
+view.p1=Scan the QR code, or tap on the image if you want to scan it in the same device in order to set up your app.
+
+validation.error.totp.required=Please enter a one time Password.
+validation.error.deviceId.required=Please enter the device Serial number.
+error.device-already-registered=Something went wrong. Could not register this device.
+error.invalid-otp=Could not verify OTP

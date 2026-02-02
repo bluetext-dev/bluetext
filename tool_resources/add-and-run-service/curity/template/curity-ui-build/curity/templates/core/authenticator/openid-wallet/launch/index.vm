@@ -1,0 +1,54 @@
+#*
+ * Copyright (C) 2023 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+###foreach ($entry in $_context.entrySet())
+##    $entry.key => $!entry.value
+###end
+#set ($page_symbol = $page_symbol_openid_wallet)
+#define($_body)
+    #set($_qrCodeId = "qrCode")
+    #set($_sameDeviceLinkId = "same-device-link")
+    <div class="area center">
+        <h1>#message("${_templatePrefix}.view.scan")</h1>
+        <div class="px4 mb2 center">
+            <div class="center">
+                <img id="$_qrCodeId" class="mx-auto block" src="$_qrCode" alt="$_sameDeviceLink" title="QR Code">
+            </div>
+        </div>
+        <span class="or mb3">#message("${_templatePrefix}.view.or")</span>
+        <a id="same-device-link" class="button button-primary center"
+           href="$_sameDeviceLink" target="_blank">#message("${_templatePrefix}.view.button.this-device")</a>
+    </div>
+    <form method="post" class="poller-onsuccess">
+        <input type="hidden"  id="moveOn" name="moveOn" value="true"/>
+    </form>
+    #parse("fragments/poller")
+#end
+#parse("layouts/default")

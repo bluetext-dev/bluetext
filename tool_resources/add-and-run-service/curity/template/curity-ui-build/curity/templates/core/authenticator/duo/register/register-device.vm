@@ -1,0 +1,55 @@
+#*
+ * Copyright (C) 2020 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * This view is shown to the user when they click the HTML authenticator's create account button.
+ *
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+#set ($page_symbol = $page_symbol_authenticate_pair_device)
+#define($_body)
+<form method="post" class="login-form">
+    <div class="center">
+        <h1>#message("authenticator.duo.register.view.activate.device")</h1>
+    </div>
+    <label for="device.alias">#message(
+        "authenticator.duo.register.device.alias")</label>
+    <input type="text" name="alias" id="alias"
+            class="block full-width mb1 field-light" autofocus>
+    <div class="form-field">
+        <label for="device.phoneNumber">#message(
+                "authenticator.duo.register.device.phoneNumber")</label>
+        <input type="text" name="phoneNumber" id="phoneNumber"
+               class="block full-width mb1 field-light" autofocus>
+        <i class="form-field-icon icon ion-iphone"></i>
+    </div>
+    <button type="submit" class="button button-fullwidth button-primary">
+        #message("authenticator.duo.register.view.activate")
+    </button>
+</form>
+#end
+#parse("layouts/default")

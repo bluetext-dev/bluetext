@@ -1,0 +1,27 @@
+#
+# Copyright (C) 2024 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+meta.title=Criar conta
+view.account-created=Sua conta foi criada!
+view.continue=Continuar
+view.activate-account=Ativar conta
+view.create-account=Criar conta
+view.select-authenticator=Selecione o método para registrar a nova conta
+view.validation.username.duplicate=O nome de usuário que você forneceu já está registrado
+view.validation.email.duplicate=O endereço de e-mail que você forneceu já está registrado
+view.validation.phone.duplicate=O número de telefone que você forneceu já está registrado
+view.validation.missing.input=Entrada ausente
+view.username=Nome de usuário
+view.email=E-mail
+view.firstName=Nome
+view.lastName=Sobrenome
+view.phone=Número de telefone
+view.password=Senha
+validation.error.password.weak=A senha não é forte o suficiente

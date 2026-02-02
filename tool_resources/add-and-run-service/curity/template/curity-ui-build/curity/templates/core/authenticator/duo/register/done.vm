@@ -1,0 +1,15 @@
+#set ($page_symbol = $page_symbol_done)
+#define($_body)
+<div class="area">
+    <div class="center">
+        <h1>#message("authenticator.duo.register.view.success.title")</h1>
+        #parse("fragments/auto-login")
+        <div class="center py2 login-actions">
+            <a href="$!_authenticationEndpoint">
+                <i class="icon ion-android-arrow-back inlineicon"></i>#message("authenticator.duo.register.view.success.return-to-login")
+            </a>
+        </div>
+    </div>
+</div>
+#end
+#parse("layouts/default")

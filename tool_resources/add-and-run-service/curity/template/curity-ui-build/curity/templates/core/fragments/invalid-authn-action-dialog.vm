@@ -1,0 +1,30 @@
+#*
+ * Copyright (C) 2024 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * Dialog to be shown to the user (modal) when a navigation to an invalid authentication
+ * action page is detected.
+ *###
+<dialog id="invalid-authn-action">
+    <header class="flex justify-between p2">
+        <p class="m0">#message('invalid-action-recover.error-title')</p>
+        <button id="recover-close" class="button button-tiny button-link">
+            <i class="icon ion-close"></i>
+        </button>
+    </header>
+    <main class="p2">
+        <h2>#message('invalid-action-recover.error-title')</h2>
+        <p>#message('invalid-action-recover.error-message')</p>
+    </main>
+    <footer class="flex flex-gap-2 flex-center justify-end p2">
+        <button id="recover-resume-action" class="button-small button-primary">#message('invalid-action-recover.resume-action')</button>
+        <button id="recover-restart-authenticator" class="button-small button-primary-outline">#message('invalid-action-recover.retry-authenticator')</button>
+    </footer>
+</dialog>

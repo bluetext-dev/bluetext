@@ -1,0 +1,27 @@
+#*
+ * Copyright (C) 2021 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+## This template is not indended to work in the UI-Builder
+#set ($page_symbol = $page_symbol_done)
+#define($_body)
+    <h1 class="center">#message("${_templatePrefix}.view.success.success")</h1>
+    #parse("fragments/auto-login")
+    <div class="center area">
+        <a href="$_registrationEndpoint" class="button button-fullwidth button-primary-outline">
+            #message("${_templatePrefix}.view.register-additional-device")
+        </a>
+    </div>
+    <div class="center login-actions">
+        <a href="$_authUrl">
+            <i class="icon ion-android-arrow-back inlineicon"></i>#message("${_templatePrefix}.view.return-to-login")
+        </a>
+    </div>
+#end
+#parse("layouts/default")

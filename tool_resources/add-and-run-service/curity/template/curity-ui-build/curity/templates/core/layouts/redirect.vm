@@ -1,0 +1,124 @@
+#*
+ * Copyright (C) 2015 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *
+ *
+ * To debug this redirect, create a file called globals.vm in <installation-dir>/usr/share/templates/third-party-debug/base.
+ * In this file, set the variable $debugRedirect to true like this:
+ *
+ * #set ($debugRedirect = true)
+ *
+ * Then, this page will not auto-redirect when it is loaded.
+ *
+ * Keep in mind that login tokens are typically short lived, and delying this redirect could cause the login token
+ * to become invalid if the debugging effort is protracted.
+ *
+ * To make the page wait a little bit before redirecting, set:
+ *
+ * #set ($debugSpinner = true)
+ *###
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Redirecting...</title>
+    #parse("fragments/csp")
+    #if ($debugRedirect)
+        <style type="text/css" $!nonceAttr>
+            textarea {
+                height: 300px;
+                width: 700px
+            }
+        </style>
+    #end
+    #parse("fragments/css")
+</head>
+#if (!$debugRedirect)
+    #parse("fragments/redirect-spinner")
+    #set($class = "class='login login-white login-waiting login-waiting-overlay'")
+#end
+<body class="login $!body_background">
+$!_redirectSpinner
+#if (!$_callbackMethod)
+    #set ($_callbackMethod = 'post')
+#end
+<form id="form1" action="$_tr.encodeHtmlAttribute($_callbackUrl)" method="$_callbackMethod">
+    $_formContent
+    <div id="noscript">
+        <p>
+            Please click Submit to continue.<br /><small>If you enable JavaScript in your browser, this manual interaction will not be needed.</small>
+        </p>
+        <input type="submit" />
+    </div>
+    <script type="text/javascript" $!nonceAttr>
+        var noScriptElement = document.getElementById("noscript");
+        noScriptElement.style.display = "none";
+    </script>
+#if ($debugRedirect)
+    #if ($_protocol == "ping")
+        <h2>Ping Protocol Response</h2>
+        <h3>Ping Ref</h3>
+        <textarea>$_pingReference</textarea>
+    #elseif ($_protocol == "saml")
+        <h2>SAML Response</h2>
+        <textarea>$_samlResponse</textarea>
+        <h3>Decoded SAML Response</h3>
+        <textarea>$!_unencodedSamlResponse</textarea>
+        <h3>Relay State</h3>
+        <textarea class="_frag_100-height">$_relayState</textarea>
+    #elseif ($_protocol == "simple")
+        <h2>Simple Protocol Response</h2>
+        <h3>Login Token</h3>
+        <textarea>$!_simpleApiLoginToken</textarea>
+        <h3>State</h3>
+        <textarea class="_frag_100-height">$!_simpleApiState</textarea>
+        <h3>Error Code</h3>
+        <input value="$!_errorCode">
+        <h3>Error Description</h3>
+        <input value="$!_errorDescription">
+    #elseif ($_authenticator == "saml2")
+        <h2>SAML AuthnRequest</h2>
+        <textarea>$_samlRequest</textarea>
+        <h3>Decoded SAML AuthnRequest</h3>
+        <textarea>$!_unencodedSamlRequest</textarea>
+    #end
+    <p>
+        <input type="submit">
+    </p>
+#else
+    <script type="text/javascript" $!nonceAttr>
+        #if($debugSpinner)
+            setTimeout(function() { document.getElementById('form1').submit(); }, 3000);
+        #else
+            document.getElementById('form1').submit();
+        #end
+    </script>
+#end
+</form>
+</body>
+</html>

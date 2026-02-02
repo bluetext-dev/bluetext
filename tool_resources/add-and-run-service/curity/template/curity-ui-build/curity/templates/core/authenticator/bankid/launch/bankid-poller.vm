@@ -1,0 +1,205 @@
+#*
+ a* Copyright (C) 2023 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#set($rfa1 =  "authenticator.bankid.service.rfa1")
+#set($rfa9 =  "authenticator.bankid.service.rfa9")
+#set($rfa13 = "authenticator.bankid.service.rfa13")
+#set($rfa14 = "authenticator.bankid.service.rfa14")
+#set($rfa15 = "authenticator.bankid.service.rfa15")
+#set($rfa23 = "authenticator.bankid.service.rfa23")
+#if ( !$_maxWaitTime )
+    #set ( $_maxWaitTime = 60 )
+#end
+#parse("fragments/jquery")
+<script type="text/javascript" $!nonceAttr>
+    const se = {'curity': {'bankid': {}}};
+    se.curity.bankid.Poller = function () {
+        let messageMappings = {
+            "rfa1": "#message($rfa1)",
+            "rfa9": "#message($rfa9)",
+            "rfa13": "#message($rfa13)",
+            "rfa14": "#message($rfa14)",
+            "rfa15": "#message($rfa15)",
+            "rfa23": "#message($rfa23)"
+        };
+        const requireFunction = (fn, name) => {
+            if (typeof fn !== 'function') {
+                throw new Error(name + ' is not a function');
+            }
+            return fn;
+        }
+        let stopPolling = false;
+        const pollOnce = (pollSettings, onDone) => {
+            const onFailure = requireFunction(pollSettings.onFailure, 'onFailure');
+            const onSuccess = requireFunction(pollSettings.onSuccess, 'onSuccess');
+            const onMessage = requireFunction(pollSettings.onMessage, 'onMessage');
+            logger.debug("Polling the server.");
+            $.ajax({
+                headers: {Accept: "application/json"},
+                url: pollSettings.url,
+                method: "POST",
+                statusCode: {
+                    200: function () {
+                        ## Not done yet... keep polling
+                        logger.debug("Response from server. Not done, keep polling");
+                        onDone();
+                    },
+                    201: function (data) {
+                        if (data) {
+                            if (data.stopPolling) {
+                                logger.debug("Stopping polling");
+                                stopPolling = true;
+                                return;
+                            } else if (data.message.redirectUrl) {
+                                logger.debug("Redirecting to: " + data.message.redirectUrl)
+                                window.location.replace(data.message.redirectUrl);
+                                return;
+                            } else if (data.message && data.message.status === 'USER_CANCEL') {
+                                logger.debug("User cancelled in the BankID app");
+                                $("form[name='cancel']").submit(); ## Do the actual cancellation
+                                return;
+                            }
+                            if(pollSettings.updateMessage === true) {
+                                onMessage(data.message);
+                            }
+                        }
+                        onDone();
+                    },
+                    202: function () {
+                        stopPolling = true;
+                        logger.debug("Got successful response");
+                        onSuccess();
+                    }
+                }
+            }).fail((err) => {
+                stopPolling = true;
+                onFailure(err);
+            });
+        }
+        const startPolling = (startPollTime, pollSettings) => {
+            let timeoutId = undefined;
+            let pollTime = 1;
+            let pollInterval = pollSettings.pollInterval;
+            let maxWaitTime = pollSettings.maxWaitTime;
+            let onTimeout = requireFunction(pollSettings.onTimeout, 'onTimeout');
+            let iterations = 1;
+            const pollForAuthenticationEnd = () => {
+                if (stopPolling) {
+                    logger.debug("Not polling, since stopPolling is set");
+                    return;
+                }
+                const onDone = (data) => {
+                    pollTime += pollInterval;
+                    iterations++;
+                    if ((pollInterval < 5) && (iterations % 3 === 0)) {
+                        pollInterval += 1;
+                        logger.debug("Increasing poll interval to " + pollInterval);
+                    }
+                    if (pollTime > maxWaitTime) {
+                        onTimeout();
+                    } else if (!stopPolling) {
+                        timeoutId = window.setTimeout(pollForAuthenticationEnd, pollInterval * 1000);
+                    }
+                }
+                pollOnce(pollSettings, onDone);
+            };
+            logger.debug("Starting the poller");
+            timeoutId = window.setTimeout(pollForAuthenticationEnd, startPollTime * 1000);
+            $(document).on("visibilitychange", () => {
+                if (document.visibilityState === "hidden") {
+                    logger.debug("Window is not visible, pausing poller");
+                    window.clearInterval(timeoutId);
+                    stopPolling = true;
+                } else if (document.visibilityState === "visible") {
+                    logger.debug("Window became visible, restarting the poller.");
+                    stopPolling = false;
+                    // poll faster when the window is visible again, only adding a small delay
+                    timeoutId = window.setTimeout(pollForAuthenticationEnd, 500);
+                }
+            });
+            return () => {
+                window.clearInterval(timeoutId);
+                stopPolling = true;
+            };
+        }
+        const createPollSettings = () => {
+            let failed = false;
+            const failure = (error) => {
+                if (!failed) { ## Needed to avoid extra call to onFailure event handler in FF after redirecting
+                    failed = true;
+                    if (error && error.readyState !== 0) {
+                        logger.info("Authentication failed. Redirecting to fail handler");
+                        window.location.replace("${_failureUrl}?_errorMessage=" + error);
+                    } else if (error && error.status === 0) {
+                        logger.debug("The browser refused to perform the request. Likely the page is reloading")
+                    } else {
+                        logger.warn("Poller failed: " + JSON.stringify(error));
+                    }
+                }
+            };
+            const timeout = () => {
+                logger.debug("Poller timed out");
+                failure("authTimeout");
+            }
+            const message = (data) => {
+                if (!data) {
+                    logger.info("No message in poll response");
+                    $('#poll_message').text("unknown error");
+                    return;
+                }
+                logger.debug("Poller received message: " + JSON.stringify(data));
+                if (data.userMessage) {
+                    logger.debug("Updating user message: " + data.userMessage)
+                    $('#poll_message').text(messageMappings[data.userMessage]);
+                }
+                if ($('#autostartTokenQr') && data.qrCode) {
+                    $('#autostartTokenQr').attr('src', data.qrCode);
+                }
+                if ($('#manualStart') && data.autoStartToken && se.curity.bankid.launch && se.curity.bankid.launch.browserStrategy)
+                {
+                    $('#manualStart').attr('href', se.curity.bankid.launch.browserStrategy.launchUrl(data.autoStartToken));
+                }
+            };
+            const success = () => {
+                logger.debug("Authentication succeeded, submitting form");
+                $('#pollingDone').submit();
+            }
+            return {
+                url: "$!_pollUrl",
+                pollInterval: 1,
+                maxWaitTime: $_maxWaitTime,
+                restartUrl: "$!_restartUrl",
+                onTimeout: timeout,
+                onMessage: message,
+                onFailure: failure,
+                onSuccess: success
+            };
+        }
+        this.checkStatus = (callback) => {
+            const pollSettings = createPollSettings();
+            pollSettings.updateMessage = false;
+            try {
+                return pollOnce(pollSettings, callback);
+            } catch (err) {
+                pollSettings.onFailure(err);
+            }
+        }
+        this.start = () => {
+            const pollSettings = createPollSettings();
+            pollSettings.updateMessage = true;
+            const firstPollDelay = 2;
+            try {
+                return startPolling(firstPollDelay, pollSettings);
+            } catch (err) {
+                pollSettings.onFailure(err);
+            }
+        }
+    }
+</script>

@@ -1,0 +1,52 @@
+#*
+ * Copyright (C) 2016 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * This view creates the icons for the available authenticators
+ *
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+#parse("fragments/icon-mappings")
+#define($_loginChooser)
+    #if(!$_loginChooser_hide_selector_title)
+    <h1 class="mt0 center">#message("views.select-authenticator.page.selector.title")</h1>
+    #end
+    #foreach($_authenticatorMapItem in $_allowedAuthenticators.values())
+        <div class="form-field #if($icons_only_authenticator_chooser)form-field-social-icon#end mb1">
+            <a href="$_authenticatorMapItem.url" id="$_authenticatorMapItem.authenticatorId"  class="button button-primary button-fullwidth button-social #if($icons_only_authenticator_chooser)button-social-icon#end button-$_authenticatorMapItem.type">
+                <i class="icon #iconClassName($_authenticatorMapItem.type)"></i>
+                #if(!$icons_only_authenticator_chooser)
+                    #if($_authenticatorMapItem.description)
+                        #message($_authenticatorMapItem.description)
+                    #else
+                        $_authenticatorMapItem.authenticatorId
+                    #end
+                #end
+            </a>
+        </div>
+    #end
+#end

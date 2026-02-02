@@ -1,0 +1,27 @@
+#
+# Copyright (C) 2024 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+meta.title=Har du inget konto?
+view.account-created=Ditt konto har skapats!
+view.continue=Fortsätt
+view.activate-account=Bekräfta konto
+view.create-account=Har du inget konto?
+view.select-authenticator=Välj metod för att registrera nytt konto
+view.validation.username.duplicate=E-postadressen är redan registrerat
+view.validation.email.duplicate=E-postadressen är redan registrerad
+view.validation.phone.duplicate=Telefonnummer är redan registrerad
+view.validation.missing.input=Saknar input
+view.username=E-postadress
+view.email=E-post
+view.firstName=Förnamn
+view.lastName=Efternamn
+view.phone=Telefonnummer
+view.password=Lösenord
+validation.error.password.weak=Lösenordet är för svagt

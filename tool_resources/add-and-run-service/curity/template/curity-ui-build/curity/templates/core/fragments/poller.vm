@@ -1,0 +1,132 @@
+#*
+ * Copyright (C) 2015 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * This template is used to add the poller, used by various authenticators, to query the server for the status of
+ * the authentication transaction state.
+ *
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+#if ( !$_maxWaitTime )
+    #set ( $_maxWaitTime = 60 )
+#end
+#parse("fragments/jquery")
+<script src="$_staticResourceRootPath/assets/js/curity.js"></script>
+<script type="text/javascript" $!nonceAttr>
+    var startPollTime = 4;
+    var stopFunction;
+    var pollerNotifyCompletedUrl = #if($_pollerNotifyCompletedUrl) '$!_pollerNotifyCompletedUrl' #else undefined #end;
+    var pollerName = #if($_authenticatorId) '$!_authenticatorId' #else undefined #end;
+    var onSuccess = function () {
+        var forms = jQuery('form.poller-onsuccess');
+        if (forms.length === 0) {
+            forms = jQuery('form');
+            if (forms.length === 0) {
+                console.error('Polling completed successfully but no form elements were found on the page');
+                return;
+            }
+        }
+        if (forms.length !== 1) {
+            console.warn('Polling completed successfully but multiple form elements were found on the page. ' +
+                    'All forms will be submitted to signal completion, which may lead to unexpected behavior. ' +
+                    'The page should be fixed to include a single form element with the "poller-onsuccess" class.');
+        }
+        forms.submit();
+    }
+    var onFailure = function () {
+        jQuery('div.waiting-spinner').replaceWith("<div class='alert alert-danger'>Failed to contact authentication service</div>");
+    }
+    var onTimeout = function () {
+        jQuery('div.waiting-spinner').replaceWith("<div class='alert alert-danger'>#message(
+            "${_templatePrefix}.view.authTimeout")</div>");
+    }
+    var onNotifyCompleted = undefined;
+    if (pollerNotifyCompletedUrl !== undefined) {
+        onNotifyCompleted = function () {
+            window.location.replace(pollerNotifyCompletedUrl);
+        };
+    }
+    var pollSettings = {
+        token: "$!_challenge",
+        url: "$!_action",
+        pollInterval: 1,
+        maxWaitTime: $_maxWaitTime,
+        restartUrl: "$!_restartUrl",
+        state: "$!_state",
+        name: pollerName,
+        onSuccess: onSuccess,
+        onFailure: onFailure,
+        onTimeout: onTimeout,
+        onNotifyCompleted: onNotifyCompleted,
+        onMessage: function (message) {
+            if(message.text)
+            {
+            #[[
+                jQuery("#message").text(message.text);
+            ]]#
+            }
+            else if(message.redirectUrl)
+            {
+                window.location.replace(message.redirectUrl);
+            }
+            if ($_qrCodeId)
+            {
+                var qrCodeElement = document.getElementById("${_qrCodeId}")
+                if(message.qrCode && qrCodeElement != null)
+                {
+                    qrCodeElement.src = message.qrCode;
+                }
+                if ($_sameDeviceLinkId) {
+                    var sameDeviceLinkElement = document.getElementById("${_sameDeviceLinkId}")
+                    if (sameDeviceLinkElement)
+                    {
+                        var sameDeviceLink = null;
+                        if (message.sameDeviceLink) {
+                            sameDeviceLink = message.sameDeviceLink;
+                        } else if (message.autoStartToken && typeof getAutoStartUri !== 'undefined') {
+                            sameDeviceLink = getAutoStartUri(message.autoStartToken);
+                        }
+                        if (sameDeviceLink) {
+                            sameDeviceLinkElement.href = sameDeviceLink;
+                            if (qrCodeElement)
+                            {
+                                qrCodeElement.alt = sameDeviceLink;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    jQuery(document).ready(function () {
+        try {
+            stopFunction = se.curity.utils.poller.startPolling(startPollTime, pollSettings);
+        } catch (err) {
+            onTimeout();
+        }
+    });
+</script>

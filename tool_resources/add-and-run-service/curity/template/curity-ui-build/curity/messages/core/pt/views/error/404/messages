@@ -1,0 +1,16 @@
+#
+# Copyright (C) 2022 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=404 - Página não encontrada
+page.title=Página não encontrada
+page.not-found=Desculpe, mas a página que você procurava não pôde ser encontrada.
+system.status.not.found=A página solicitada não foi encontrada.
+Not found=não encontrado

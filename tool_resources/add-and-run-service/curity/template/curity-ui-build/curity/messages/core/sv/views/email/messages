@@ -1,0 +1,19 @@
+#
+# Copyright (C) 2024 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+enter-opt-in-browser=För att slutföra aktivering av ditt konto, använd koden nedan för att verifiera din e-post
+your-otp=Engångskod
+verify=För att verifiera ditt konto, klicka på knappen
+verify.button=Bekräfta
+title=Bekräfta konto
+account-activated=Ditt konto har bekräftats
+thanks=Tack!
+invalid.link=Ogiltig länk. Länken som användes är för gammal.

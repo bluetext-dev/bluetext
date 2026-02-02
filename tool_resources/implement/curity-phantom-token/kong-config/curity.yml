@@ -1,0 +1,67 @@
+services:
+- name: curity
+  url: http://curity:${CURITY_PORT}
+  routes:
+  - name: curity-route
+    strip_path: false
+    paths:
+    - /apps
+    - /oauth
+    - /authn
+    - /assets
+    - /theme
+  plugins:
+    - name: cors
+      config:
+        origins:
+        - ${WEB_APP_URL}
+        methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+        headers:
+        - Accept
+        - Authorization
+        - Content-Type
+        - x-curity-csrf
+        exposed_headers:
+        - Authorization
+        credentials: true
+        preflight_continue: false
+
+- name: curity-proxied
+  url: http://curity:${CURITY_PORT}/oauth/v2/oauth-userinfo
+  routes:
+  - name: curity-proxied-route
+    strip_path: true
+    paths:
+    - /api/userinfo
+  plugins:
+    - name: cors
+      config:
+        origins:
+        - ${WEB_APP_URL}
+        - ${CURITY_BASE_URL}
+        methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+        headers:
+        - Accept
+        - Authorization
+        - Content-Type
+        - x-curity-csrf
+        exposed_headers:
+        - Authorization
+        credentials: true
+        preflight_continue: false
+
+    - name: oauth-proxy
+      config:
+        cookie_prefix: th-
+        cookie_key: ${OAUTH_PROXY_COOKIE_KEY_PEM}
+        cookie_key_pass: ${KONG_OAUTH_PROXY_COOKIE_KEY}

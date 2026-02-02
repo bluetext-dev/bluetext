@@ -1,0 +1,28 @@
+#*
+* Copyright (C) 2024 Curity AB. All rights reserved.
+*
+* The contents of this file are the property of Curity AB.
+* You may not copy or use this file, in either source code
+* or executable form, except in compliance with terms
+* set by Curity AB.
+*
+* For further information, please contact Curity AB.
+*###
+#if ($_error)
+    #set ($page_symbol = $page_symbol_authenticate_desktop)
+#else
+    #set ($page_symbol = $page_symbol_done)
+#end
+#define($_body)
+    #if ($_error)
+        <div class="area center">
+            <div class="alert alert-danger">#message("views.email.invalid.link")</div>
+        </div>
+    #else
+        <div class="area center">
+            <h1>#message("views.email.thanks")</h1>
+            <p>#message("views.email.account-activated")</p>
+        </div>
+    #end
+#end
+#parse("layouts/default")

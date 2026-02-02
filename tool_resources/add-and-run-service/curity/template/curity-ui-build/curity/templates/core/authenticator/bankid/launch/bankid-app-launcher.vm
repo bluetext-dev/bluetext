@@ -1,0 +1,62 @@
+#*
+ * Copyright (C) 2023 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+<script type="text/javascript" $!nonceAttr>
+    $(document).ready(function () {
+        const authnComplete = '$!authncomplete' === 'true';
+        if (authnComplete) {
+            logger.debug("Authentication was complete");
+            $('#pollingDone').submit();
+            return;
+        } else {
+            logger.debug("Authentication is not yet completed. ")
+        }
+        const userCancelled = '$!_userCancelled' === 'true'
+        if (userCancelled) {
+            logger.debug("User cancelled in app");
+            $("form[name='cancel']").submit();
+            return;
+        }
+        const poller = new se.curity.bankid.Poller();
+        ## Poll once before setting up to check status of transaction. If this is a page reload,
+        ## the poll should determine if authentication was completed or cancelled
+        poller.checkStatus(() => {
+            logger.debug("Check status poll completed");
+            #parse("authenticator/bankid/launch/check-platform-capabilities.js")
+            let browserStrategy = getBrowserStrategy();
+            se.curity.bankid.launch = {'browserStrategy': browserStrategy};
+            if (browserStrategy.platform === PLATFORM_IOS) {
+                if (window.self !== window.top) {
+                    ## We're framed. User will have to manually open the app. Univeral links in frames require
+                    ## user interaction
+                    ## *OBS* Cancel in the BankID app will break the user out of the frame because we can't access
+                    ## window.top.location across origins
+                    logger.debug("Page is framed. Auto launching the BankID app will likely not work");
+                    $("#manualStart").attr("target", "_top");
+                }
+            }
+            ## Cancel poller on cancel
+            let cancelFunction = poller.start();
+            $("form[name='cancel']").submit(cancelFunction);
+            #if($!bankidNeverAutoStart)
+                logger.debug("Not launching the app per configuration.");
+            #elseif($!_skipAutoLaunch)
+                logger.debug("Not launching the app since the user previously cancelled in the app");
+            #else
+                if (!browserStrategy.neverAutoLaunch) {
+                    browserStrategy.launchApp();
+                } else {
+                    logger.debug("Not launching the app per browser strategy configuration");
+                }
+            #end
+            $('#manualStart').attr('href', browserStrategy.launchUrl());
+        });
+    });
+</script>

@@ -1,0 +1,45 @@
+#*
+ * Copyright (C) 2021 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#parse("authenticator/webauthn/js/common-js")
+<script $!nonceAttr>
+    const registerDevice = () => {
+        $("#waitingDiv").showElement();
+        $("#registerDiv, #alertWrapper").hideElement();
+        webauthnJSON.create($_json)
+                .then(response => {
+                    delete response["rawId"];
+                    $("input[name='json']").val(JSON.stringify(response));
+                    $("#additionalDeviceForm").submit();
+                }).catch(handleError);
+    }
+    const handleError = (error) => {
+        let userCancelOrTimeout = error.name === webAuthnErrors.NOT_ALLOWED || error.name === webAuthnErrors.ABORTED
+        console.info("ERROR", error)
+        if (userCancelOrTimeout) {
+            ## Probably cancel, but could be something else.
+            showInfo('#message("${_templatePrefix}.view.error.cancel-or-timeout")');
+        } else {
+            showError('#message("${_templatePrefix}.view.error.registration")');
+        }
+        $("#waitingDiv").hideElement();
+        $("#registerDiv").showElement();
+    }
+    const skipRegisterDevice = (dontAskAgainFor) => {
+        if (dontAskAgainFor) {
+            $("input[name='dont_ask_again_for']").val(dontAskAgainFor);
+        }
+        $("#noAdditionalDeviceForm").submit();
+    }
+    $("#registerAdditionalDeviceButton").click(registerDevice);
+    $("#registerNoAdditionalDeviceButton").click(() => skipRegisterDevice());
+    $("#dontAskAgainForBrowserLink").click(() => skipRegisterDevice("browser"))
+    $("#dontAskAgainForAccountLink").click(() => skipRegisterDevice("account"))
+</script>

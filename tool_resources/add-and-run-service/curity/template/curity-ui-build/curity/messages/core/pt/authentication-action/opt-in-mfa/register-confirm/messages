@@ -1,0 +1,20 @@
+#
+# Copyright (C) 2022 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+page.title=Confirmar novo método
+meta.title=Confirmar novo método
+view.title=Confirmar novo método
+view.detail=Confirma a adição do seguinte método:
+view.detail.template=Confirma a adição do seguinte método: %s
+view.detail.already-registered=Tem certeza que pretende atualizar o seguinte método (substituindo o método anteriormente registrado):
+view.detail.already-registered.template=Tem certeza que pretende atualizar o seguinte método (substituindo o método anteriormente registrado): %s
+view.confirm=Confirmar
+view.cancel=Cancelar

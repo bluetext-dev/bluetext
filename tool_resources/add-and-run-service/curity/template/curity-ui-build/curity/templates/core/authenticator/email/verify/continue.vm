@@ -1,0 +1,19 @@
+#*
+ * Copyright (C) 2023 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * This page is rendered when clicking the link in an email and authentication can be immediately continued.
+ *###
+#set ($_callbackUrl = $_continueUrl)
+#set ($_callbackMethod = 'get')
+#define ($_formContent)
+#parse("fragments/poller-notify-completed")
+#end
+#parse("layouts/redirect")

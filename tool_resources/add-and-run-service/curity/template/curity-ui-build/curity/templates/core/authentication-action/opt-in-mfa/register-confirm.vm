@@ -1,0 +1,38 @@
+#*
+ * Copyright (C) 2021 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#parse("fragments/icon-mappings")
+#set($title = "#message('authentication-action.opt-in-mfa.register-confirm.page.title')")
+#set ($page_symbol = $page_symbol_authenticate_opt_in_mfa)
+#define ($_body)
+<div class="area center">
+    <h1>#message("${_templatePrefix}.register-confirm.view.title")</h1>
+</div>
+#if($_reRegisteringSameFactor)
+<p>#message("${_templatePrefix}.register-confirm.view.detail.already-registered") $_factor.description?</p>
+#else
+<p>#message("${_templatePrefix}.register-confirm.view.detail") $_factor.description?</p>
+#end
+<div class="area flex justify-between mxn1">
+    <div class="col-12 px1">
+        <form method="POST" name="register-confirm" class="no-padding">
+            <input type="hidden" name="acr" value="$_factor.acr"/>
+            <input type="submit" value='#message("${_templatePrefix}.register-confirm.view.confirm")' class="button button-fullwidth button-primary"/>
+        </form>
+    </div>
+    <div class="col-12 px1">
+        <form method="POST" name="setup-confirm" class="no-padding">
+            <input type="hidden" name="cancel" value="true"/>
+            <input type="submit" value="#message("${_templatePrefix}.register-confirm.view.cancel")" class="button button-fullwidth button-primary-outline"/>
+        </form>
+    </div>
+</div>
+#end
+#parse("layouts/default")

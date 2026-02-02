@@ -1,0 +1,19 @@
+#
+# Copyright (C) 2022 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+view.allow=Tillåt
+view.deny=Neka
+view.info=Vill du länka dessa konton med varandra?
+view.prev=Tidigare använt
+view.current=Aktuellt
+view.question-template=Vill du länka konto '%s' med konto '%s' från '%s'?
+view.text=Du loggade just in med ett nytt konto. Du kan välja att länka dessa konton. Om du nekar, kommer ingen länkning att göras.
+validation.error.invalid-response-value=Felaktiga eller otillräckliga parametrar

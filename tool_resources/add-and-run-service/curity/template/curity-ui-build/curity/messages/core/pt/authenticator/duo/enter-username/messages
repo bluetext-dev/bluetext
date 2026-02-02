@@ -1,0 +1,18 @@
+#
+# Copyright (C) 2022 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=Digite seu nome de usuário
+view.username=Digite seu nome de usuário
+view.button=Enviar
+view.register=Registrar
+view.challenge=Próximo
+error.account.not.found=Nenhum dispositivo foi associado a este usuário. Para adicionar um, entre em contato com um administrador ou use o botão voltar do seu navegador para fazer o login usando uma opção diferente (se disponível).
+error.account.not.found.in.account.manager=Não é possível processar a solicitação. Tente novamente.

@@ -1,0 +1,79 @@
+#*
+ * Copyright (C) 2016 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * This is an information page that is shown before registration. This can be useful when
+ * using a required authentication for registration, since the user will be required to authenticate
+ * after this and may need to know what is about to happen.
+ * It is also a good place to show the "download the app" uri
+ *
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+#set ($page_symbol = $page_symbol_authenticate_pair_device)
+#define($_leftColumn)
+<div class="area">
+    <h1>#message("authenticator.encap.info.view.download-app-and-activate")</h1>
+    <div class="appstorebadges">
+        <a href="#">
+            <img src="/assets/images/appstore.svg" alt="Apple App Store" title="Apple App Store" role="presentation">
+        </a>
+        <a href="#">
+            <img src="/assets/images/googleplay.svg" alt="Google Play" title="Google Play" role="presentation">
+        </a>
+    </div>
+    <h2 class="h3">#message("authenticator.encap.info.view.activate-device")</h2>
+    <p>#message("authenticator.encap.info.view.description")</p>
+    <div class="alert alert-info">#message("authenticator.encap.info.view.own-device")</div>
+</div>
+#end
+#if ($_downloadUriDataUri)
+    #define($_qrCode)
+    <img src="$_downloadUriDataUri" class="mx-auto block" title="$!_downloadUri"
+         alt="$!_downloadUri" onclick="document.getElementById('_downloadUri').select()">
+    #end
+#end
+#define($_rightColumn)
+<form action="" class="p4">
+    <h3>#message("authenticator.encap.info.view.not-on-your-device")</h3>
+    <p>
+        #message("authenticator.encap.info.view.on-other-device")
+        #if ($_qrCode)
+        #message("authenticator.encap.info.view.scan-qr")
+        #end
+    </p>
+    #if ($_downloadUri)
+        $!_qrCode
+        <a class="center block" href="$_downloadUri" id="_downloadUri">$_downloadUri</a>
+    #end
+    <h3>#message("authenticator.encap.info.view.button.activate-device")</h3>
+    <p>#message("authenticator.encap.info.view.app-installed")</p>
+    <a href="$!_registerUrl" class="button button-primary button-fullwidth" role="button">
+        #message("authenticator.encap.info.view.activate-device")
+    </a>
+</form>
+#end
+#parse("layouts/wide")

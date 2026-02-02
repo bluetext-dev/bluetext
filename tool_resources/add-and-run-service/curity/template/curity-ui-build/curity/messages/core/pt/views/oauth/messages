@@ -1,0 +1,78 @@
+#
+# Copyright (C) 2022 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=Habilitar o acesso ao dispositivo
+page.title=Habilitar o acesso ao dispositivo
+enter-user-code=Inserir o código
+enter-user-code-description=Um código de verificação é exibido em seu dispositivo. Digite o código para continuar.
+enter-user-code-submit=Enviar
+enter-user-code-help=Não recebeu um código de verificação?
+enter-user-code-invalid-code=O código era inválido
+confirm=Confirmar dispositivo
+confirm-description=Ao confirmar, você permite o acesso do dispositivo à sua conta.
+confirm-submit=Confirmar
+code-confirmed=Feito
+code-confirmed-description=Agora, verifique seu dispositivo e siga as instruções
+consent.meta.title=Solicitar consentimento do usuário
+consent.page.title=Solicitar consentimento do usuário
+consent=Consentimento necessário
+consent.info=As seguintes permissões são solicitadas pelo aplicativo acima. Revise-as e permita, se estiver tudo certo.
+consent.info-for-no-scopes=O aplicativo acima está solicitando seu consentimento. Se estiver tudo certo, confirme.
+consent.help=É necessário o seu consentimento para fornecer acesso. Se você não aprovar, clique em Cancelar. Neste caso, nenhuma informação será compartilhada com o aplicativo.
+consent.account-info=quer acessar sua conta
+consent.submit=Enviar consentimento
+consent.cancel=Cancelar
+consent.showAll=Mostrar tudo
+consent.hideAll=Esconder tudo
+consent.policyDocument=Documento de Política
+consent.termsOfService=Termos de Serviço
+consent.claim-names.sub=ID do usuário
+consent.claim-names.name=Nome completo
+consent.claim-names.given_name=Nome
+consent.claim-names.family_name=Sobrenome
+consent.claim-names.middle_name=Nome do meio
+consent.claim-names.nickname=Apelido
+consent.claim-names.preferred_username=Nome de usuário preferido
+consent.claim-names.profile=Perfil
+consent.claim-names.picture=Foto
+consent.claim-names.website=Website
+consent.claim-names.email=E-mail
+consent.claim-names.email_verified=E-mail verificado
+consent.claim-names.gender=Gênero
+consent.claim-names.birthdate=Data de nascimento
+consent.claim-names.zoneinfo=Fuso horário
+consent.claim-names.locale=Local
+consent.claim-names.phone_number=Número de telefone
+consent.claim-names.phone_number_verified=Número de telefone verificado
+consent.claim-names.address=Endereço
+consent.claim-names.updated_at=Última atualização
+consent.claim-descriptions.sub=Seu ID de conta de usuário
+consent.claim-descriptions.name=
+consent.claim-descriptions.given_name=
+consent.claim-descriptions.family_name=
+consent.claim-descriptions.middle_name=
+consent.claim-descriptions.nickname=Um nome de usuário alternativo.
+consent.claim-descriptions.preferred_username=
+consent.claim-descriptions.profile=Seus dados de usuário
+consent.claim-descriptions.picture=
+consent.claim-descriptions.website=
+consent.claim-descriptions.email=
+consent.claim-descriptions.email_verified=Seu endereço de e-mail verificado
+consent.claim-descriptions.gender=
+consent.claim-descriptions.birthdate=
+consent.claim-descriptions.zoneinfo=O fuso horário em que você vive
+consent.claim-descriptions.locale=Estado
+consent.claim-descriptions.phone_number=
+consent.claim-descriptions.phone_number_verified=Seu número de telefone verificado
+consent.claim-descriptions.address=
+consent.claim-descriptions.updated_at=Quando sua conta foi atualizada por último
+logout.meta.title=Sair
+logout.page.title=Sair

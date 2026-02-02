@@ -1,0 +1,30 @@
+#
+# Copyright (C) 2021 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=Register new device
+view.title=Register new device
+view.register=Select device to register
+view.try-again=Try Again
+view.button.any-attachment=Continue with a passkey
+view.button.platform=Built-in
+view.button.cross-platform=Security key
+view.authenticator-attachment.platform=A non-removable built-in device, such as face recognition or a finger print reader embedded in your device.
+view.authenticator-attachment.cross-platform=A security key, such as a portable key attached through USB or wirelessly through NFC.
+view.error.title=Error
+view.error.registration=Something went wrong. Could not register this device.
+view.error.cancel-or-timeout=Registration of device was cancelled or timed out.
+view.error.not-supported=WebAuthn is currently not supported in this browser
+view.error.user-not-found=User not found
+view.success.title=Success!
+view.success.success=Your device has been registered!
+view.return-to-login=Return to login
+view.retry=Retry to register device
+view.register-additional-device=Register an additional device

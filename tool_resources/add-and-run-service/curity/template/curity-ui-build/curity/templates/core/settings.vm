@@ -1,0 +1,143 @@
+#*
+ * Copyright (C) 2018 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * This file contains the "theme" settings for the template system.
+ *
+ * 1. Copy this file to overrides or your template-area
+ * 2. Uncomment the setting you'd like to override and set the new value.
+ *
+ * Leave settings commented if they don't need to be modified.
+ * All defaults can be found in core/settings-default.vm for future reference.
+ *###
+#*
+  Always parse the default settings first, do not remove this.
+  Any non-overridden setting will be source from settings-defaults
+*###
+#parse("settings-defaults")
+#*
+  Theme
+  Use for client theming.
+  $main_css_path  : The main layouts and includes are defined here.
+  $theme_css_path : The colors and theme specific styles are here.
+  Standard theme curity-theme.css is used by default. See the developer documentation under
+  customizing front-end for how to create a custom theme css file.
+*###
+## #set ($main_css_path = $!_staticResourceRootPath + '/assets/css/main.css' )
+## #set ($theme_css_path = $!_staticResourceRootPath + '/assets/css/curity-theme.css')
+#*
+  Background color.
+  The curity theme defines two modes, dark and light.
+  The actual colors are defined in the Theme css file.
+  body-light = White background color
+  body-dark = Dark background color
+*###
+## #set ($body_background = 'body-light')
+#*
+  Login form background color
+  The login screens use a box with white background by default. In dark or light themes
+  it might be desirable to remove this box. Set to `form-transparent` to remove the box.
+  form-light = White background around form
+  form-transparent = Transparent around form
+*###
+## #set ($login_form_background = 'form-light')
+#*
+  Logo
+  Logo path and file name. Use -white version for using the negative logotype.
+  path + file name. Update this with your logo to update all templates
+  logo_path is used when the theme is in normal mode (white form background)
+  logo_white_path is used when the theme is in dark mode (transparent form background)
+*###
+## #set ($logo_path = $!_staticResourceRootPath + '/assets/images/curity-logo.svg')
+## #set ($logo_white_path = $!_staticResourceRootPath + '/assets/images/curity-logo-white.svg')
+#*
+  Logo position. The logo can be used inside the login well, or outside right before
+  true = inside the well
+  false = right before the well
+*###
+## #set ($logo_inside = true)
+#*
+  Show Powered by Curity?
+  true or false
+*###
+## #set ($powered_by = true)
+#*
+  Authenticator color
+  The authentication listing pages has two color modes:
+  1. List all authenticators using the same color
+  2. List all authenticators with individual colors.
+  Default is single color
+  true = Use single color version, using theme primary color
+  false = Use default colored version
+*###
+## #set ($single_color_authenticator_chooser = true)
+#*
+  Authenticator style
+  The authentication listing pages show the listing with either icons+text or just icons.
+  Default is icons+text
+  true = Use icons only
+  false = Use default icon + text
+*###
+## #set ($icons_only_authenticator_chooser = false)
+#*
+  Page Symbols
+  These define the symbols shown in the top under the logo on the login pages, each page defines what symbol to use
+  or if non is defined the Default Page Symbol `$page_symbol` will be used
+  If the symbol should be hidden entirely, set `$show_symbol = false`
+ *###
+## #set ($show_symbol = true)
+## #set ($page_symbol_path = $!_staticResourceRootPath + '/assets/images/')
+## #set ($page_symbol_done = $page_symbol_path + "done.svg")
+## #set ($page_symbol_authenticate_desktop = $page_symbol_path + "login-symbol-computer.svg")
+## #set ($page_symbol_authenticate_mobile = $page_symbol_path + "login-symbol-user-computer.svg")
+## #set ($page_symbol_authenticate_email = $page_symbol_path + "login-symbol-email.svg")
+## #set ($page_symbol_authenticate_card = $page_symbol_path + "login-symbol-card.svg")
+## #set ($page_symbol_authenticate_sms = $page_symbol_path + "login-symbol-sms.svg")
+## #set ($page_symbol_authenticate_pair_device = $page_symbol_path + "login-symbol-pair-device.svg")
+## #set ($page_symbol_authenticate_htmlform = $page_symbol_path + "login-symbol-password.svg")
+## #set ($page_symbol_authenticate_totp = $page_symbol_path + "login-symbol-totp.svg")
+## #set ($page_symbol_authenticate_bankid = $page_symbol_path + "login-symbol-bankid.svg")
+## #set ($page_symbol_error_generic = $page_symbol_path + "login-symbol-exclamation.svg")
+## #set ($page_symbol_error_401 = $page_symbol_path + "login-symbol-exclamation.svg")
+## #set ($page_symbol_error_400 = $page_symbol_path + "login-symbol-exclamation.svg")
+## #set ($page_symbol_error_403 = $page_symbol_path + "login-symbol-exclamation.svg")
+## #set ($page_symbol_error_404 = $page_symbol_path + "login-symbol-questionmark.svg")
+## #set ($page_symbol_error_406 = $page_symbol_path + "login-symbol-exclamation.svg")
+## #set ($page_symbol_error_405 = $page_symbol_path + "login-symbol-exclamation.svg")
+## #set ($page_symbol_error_406 = $page_symbol_path + "login-symbol-exclamation.svg")
+## #set ($page_symbol_error_413 = $page_symbol_path + "login-symbol-exclamation.svg")
+## #set ($page_symbol_error_500 = $page_symbol_path + "login-symbol-exclamation.svg")
+## #set ($page_symbol_error_503 = $page_symbol_path + "login-symbol-exclamation.svg")
+## #set ($page_symbol_done = "PAGE_SYMBOL_DONE")
+#*
+   Default Page Symbol
+   Used if the view doesn't define it's own symbol
+ *###
+## #set ($page_symbol = $page_symbol_authenticate_desktop)
+#* This adds a cachebusting query to the CSS and JS files used by the kit
+Override this with custom busting if necessary or set to empty if cache busting
+should not be used
+ *###
+## #set ($_cacheBustingHash = $_hashedServerVersion)
+## Enable client side debug logging for pages using the logger fragment
+##set($enableClientSideDebugLog = false)
+##
+## BankID Authenticator
+##
+## Use the new version of the launch template
+##set($bankidLaunchVersion2 = false)
+## Never try to auto start the app
+## This will be effective for all browsers. If specific browsers should not autostart, add
+## an override for the intended browser
+##set($bankidNeverAutoStart = false)
+##
+## Detect navigations to invalid pages on authentication actions
+##
+##set($enableDetectInvalidAuthnActionPage = true)

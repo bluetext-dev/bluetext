@@ -1,0 +1,65 @@
+#*
+ * Copyright (C) 2021 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#parse("fragments/icon-mappings")
+#set ($page_symbol = $page_symbol_authenticate_opt_in_mfa)
+#set($title = "#message('authentication-action.opt-in-mfa.setup-confirm.page.title')")
+#define ($_body)
+<div class="area center">
+    <h1>#message("${_templatePrefix}.setup-confirm.view.title") $_factorDescription</h1>
+</div>
+#if($_recoveryCodesBatchId)
+    <div class="area">
+        <h3>#message("${_templatePrefix}.setup-confirm.view.codes.title")</h3>
+        <p>#message("${_templatePrefix}.setup-confirm.view.codes.description")</p>
+        <div class="backup-codes">
+            <ul class="list-reset m0 px2 py3">
+                #foreach($_recoveryCode in $_recoveryCodes)
+                    <li><code>$_recoveryCode</code></li>
+                #end
+            </ul>
+        </div>
+        <div class="flex mt1" style="justify-content: flex-end">
+            <button class="button button-tiny button-link button-print-recovery-codes">
+                <i class="icon ion-ios-printer-outline inlineicon"></i>#message("${_templatePrefix}.setup-confirm.view.codes.print")
+            </button>
+        </div>
+    </div>
+#end
+<div class="area flex justify-between mxn1">
+    <div class="col-12 px1">
+        <form method="POST" name="setup-confirm" class="no-padding">
+            #if($_recoveryCodesBatchId)
+                <input type="hidden" name="recoveryCodesBatchId" value="$_recoveryCodesBatchId"/>
+            #end
+            <!-- This can be used to add a checkbox -->
+            <input type="hidden" name="confirm" value="on"/>
+            <input type="submit" value="#message("${_templatePrefix}.setup-confirm.view.confirm")" class="button button-fullwidth button-primary"/>
+        </form>
+    </div>
+    <div class="col-12 px1">
+        <form method="POST" name="setup-confirm" class="no-padding">
+            <input type="hidden" name="cancel" value="true"/>
+            <input type="submit" value="#message("${_templatePrefix}.setup-confirm.view.cancel")" class="button button-fullwidth button-primary-outline"/>
+        </form>
+    </div>
+</div>
+<script $!nonceAttr>
+    document.addEventListener("DOMContentLoaded", function () {
+        const printButton = document.querySelector('.button-print-recovery-codes')
+        if(printButton) {
+            printButton.addEventListener('click', event => {
+                window.print();
+            })
+        }
+    })    
+</script>
+#end
+#parse("layouts/default")

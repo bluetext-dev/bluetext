@@ -1,0 +1,71 @@
+#*
+ * Copyright (C) 2017 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+#define ($_formContent)
+    #if ($code)
+        <input type="hidden" name="code" value="$code"/>
+    #end
+    #if ($state)
+        <input type="hidden" name="state" value="$_tr.encodeHtmlAttribute($state)"/>
+    #end
+    #if ($error)
+        <input type="hidden" name="error" value="$error"/>
+    #end
+    #if ($error_description)
+        <input type="hidden" name="error_description" value="$error_description"/>
+    #end
+    #if ($id_token)
+        <input type="hidden" name="id_token" value="$id_token"/>
+    #end
+    #if ($error_uri)
+        <input type="hidden" name="error_uri" value="$error_uri"/>
+    #end
+    ## Parameters for implicit flow with response_mode=form_post
+    #if ($access_token)
+        <input type="hidden" name="access_token" value="$access_token"/>
+    #end
+    #if ($token_type)
+        <input type="hidden" name="token_type" value="$token_type"/>
+    #end
+    #if ($expires_in)
+        <input type="hidden" name="expires_in" value="$expires_in"/>
+    #end
+    #if ($scope)
+        <input type="hidden" name="scope" value="$scope"/>
+    #end
+    ## Parameter for JARM with response_mode=form_post
+    #if ($response)
+        <input type="hidden" name="response" value="$response"/>
+    #end
+    #if ($session_state)
+        <input type="hidden" name="session_state" value="$session_state"/>
+    #end
+#end
+#parse("layouts/redirect")

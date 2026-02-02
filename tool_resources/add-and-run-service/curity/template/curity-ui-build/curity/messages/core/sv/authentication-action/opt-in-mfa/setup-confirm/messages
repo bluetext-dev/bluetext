@@ -1,0 +1,20 @@
+#
+# Copyright (C) 2021 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+page.title=Bekräfta tvåstegsverifiering
+meta.title=Bekräfta tvåstegsverifiering
+view.title=Bekräfta tvåstegsverifiering och använd denna metod:
+view.title.template=Bekräfta tvåstegsverifiering och använd denna metod: %s
+view.codes.title=Dina reservkoder
+view.codes.description=Dessa reservkoder kan användas för att hantera tvåstegsverifiering. Förvara reservkoderna på ett säkert men lättillgängligt ställe. Du kan skapa nya koder när som helst.
+view.codes.print=Skriv ut reservkoder
+view.confirm=Bekräfta
+view.cancel=Avbryt

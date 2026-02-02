@@ -1,0 +1,21 @@
+#
+# Copyright (C) 2022 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=Login com TOTP
+view.username=Nome de usuário
+view.challenge=Enviar
+view.register=Registrar novo dispositivo
+view.title1=Digite seu nome de usuário
+view.enter-totp.title1=Digite a senha única
+view.enter-totp=Senha única 
+view.verify=Verificar
+error.invalid-otp=A senha única é inválida. Se ela foi usada recentemente, aguarde pelo próximo código e tente novamente.
+error.no-device=Nenhum dispositivo registrado para o usuário ou o usuário não existe

@@ -1,0 +1,27 @@
+#
+# Copyright (C) 2022 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=Set Password
+page.title=Set Password
+view.head1=Set password
+view.newPassword=New password
+view.repeatNewPassword=Repeat new password
+view.button=Update Password
+view.cancel=Cancel
+view.success.head1=Your password has been reset
+view.success.done=You can safely close this window.
+view.back.to.login=Return to login
+
+validation.error.token.invalid=Invalid link. Note that links are only valid for a short period of time.
+validation.error.token.required=Missing token
+validation.error.password.required=Your have to enter a new password
+validation.error.password.mismatch=Your passwords do not match
+validation.error.password.weak=Password not strong enough

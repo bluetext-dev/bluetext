@@ -1,0 +1,133 @@
+#*
+ * Copyright (C) 2015 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+#set ($page_symbol = $page_symbol_authenticate_bankid)
+#define($_body)
+#if($_maxWaitTime < 60)
+    #set($qr_time_left = $_maxWaitTime)
+#else
+    #set($qr_time_left = $_maxWaitTime / 60)
+#end
+#set($qr_time_elapsed = 0)
+<iframe id="autoStart" height="0" width="0" frameborder="0"></iframe>
+    <h1 class="center">#message("${_templatePrefix}.page.title")</h1>
+    #if ($_autostartTokenDataUri)
+    <div class="center">
+        <p class="h4" id="poll_message">#message("${_templatePrefix}.view.scan")</p>
+        <div class="p2">
+            <div>
+                <button class="button button-link p0 m0" id="trigger-fullscreen">
+                    <img id="autostartTokenQr" src="$_autostartTokenDataUri" alt="#message("${_templatePrefix}.view.qr.click")" title="#message("${_templatePrefix}.view.qr.click")">
+                </button>
+                <progress id="qr-time" max="$_maxWaitTime" value="$qr_time_elapsed"></progress>
+                <p class="h4 center" id="qr-time-duration"><span>${qr_time_left.intValue()}</span>
+                    <span id="qr-time-label-minutes" #if($_maxWaitTime < 60) class="hide"#end>#message("${_templatePrefix}.view.qr.minutes-left")</span>
+                    <span id="qr-time-label-seconds" #if($_maxWaitTime >= 60) class="hide"#end>#message("${_templatePrefix}.view.qr.seconds-left")</span>
+                 </p>
+                 <div class="mt2">
+                    <a class="button button-tiny button-primary-outline" id="qr-time-extend" href="$_authUrl">
+                    #message("${_templatePrefix}.view.button.qr-time-extend")
+                    </a>
+                 </div>
+            </div>
+        </div>
+    </div>
+    <div class="p3">
+        <details>
+            <summary>#message("${_templatePrefix}.view.qr.instruction.heading")</summary>
+            <ul>
+                <li>#message("${_templatePrefix}.view.qr.instruction.step1")</li>
+                <li>#message("${_templatePrefix}.view.qr.instruction.step2")</li>
+                <li>#message("${_templatePrefix}.view.qr.instruction.step3")</li>
+                <li>#message("${_templatePrefix}.view.qr.instruction.step4")</li>
+            </ul>
+            <p>#message("${_templatePrefix}.view.qr.instruction.outro")</p>
+        </details>
+        <details>
+            <summary>#message("${_templatePrefix}.view.qr.screen-reader.heading")</summary>
+            #message("${_templatePrefix}.view.qr.screen-reader.intro")
+            <ul>
+                <li>#message("${_templatePrefix}.view.qr.screen-reader.step1")</li>
+                <li>#message("${_templatePrefix}.view.qr.screen-reader.step2")</li>
+                <li>#message("${_templatePrefix}.view.qr.screen-reader.step3")</li>
+                <li>#message("${_templatePrefix}.view.qr.screen-reader.step4")
+                    <ul>
+                        <li>#message("${_templatePrefix}.view.qr.screen-reader.step4.1")</li>
+                        <li>#message("${_templatePrefix}.view.qr.screen-reader.step4.2")
+                            <ul>
+                                <li>#message("${_templatePrefix}.view.qr.screen-reader.step4.2.1")</li>
+                                <li>#message("${_templatePrefix}.view.qr.screen-reader.step4.2.2")</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+            <p class="left-align">#message("${_templatePrefix}.view.qr.screen-reader.outro")</p>
+        </details>
+    </div>
+    <p class="login-symbol">#message("${_templatePrefix}.view.or")</p>
+    <form class="manuallink pb0">
+        <a class="button button-fullwidth button-primary center" id="manualStart">
+            #message("${_templatePrefix}.view.button.this-device")</a>
+    </form>
+    <form name="cancel" action="cancel" class="manuallink" method="get">
+        <button type="submit" class="button button-fullwidth button-primary-outline">#message($_messages,
+            "${_templatePrefix}.view.button.cancel")</button>
+    </form>
+    #else
+    <div class="area center">
+        <p class="h4 mb4 semibold" id="poll_message">#message("${_templatePrefix}.view.title")</p>
+        #parse("fragments/spinner")
+    </div>
+    <form class="manuallink pb0 display-none">
+        <p class="h4 center">#message("${_templatePrefix}.view.manualstart")</p>
+        <a class="button button-fullwidth button-primary center" id="manualStart">
+            #message("${_templatePrefix}.view.button.manualstart")</a>
+    </form>
+    <form name="cancel" action="cancel" class="manuallink display-none" method="get">
+        <button type="submit" class="button button-fullwidth button-primary-outline">#message($_messages,
+            "${_templatePrefix}.view.button.cancel")</button>
+    </form>
+    #end
+<form action="$_action" method="post" id="pollingDone" class="display-none">
+    <input type="hidden" name="_pollingDone" value="true"/>
+</form>
+    #set($keyPrefix = "authenticator.bankid.service")
+    #if($_secureStartEnabled && $!bankidLaunchVersion2)
+        #parse("fragments/logger")
+        #parse("authenticator/bankid/launch/bankid-poller")
+        #parse("authenticator/bankid/launch/bankid-app-launcher")
+    #else
+        #parse("fragments/generic-poller")
+        #parse("authenticator/bankid/launch/handle-auto-start-uri")
+        #parse("fragments/authentication-app-launcher")
+    #end
+#end
+#parse("layouts/default")

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="256px" height="256px" viewBox="0 0 256 256" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 51.3 (57544) - http://www.bohemiancoding.com/sketch -->
+    <title>stackexchange-logo-white copy</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="stackexchange-logo-white-copy" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="se-icon" transform="translate(46.000000, 26.000000)" fill="#FFFFFF" fill-rule="nonzero">
+            <polygon id="Shape" points="0 89 164 89 164 123 0 123"></polygon>
+            <polygon id="Shape" points="0 45 164 45 164 79 0 79"></polygon>
+            <path d="M138.347594,0 L26.3101604,0 C11.8395722,0 0,12.1472393 0,27.1656442 L0,36 L164,36 L164,27.1656442 C164,12.1472393 152.59893,0 138.347594,0 Z" id="Shape"></path>
+            <path d="M0,132 L0,140.834356 C0,155.852761 11.8326693,168 26.2948207,168 L96.4143426,168 L96.4143426,204 L131.035857,168 L138.705179,168 C153.167331,168 165,155.852761 165,140.834356 L165,132 L0,132 Z" id="Shape"></path>
+        </g>
+    </g>
+</svg>

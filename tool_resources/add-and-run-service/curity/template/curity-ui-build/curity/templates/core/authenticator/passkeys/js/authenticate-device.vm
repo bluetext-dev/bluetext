@@ -1,0 +1,131 @@
+#*
+ * Copyright (C) 2023 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#parse("authenticator/webauthn/js/common-js")
+<script $!nonceAttr>
+    if (!isWebauthnSupported) {
+        showError('#message("${_templatePrefix}.view.error.not-supported")');
+        $("#registerDiv").hideElement();
+        throw new Error('WebAuthn not supported');
+    }
+        #if($assertionRequest)
+        var assertionRequest = $!assertionRequest
+        #else
+        var assertionRequest = undefined
+        #end
+        #if($_promptForUsername)
+        let doPromptForUsername = true;
+        #else
+        let doPromptForUsername = false;
+        #end
+        #if($showAdditionalPasskeyInfo)
+        let useAdditionalPasskeyInfo = true;
+        #else
+        let useAdditionalPasskeyInfo = false;
+        #end
+    if(!doPromptForUsername) {
+        $("#additionalDialog").showElement();
+    }
+    const submitUsername = (event) => {
+        event.preventDefault();
+        let formValues = $('#usernameForm').serialize();
+        $.ajax({
+            url: '$_promptForUsername',
+            method: 'POST',
+            dataType: 'json',
+            data: formValues
+        }).done(function (data) {
+            if (data.hasOwnProperty('noDevices')) {
+                handleNoDevices();
+            } else if (data.hasOwnProperty('assertionRequest')) {
+                assertionRequest = JSON.parse(data['assertionRequest']);
+                if (useAdditionalPasskeyInfo) {
+                    additionalDialog
+                    $("#additionalDialog").showElement();
+                    $("#usernameForm, #registerDiv").hideElement();
+                }
+                else {
+                    getAssertion(assertionRequest, true);
+                }
+            }
+        }).fail(function (jqXHR) {
+            showInputError('usernameInput')
+            let data = JSON.parse(jqXHR.responseText);
+            let errorMessage = data.errors && data.errors[0];
+            if (errorMessage === undefined) {
+                errorMessage = '#message("${_templatePrefix}.view.error.authentication")'
+            }
+            showError(errorMessage);
+        });
+        return false;
+    }
+    const getAssertion = (assertionRequest, isUserInteraction) => {
+        $("#alertWrapper, #authenticateDiv, #usernameForm").hideElement();
+        $("#waitingDiv").showElement();
+        webauthnJSON.get(assertionRequest)
+                .then(async function (response) {
+                    let form = $("#assertionForm");
+                    form.find("input[name='json']").val(JSON.stringify(response));
+                    if (! await supportsPlatformAuthenticatorAttachment()) {
+                        form.find('input[name="platform_attachment_not_supported"]').val("true");
+                    }
+                    form.submit();
+                }).catch(e => handleError(e, isUserInteraction));
+    }
+    const retry = () => {
+        getAssertion(assertionRequest, true);
+    };
+    const handleError = (error, isUserInteraction) => {
+        ## There are some cases where the browser may have disallowed an auto-initiated API call. This happens
+        ## (at least) in Safari when there is a popover (document is not focused). The user may also, in any case,
+        ## cancel the registration on the native form, but the error codes don't allow distinguishing these two cases.
+        ##
+        ## To avoid using heuristics (probably time-based)) to determine if the error was caused by the user, any error
+        ## after an auto-initiated API call is not considered the user's fault, and a "start" button is displayed.
+        ## This means that a user will see a "start" button after cancelling an auto-initiated registration, instead of
+        ## the "retry" button. This is slightly better than the heuristic failing and showing “retry” when the user
+        ## didn’t do anything.
+        if (isUserInteraction) {
+            if (error.name === webAuthnErrors.NOT_ALLOWED || error.name === webAuthnErrors.ABORTED) {
+                ## Probably cancel, but could be something else.
+                showInfo('#message("${_templatePrefix}.view.error.cancel-or-timeout")');
+            } else {
+                showError('#message("${_templatePrefix}.view.error.authentication")');
+            }
+            $("#authenticateButton").text('#message("${_templatePrefix}.view.button.try-again")');
+        }
+        ## else: display authenticate button as-is
+        $("#waitingDiv").hideElement();
+        $("#authenticateDiv").showElement()
+        console.error('Device assertion error', error)
+    }
+    const handleNoDevices = () => {
+        $('#noDevicesDiv').showElement();
+        $('#devicesDiv').hideElement();
+    }
+    const handleDevices = () => {
+        $('#devicesDiv').showElement();
+        $('#noDevicesDiv').hideElement();
+    }
+    $('#usernameForm').submit(submitUsername);
+    $("#authenticateButton").click(retry);
+    if ("$!noDevices".length > 0) {
+        handleNoDevices();
+    } else {
+        handleDevices();
+        if (!useAdditionalPasskeyInfo) {
+            if (assertionRequest !== undefined) {
+                getAssertion(assertionRequest, false);
+            } else if (!doPromptForUsername) {
+                showError('#message("${_templatePrefix}.view.error.could-not-start")');
+            }
+        }
+    }
+</script>

@@ -1,0 +1,20 @@
+#
+# Copyright (C) 2022 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+page.title=Confirmar autenticação em dois passos
+meta.title=Confirmar autenticação em dois passos
+view.title=Confirmar autenticação em dois passos using o método adicional:
+view.title.template=Confirmar autenticação em dois passos usando o método adicional: %s
+view.codes.title=Os seus códigos de recuperação
+view.codes.description=Estes códigos de recuperação podem ser usados para gerenciar os métodos adicionais de autenticação. Mantenha estes códigos em local seguro e accessível. Cada código apenas pode ser usado uma única vez. É possível gerar novos códigos a qualquer altura.
+view.codes.print=Imprimir
+view.confirm=Confirmar
+view.cancel=Cancelar

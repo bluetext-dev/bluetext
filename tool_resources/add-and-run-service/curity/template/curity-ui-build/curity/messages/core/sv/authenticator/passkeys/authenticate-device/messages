@@ -1,0 +1,30 @@
+#
+# Copyright (C) 2023 Curity AB. All rights reserved.
+#
+# The contents of this file are the property of Curity AB.
+# You may not copy or use this file, in either source code
+# or executable form, except in compliance with terms
+# set by Curity AB.
+#
+# For further information, please contact Curity AB.
+#
+
+meta.title=Logga in med en passkey
+page.title=Logga in med en passkey
+view.username=Användarnamn
+view.button.submit=Skicka
+view.button.try-again=Starta om
+view.button.authenticate=Starta
+view.register-additional=Registrera fler enheter
+view.no-registered-devices=Inga enheter registrerade för kontot
+view.register-device=Registrera enhet
+view.error.authentication=Något gick fel. Kunde inte autentisera
+view.error.cancel-or-timeout=Inloggningen avbröts, eller tog för lång tid.
+view.error.not-supported=Passkeys stöds för närvarande in i din webbläsare
+validation.error.username.required=Du måste fylla i användarnamn
+validation.error.could-not-start=Kunde inte starta inloggning
+view.signin=Logga in
+view.signin.passkey=Logga in med passkey
+view.create.passkey=Skapa passkey
+view.create.passkey.info=Om du ännu inte har en passkey, eller om du har problem med att logga in, vänligen skapa en ny passkey.
+view.passkey.info=Passkeys är ett användarvänligt sätt att logga in utan lösenord, genom att tillhandahålla en biometrisk eller PIN-kod. Säkerhetsfunktionerna på din mobile plattform loggar sedan in dig med stark kryptografi för att skydda din data.

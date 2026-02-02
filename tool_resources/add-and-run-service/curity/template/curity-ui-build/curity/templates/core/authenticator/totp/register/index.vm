@@ -1,0 +1,132 @@
+#*
+ * Copyright (C) 2018 Curity AB. All rights reserved.
+ *
+ * The contents of this file are the property of Curity AB.
+ * You may not copy or use this file, in either source code
+ * or executable form, except in compliance with terms
+ * set by Curity AB.
+ *
+ * For further information, please contact Curity AB.
+ *###
+#*
+ * This is the view where the user enters an OTP.
+ *
+ * For a full list of variables available in this template and their associated values, do the following:
+ *
+ * 1. Create a file called globals.vm in <installation-dir>/usr/share/templates/overrides/fragments
+ *
+ * 2. Add the following to this new file:
+ *
+ * <!--
+ *    All variables:
+ *    #foreach ($entry in $_context.entrySet())
+ *        $entry.key => $!entry.value
+ *    #end
+ * -->
+ *
+ * 3. Request this template again and view the HTML source code. All variables and their values will be shown in an
+ *    HTML comment at the top of the file.
+ *
+ * For more information about using the Velocity templating language, refer to
+ * http://velocity.apache.org/engine/devel/user-guide.html.
+ *###
+#if($_postBack && $_postBack["deviceId"])
+    #set($deviceId = $_postBack["deviceId"])
+#elseif($_deviceId)
+    #set($deviceId = $_deviceId)
+#end
+#if($_postBack && $_postBack["device_expires_in"])
+    #set($expirationTime = $_postBack["device_expires_in"])
+#elseif($_expirationTime)
+    #set($expirationTime = $_expirationTime)
+#end
+#if($_postBack && $_postBack["key"])
+    #set($key = $_postBack["key"])
+#elseif($_key)
+    #set($key = $_key)
+#end
+#if($_postBack && $_postBack["QR"])
+    #set($QR = $_postBack["QR"])
+#elseif($_QR)
+    #set($QR = $_QR)
+#end
+#if($_postBack && $_postBack["QRLink"])
+    #set($QRLink = $_postBack["QRLink"])
+#elseif($_QRLink)
+    #set($QRLink = $_QRLink)
+#end
+#set($step1Class = "")
+#set($step2Class = "hidden")
+#set ($page_symbol = $page_symbol_authenticate_totp)
+#define($_body)
+<form method="post">
+    #if ($_errors)
+        #set($_errorClass = "is-error is-error-danger")
+        #if ($key)
+            #set($step1Class = "hidden")
+            #set($step2Class = "")
+        #else
+            #set($step1Class = "")
+            #set($step2Class = "hidden")
+        #end
+    #end
+    <h1 class="center">#message("authenticator.totp.register.view.title1")</h1>
+    <div id="enter-device-id" class="$step1Class">
+        #if($key)
+            <div class="center">
+                <a href="$!QRLink" target="_blank">
+                    <img src="$!QR" class="mx-auto block"/>
+                </a>
+            </div>
+            <p>#message("authenticator.totp.register.view.p1")</p>
+            <input type="text" name="key" id="key" class="block full-width mb1 field-light hidden $!_errorClass"
+                   autofocus
+                   required value="$!key" autocapitalize="none">
+        #else
+            <div class="form-field">
+                <label class="$!_errorClass">#message("authenticator.totp.register.view.deviceId")</label>
+                <input type="text" name="deviceId" id="deviceId" class="block full-width mb1 field-light $!_errorClass"
+                       autofocus
+                       required value="$!deviceId" autocapitalize="none">
+                <i class="form-field-icon icon ion-iphone"></i>
+            </div>
+        #end
+        <button type="" id="button-next" class="button button-fullwidth button-primary mt2">#message(
+                "authenticator.totp.register.view.next")</button>
+    </div>
+    <div id="enter-totp" class="$step2Class">
+        <div class="form-field">
+            <label class="$!_errorClass">#message("authenticator.totp.register.view.totp")</label>
+            <input type="text" name="totp" id="totp" class="block full-width mb1 field-light $!_errorClass"
+                   required value="" autocapitalize="none">
+            <i class="form-field-icon icon ion-grid"></i>
+        </div>
+##        Uncomment this if you want the user to set the expiration time of the device he is registering
+##        Any value set in the configuration of the authenticator overrides this
+##        The time should be posted in seconds in the backend so either make the necessary calculations
+##        or make sure that the users are aware
+##        <div class="form-field">
+##            <label>#message("authenticator.totp.register.view.device-expiration")</label>
+##            <input type="number" name="device_expires_in" id="device_expires_in"
+##                   class="block full-width mb1 field-light"
+##                   value="$!expirationTime" autocapitalize="none">
+##            <i class="form-field-icon icon ion-clock"></i>
+##        </div>
+        <button type="submit" class="button button-fullwidth button-primary">#message(
+                "authenticator.totp.register.view.register")</button>
+    </div>
+</form>
+    #parse("fragments/jquery")
+<script type="text/javascript" $!nonceAttr>
+    jQuery(document).ready(function ($) {
+        $("#button-next").on("click", function () {
+            $("#enter-device-id").fadeOut(
+                    function () {
+                        $("#enter-totp").fadeIn();
+                        $("#totp").focus();
+                    });
+        });
+    });
+</script>
+#end
+#parse("layouts/default")
