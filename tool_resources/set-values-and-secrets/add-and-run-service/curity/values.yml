@@ -1,1 +1,6 @@
 # Values for curity service
+curity-host: curity
+curity-port: 8443
+base-url: https://localhost:8443
+web-app-host: http://localhost
+web-app-port: 3000
