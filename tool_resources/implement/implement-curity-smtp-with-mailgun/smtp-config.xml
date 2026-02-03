@@ -2,11 +2,11 @@
       <email-provider>
         <id>default-email-provider</id>
         <smtp>
-          <smtp-host>smtp.eu.mailgun.org</smtp-host>
-          <smtp-port>587</smtp-port>
-          <default-sender>accounts@bluetext.dev</default-sender>
-          <username>accounts@bluetext.dev</username>
-          <password>{{ mailgun-password }}</password>
+          <smtp-host>${MAILGUN_SMTP_HOST}</smtp-host>
+          <smtp-port>${MAILGUN_SMTP_PORT}</smtp-port>
+          <default-sender>${MAILGUN_DEFAULT_SENDER}</default-sender>
+          <username>${MAILGUN_SMTP_USERNAME}</username>
+          <password>${MAILGUN_SMTP_PASSWORD}</password>
         </smtp>
       </email-provider>
     </email-providers>
