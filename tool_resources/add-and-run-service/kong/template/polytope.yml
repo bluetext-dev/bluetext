@@ -1,12 +1,14 @@
 tools:
   kong:
     info: "Runs the Kong API Gateway"
+    await: [set-values-and-secrets]
     run:
       - tool: polytope/kong!simple
         args:
           image: gcr.io/arched-inkwell-420116/kong-oauth-proxy:latest
           config-file: { type: host, path: ./services/kong/kong.yml }
           autoreload: true
+          restart: { policy: always }
           env:
             - { name: KONG_ADMIN_LISTEN, value: "0.0.0.0:8001" }
             - { name: KONG_PROXY_LISTEN, value: "0.0.0.0:8000" }

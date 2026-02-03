@@ -15,7 +15,7 @@ tools:
             - { name: POSTGRES_USER, value: pt.secret {{ project-name }}-username }
             - { name: POSTGRES_PASSWORD, value: pt.secret {{ project-name }}-password }
             - { name: POSTGRES_HOST_AUTH_METHOD, value: scram-sha-256 }
-          restart: { policy: on-failure }
+          restart: { policy: always }
           data-path: /var/lib/postgresql/data
           service-id: {{ project-name }}
           data-volume: { id: postgres-data-{{ project-name }}, type: volume, scope: project }

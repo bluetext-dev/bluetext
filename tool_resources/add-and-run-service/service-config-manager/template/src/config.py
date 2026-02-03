@@ -30,29 +30,23 @@ class Config:
             self.logger.info(f"🔍 Scanning for config files in {self.config_dir}")
             self._targets = {}
             
-            # Check for couchbase config
-            couchbase_opts = ['couchbase.yaml', 'couchbase.yml']
-            for opt in couchbase_opts:
-                path = self.config_dir / opt
-                if path.exists():
-                    self._targets['couchbase'] = path
-                    break
+            # Check for couchbase config (recursive)
+            couchbase_files = list(self.config_dir.rglob('couchbase.y*ml'))
+            if couchbase_files:
+                self._targets['couchbase'] = couchbase_files[0]
+                self.logger.info(f"✅ Found Couchbase config: {couchbase_files[0]}")
             
-            # Check for redpanda config
-            redpanda_opts = ['redpanda.yaml', 'redpanda.yml']
-            for opt in redpanda_opts:
-                path = self.config_dir / opt
-                if path.exists():
-                    self._targets['redpanda'] = path
-                    break
+            # Check for redpanda config (recursive)
+            redpanda_files = list(self.config_dir.rglob('redpanda.y*ml'))
+            if redpanda_files:
+                self._targets['redpanda'] = redpanda_files[0]
+                self.logger.info(f"✅ Found Redpanda config: {redpanda_files[0]}")
 
-            # Check for postgres config
-            postgres_opts = ['postgres.sql']
-            for opt in postgres_opts:
-                path = self.config_dir / opt
-                if path.exists():
-                    self._targets['postgres'] = path
-                    break
+            # Check for postgres config (recursive)
+            postgres_files = list(self.config_dir.rglob('postgres.sql'))
+            if postgres_files:
+                self._targets['postgres'] = postgres_files[0]
+                self.logger.info(f"✅ Found Postgres config: {postgres_files[0]}")
         
         return self._targets
     

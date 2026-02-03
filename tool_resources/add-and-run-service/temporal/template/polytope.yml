@@ -9,7 +9,7 @@ tools:
           image: temporalio/auto-setup:1.26.3.0
           id: temporal
           restart:
-            policy: on-failure
+            policy: always
           services:
             - id: temporal
               ports:

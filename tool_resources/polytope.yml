@@ -421,114 +421,74 @@ tools:
 
       - id: read-dependencies
         after: {step: scaffold-base-structure}
-        tool: pt/run-script
-        args:
-          repo: {type: host, path: .}
-          language: python
-          dependencies: [pyyaml]
-          mounts:
-            - path: /tool-resources
-              source:
-                type: repo
-                repo: "#pt-clj pt/module-repo-ref"
-                path: tool_resources/add-and-run-service
-          script:
-            type: string
-            data: |
-              import yaml
-              import json
-              import sys
-              from pathlib import Path
-
-              template = "{pt.param template}"
-              print(f"Resolving dependencies for {template}...")
-
-              visited = set()
-              results = []
-
-              def collect_dependencies(dep_path):
-                  if dep_path in visited:
-                      return
-                  visited.add(dep_path)
-
-                  dep_file = Path(f"/tool-resources/{dep_path}/dependencies.yml")
-                  if not dep_file.exists():
-                      return
-
-                  try:
-                      with open(dep_file) as f:
-                          data = yaml.safe_load(f) or {}
-                  except Exception as e:
-                      print(f"Warning: Failed to parse {dep_file}: {e}")
-                      return
-
-                  # First recursive pass for dependencies of this service
-                  current_deps = data.get("dependencies", [])
-                  if current_deps:
-                      for sub_dep in current_deps:
-                          sub_name = sub_dep.get("name")
-                          sub_path = sub_dep.get("path", sub_name)
-                          if sub_path:
-                              # Recursively collect ITS dependencies first
-                              collect_dependencies(sub_path)
-                              
-                              # Then add it if not already added to results (to maintain order for bottom-up if needed, 
-                              # though scaffold-deps order might not strictly matter if they are independent. 
-                              # But usually we want deps scaffolded before dependents? 
-                              # Actually _scaffold-deps runs in parallel properly if we construct the graph, 
-                              # but here it's just a list. 
-                              # Let's verify if we need to add to results check.)
-                              
-                              # Simple unique add to list
-                              exists = False
-                              for r in results:
-                                  if r.get("name") == sub_name:
-                                      exists = True
-                                      break
-                              if not exists:
-                                  results.append(sub_dep)
-
-              # Start with the main template
-              collect_dependencies(template)
-
-              # Also need to get language from the main template
-              main_dep_file = Path(f"/tool-resources/{template}/dependencies.yml")
-              main_lang = None
-              if main_dep_file.exists():
-                   with open(main_dep_file) as f:
-                       main_data = yaml.safe_load(f) or {}
-                       main_lang = main_data.get("language")
-
-              output = {
-                  "dependencies": results,
-                  "language": main_lang
-              }
-              
-              print(f"📦 Found {len(results)} transitive dependencies")
-              
-              with open("/dependencies.json", "w") as f:
-                  json.dump(output, f)
-
-        # Output capturing wrapper
         code: |-
           #pt-clj
-          (let [container-id (:container-id last-step)]
-             (let [content (pt/read-container-file container-id "/dependencies.json")
-                   data (pt/read-json content)
-                   deps (or (:dependencies data) [])
-                   lang (:language data)]
-               (pt/log (str "📦 Recursive resolution found " (count deps) " dependencies"))
-               
-               ;; Scaffold language directories if specified
-               (when lang
-                 (pt/call-module "_scaffold-language" {:language lang}))
-               
-               ;; Handle dependency scaffolding
-               (when (seq deps)
-                 (pt/call-module "_scaffold-deps" {:deps deps
-                                                    :on-conflict (:on-conflict params)
-                                                    :target (:target params)}))
-               {:dependencies deps :language lang}))
+          (let [template (:template params)
+                ;; Mount the entire tool resources dir to access all dependencies
+                container-id (pt/spawn {:image "registry.k8s.io/pause:3.9"
+                                        :id (str "read-deps-" template)
+                                        :restart {:policy "never"}
+                                        :mounts [{:path "/deps-root"
+                                                  :source {:type "repo"
+                                                           :repo pt/module-repo-ref
+                                                           :path "tool_resources/add-and-run-service"}}]})
+                
+                ;; Helper to read usage of deps
+                read-deps-file (fn [name]
+                                 (try
+                                   (let [path (str "/deps-root/" name "/dependencies.yml")
+                                         content (pt/read-container-file container-id path)]
+                                     (pt/read-yaml content))
+                                   (catch Exception e nil)))
+                
+                ;; Recursive collection
+                collect-deps (fn collect-deps [name visited]
+                               (if (contains? visited name)
+                                 [] #_ "Cycle detected or already visited, return empty"
+                                 (let [data (read-deps-file name)
+                                       deps (or (:dependencies data) [])
+                                       visited (conj visited name)]
+                                   ;; Map over deps, recurse, and flatten
+                                   (reduce (fn [acc dep]
+                                             (let [dep-name (:name dep)
+                                                   dep-path (or (:path dep) dep-name)
+                                                   sub-deps (collect-deps dep-path visited)]
+                                               (concat acc [dep] sub-deps)))
+                                           []
+                                           deps))))]
+            
+            (pt/await-started {:type "deployment" :ref container-id})
+            
+            (let [;; Get main language
+                  main-data (read-deps-file template)
+                  lang (:language main-data)
+                  
+                  ;; Collect all deps recursively
+                  all-deps (collect-deps template #{})
+                  
+                  ;; Deduplicate by name (keep first occurrence or last? usually first is fine, set logic handles it)
+                  ;; We want to preserve object structure, so distinct-by name
+                  unique-deps (vals (reduce (fn [acc dep]
+                                              (if (contains? acc (:name dep))
+                                                acc
+                                                (assoc acc (:name dep) dep)))
+                                            {}
+                                            all-deps))]
+              
+              (pt/log (str "📦 Recursive resolution found " (count unique-deps) " unique dependencies"))
+              (pt/stop {:type "container" :ref container-id})
+
+              ;; Scaffold language directories if specified
+              (when lang
+                (pt/call-module "_scaffold-language" {:language lang}))
+
+              ;; Handle dependency scaffolding
+              (when (seq unique-deps)
+                (pt/call-module "_scaffold-deps" {:deps unique-deps
+                                                   :on-conflict (:on-conflict params)
+                                                   :target (:target params)}))
+              
+              {:dependencies unique-deps :language lang}))
 
       - id: scaffold-services
         after: {step: read-dependencies}
@@ -723,11 +683,11 @@ tools:
           language: python
           dependencies: [pyyaml]
           mounts:
-            - path: /dependencies.yml
+            - path: /deps-root
               source:
                 type: repo
                 repo: "#pt-clj pt/module-repo-ref"
-                path: "#pt-clj (str \"tool_resources/add-and-run-service/\" (:template params) \"/dependencies.yml\")"
+                path: tool_resources/add-and-run-service
             - path: /service-configs
               source:
                 type: repo
@@ -744,11 +704,50 @@ tools:
                   print("Skipping - run is not enabled")
                   exit(0)
 
-              # Read dependencies from mounted file
-              with open("/dependencies.yml") as f:
-                  deps_data = yaml.safe_load(f) or {}
+              template = "{pt.param template}"
+              print(f"Resolving dependencies for {template}...")
 
-              deps = deps_data.get("dependencies", [])
+              visited = set()
+              results = []
+
+              def collect_dependencies(dep_path):
+                  if dep_path in visited:
+                      return
+                  visited.add(dep_path)
+
+                  dep_file = Path(f"/deps-root/{dep_path}/dependencies.yml")
+                  if not dep_file.exists():
+                      return
+
+                  try:
+                      with open(dep_file) as f:
+                          data = yaml.safe_load(f) or {}
+                  except Exception as e:
+                      print(f"Warning: Failed to parse {dep_file}: {e}")
+                      return
+
+                  # First recursive pass for dependencies of this service
+                  current_deps = data.get("dependencies", [])
+                  if current_deps:
+                      for sub_dep in current_deps:
+                          sub_name = sub_dep.get("name")
+                          sub_path = sub_dep.get("path", sub_name)
+                          if sub_path:
+                              collect_dependencies(sub_path)
+                              
+                              exists = False
+                              for r in results:
+                                  if r.get("name") == sub_name:
+                                      exists = True
+                                      break
+                              if not exists:
+                                  results.append(sub_dep)
+
+              # Start with the main template
+              collect_dependencies(template)
+              
+              deps = results
+
               if not deps:
                   print("No dependencies to process")
                   exit(0)

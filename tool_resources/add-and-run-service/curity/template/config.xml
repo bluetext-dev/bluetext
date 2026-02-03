@@ -120,10 +120,10 @@
       <settings>
         <authentication-service xmlns="https://curity.se/ns/conf/profile/authentication">
           <redirect-url-whitelist>
-            <url tags=" I3tXRUJfQVBQX1VSTH0= ">http://localhost:3000</url>
-            <url tags=" I3tXRUJfQVBQX1VSTH0q ">http://localhost:3000*</url>
+            <url>http://localhost:3000</url>
+            <url>http://localhost:3000*</url>
           </redirect-url-whitelist>
-          <logout-redirect-url tags=" I3tXRUJfQVBQX1VSTH0= ">http://localhost:3000</logout-redirect-url>
+          <logout-redirect-url>http://localhost:3000</logout-redirect-url>
           <authenticators>
             <authenticator>
               <id>default-authenticator</id>
@@ -468,8 +468,8 @@
               <client>
                 <id>spa-client</id>
                 <secret>$5$RbiJ8E3azxUdOZx8$jpj3y0vsGVOILRAQV.6CGFLchJcEbpPvU33PnAetvQ3</secret>
-                <redirect-uris tags=" I3tXRUJfQVBQX1VSTH0vYXV0aC9jYWxsYmFjaw== ">http://localhost:3000/auth/callback</redirect-uris>
-                <application-url tags=" I3tXRUJfQVBQX1VSTH0= ">http://localhost:3000</application-url>
+                <redirect-uris>http://localhost:3000/auth/callback</redirect-uris>
+                <application-url>http://localhost:3000</application-url>
                 <access-token-ttl>3600</access-token-ttl>
                 <refresh-token-ttl>57600</refresh-token-ttl>
                 <refresh-token-max-rolling-lifetime>57600</refresh-token-max-rolling-lifetime>
@@ -480,7 +480,7 @@
                 <user-authentication>
                   <force-authn>true</force-authn>
                 </user-authentication>
-                <allowed-origins tags=" I3tXRUJfQVBQX1VSTH0= ">http://localhost:3000</allowed-origins>
+                <allowed-origins>http://localhost:3000</allowed-origins>
                 <capabilities>
                   <code/>
                 </capabilities>
