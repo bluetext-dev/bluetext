@@ -1,1 +1,3 @@
-values: []
+mailgun-smtp-host: smtp.eu.mailgun.org
+mailgun-smtp-port: 587
+mailgun-default-sender: accounts@bluetext.dev
