@@ -12,19 +12,17 @@ tools:
             - { path: /workspace, source: { type: host, path: . }}
   {{ project-name }}:
     info: "Runs the Curity Identity Server (blueprint: curity-identity-provider)"
+    await: [set-values-and-secrets]
     run:
       - tool: polytope/curity
         args:
           image: curity.azurecr.io/curity/idsvr:10.4.0
-          config-file: { type: host, path: ./config/{{ project-name }}/config.xml }
+          config-file: { type: host, path: ./services/{{ project-name }}/config.xml }
           restart: { policy: always }
           password: "{pt.secret curity-password}"
           env:
             - { name: ADMIN, value: true }
-            - { name: CURITY_BASE_URL, value: "{pt.value curity-host}:{pt.value curity-port}" }
-            - { name: BASE_URL, value: pt.value base-url }
-            - { name: WEB_APP_URL, value: "{pt.value web-app-host}:{pt.value web-app-port}" }
-            - { name: AGENT_BASE_URL, value: "{pt.value web-app-host}:{pt.value web-app-port}" }
+            - { name: CURITY_BASE_URL, value: "{pt.value curity-external-host}:{pt.value curity-external-port}" }
             - { name: POSTGRES_USERNAME, value: pt.secret postgres-username }
           mounts:
             - { path: /opt/idsvr/usr/bin/post-commit-cli-scripts, source: { type: host, path: ./services/{{ project-name }}/post-commit-cli-scripts }}

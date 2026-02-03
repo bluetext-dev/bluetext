@@ -2,13 +2,14 @@ tools:
   service-config-manager:
     info: Manages Redpanda topics and Couchbase buckets/scopes/collections
     await: [set-values-and-secrets]
+
     run:
       - tool: polytope/python
         args:
           await: false
           image: python:3.11.8-slim-bookworm
           id: service-config-manager
-          restart: { policy: on-failure }
+          restart: { policy: always }
           code: { type: repo, path: . }
           cmd: ./bin/run
           create: when-missing
@@ -29,5 +30,5 @@ tools:
             - { name: POSTGRES_USER, value: pt.secret service-config-manager-postgres-user }
             - { name: POSTGRES_PASSWORD, value: pt.secret service-config-manager-postgres-password }
           mounts:
-            - { path: /config/, source: { type: repo, path: config }}
+            - { path: /config/, source: { type: host, path: ./config }}
             - { path: /root/.cache/, source: { type: volume, scope: project, id: dependency-cache } }
