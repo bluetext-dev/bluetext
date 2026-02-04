@@ -8,7 +8,7 @@ tools:
           image: gcr.io/arched-inkwell-420116/kong-oauth-proxy:latest
           config-file: { type: host, path: ./services/kong/kong.yml }
           autoreload: true
-          restart: { policy: always }
+          restart: { policy: on-failure }
           env:
             - { name: KONG_ADMIN_LISTEN, value: "0.0.0.0:8001" }
             - { name: KONG_PROXY_LISTEN, value: "0.0.0.0:8000" }
