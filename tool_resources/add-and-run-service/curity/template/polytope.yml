@@ -9,6 +9,7 @@ tools:
           image: curity.azurecr.io/curity/idsvr:10.4.0
           config-file: { type: repo, path: /config/curity/config.xml }
           restart: { policy: always }
+          create: when-missing
           password: "{pt.secret curity-password}"
           env:
             - { name: ADMIN, value: true }
