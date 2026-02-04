@@ -30,5 +30,5 @@ tools:
             - { name: POSTGRES_USER, value: pt.secret service-config-manager-postgres-user }
             - { name: POSTGRES_PASSWORD, value: pt.secret service-config-manager-postgres-password }
           mounts:
-            - { path: /config/, source: { type: host, path: ./config }}
+            - { path: /config/, source: { type: repo, path: /config }}
             - { path: /root/.cache/, source: { type: volume, scope: project, id: dependency-cache } }

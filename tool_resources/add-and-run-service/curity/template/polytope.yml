@@ -1,15 +1,5 @@
 tools: 
-  add-phantom-token-to-kong:
-    info: "Configures Kong (if present) to work with the phantom token pattern using Curity."
-    run:
-      - tool: polytope/python
-        args:
-          image: python:3.11.8-slim-bookworm
-          id: phantom-token-kong
-          code: { type: repo, path: . }
-          cmd: ./services/{{ project-name }}/bin/kong
-          mounts:        
-            - { path: /workspace, source: { type: host, path: . }}
+
   {{ project-name }}:
     info: "Runs the Curity Identity Server (blueprint: curity-identity-provider)"
     await: [set-values-and-secrets]
@@ -17,7 +7,7 @@ tools:
       - tool: polytope/curity
         args:
           image: curity.azurecr.io/curity/idsvr:10.4.0
-          config-file: { type: host, path: ./services/{{ project-name }}/config.xml }
+          config-file: { type: repo, path: /config/curity/config.xml }
           restart: { policy: always }
           password: "{pt.secret curity-password}"
           env:
@@ -25,8 +15,8 @@ tools:
             - { name: CURITY_BASE_URL, value: "{pt.value curity-external-host}:{pt.value curity-external-port}" }
             - { name: POSTGRES_USERNAME, value: pt.secret postgres-username }
           mounts:
-            - { path: /opt/idsvr/usr/bin/post-commit-cli-scripts, source: { type: host, path: ./services/{{ project-name }}/post-commit-cli-scripts }}
-            - { path: /opt/idsvr/etc/init/curity-users.xml, source: { type: host, path: ./services/{{ project-name }}/users.xml }}
-            - { path: /opt/idsvr/usr/share/templates, source: { type: host, path: ./services/{{ project-name }}/curity-ui-build/curity/templates }}
-            - { path: /opt/idsvr/usr/share/messages, source: { type: host, path: ./services/{{ project-name }}/curity-ui-build/curity/messages }}
-            - { path: /opt/idsvr/usr/share/webroot, source: { type: host, path: ./services/{{ project-name }}/curity-ui-build/curity/webroot }}
+            - { path: /opt/idsvr/usr/bin/post-commit-cli-scripts, source: { type: repo, path: /config/curity/post-commit-cli-scripts }}
+            - { path: /opt/idsvr/etc/init/curity-users.xml, source: { type: repo, path: /config/curity/users.xml }}
+            - { path: /opt/idsvr/usr/share/templates, source: { type: repo, path: ./curity-ui-build/curity/templates }}
+            - { path: /opt/idsvr/usr/share/messages, source: { type: repo, path: ./curity-ui-build/curity/messages }}
+            - { path: /opt/idsvr/usr/share/webroot, source: { type: repo, path: ./curity-ui-build/curity/webroot }}
