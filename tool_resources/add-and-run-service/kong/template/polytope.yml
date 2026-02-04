@@ -1,23 +1,24 @@
 tools:
-  kong:
+  {{ project-name }}:
     info: "Runs the Kong API Gateway"
-    await: [set-values-and-secrets]
+    await: [load-config]
     run:
       - tool: polytope/kong!simple
         args:
           image: gcr.io/arched-inkwell-420116/kong-oauth-proxy:latest
-          config-file: { type: host, path: ./services/kong/kong.yml }
+          config-file: { type: host, path: /config/kong/kong.yml }
           autoreload: true
-          restart: { policy: on-failure }
+          restart: { policy: always }
+          create: when-missing
           env:
-            - { name: KONG_ADMIN_LISTEN, value: "0.0.0.0:8001" }
-            - { name: KONG_PROXY_LISTEN, value: "0.0.0.0:8000" }
+            - { name: KONG_ADMIN_LISTEN, value: "0.0.0.0:{pt.value kong-admin-port}" }
+            - { name: KONG_PROXY_LISTEN, value: "0.0.0.0:{pt.value kong-proxy-port}" }
             - { name: KONG_NGINX_HTTP_LUA_SHARED_DICT, value: 'phantom-token 10m' }
             - { name: KONG_PLUGINS, value: 'bundled,oauth-proxy,phantom-token' }
           plugins:
             - { name: phantom-token, package: kong-phantom-token, version: 2.0.0 }
 
           services:
-            - { id: kong, ports: [{ port: 8000, protocol: http, expose-as: 8000 }] }
-            - { id: kong-admin, ports: [{ port: 8001, protocol: http, expose-as: 8001 }] }
+            - { id: {{ project-name }}, ports: [{ port: "{pt.value kong-proxy-port}", protocol: http, expose-as: "{pt.value kong-proxy-port}" }] }
+            - { id: {{ project-name }}-admin, ports: [{ port: "{pt.value kong-admin-port}", protocol: http, expose-as: "{pt.value kong-admin-port}" }] }
 
