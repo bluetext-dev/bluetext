@@ -6,7 +6,7 @@ tools:
       - tool: polytope/kong!simple
         args:
           image: gcr.io/arched-inkwell-420116/kong-oauth-proxy:latest
-          config-file: { type: host, path: /config/kong/kong.yml }
+          config-file: { type: repo, path: /config/kong/kong.yml }
           autoreload: true
           restart: { policy: always }
           create: when-missing
