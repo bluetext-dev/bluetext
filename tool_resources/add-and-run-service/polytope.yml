@@ -131,60 +131,64 @@ tools:
       - id: read-dependencies
         after: {step: scaffold-base-structure}
         code: |-
-          #pt-clj
-          (let [template (:template params)
-                container-id (pt/spawn {:image "registry.k8s.io/pause:3.9"
-                                        :id (str "read-deps-" template)
-                                        :restart {:policy "never"}
-                                        :mounts [{:path "/deps-root"
-                                                  :source {:type "repo"
-                                                           :repo pt/module-repo-ref
-                                                           :path "/tool_resources/add-and-run-service"}}]})
-                
-                read-deps-file (fn [name]
-                                 (try
-                                   (let [path (str "/deps-root/" name "/dependencies.yml")
-                                         content (pt/read-container-file container-id path)]
-                                     (pt/read-yaml content))
-                                   (catch Exception e nil)))
-                
-                collect-deps (fn collect-deps [name visited]
-                               (if (contains? visited name)
-                                 [] 
-                                 (let [data (read-deps-file name)
-                                       deps (or (:dependencies data) [])
-                                       visited (conj visited name)]
-                                   (reduce (fn [acc dep]
-                                             (let [dep-name (:name dep)
-                                                   dep-path (or (:path dep) dep-name)
-                                                   sub-deps (collect-deps dep-path visited)]
-                                               (concat acc [dep] sub-deps)))
-                                           []
-                                           deps))))]
-            
-            (pt/await-started {:type "deployment" :ref container-id})
-            
-            (let [main-data (read-deps-file template)
-                  lang (:language main-data)
-                  all-deps (collect-deps template #{})
-                  unique-deps (vals (reduce (fn [acc dep]
-                                              (if (contains? acc (:name dep))
-                                                acc
-                                                (assoc acc (:name dep) dep)))
-                                            {}
-                                            all-deps))]
-              
-              (pt/stop {:type "container" :ref container-id})
+          pt.js
+          const template = params.template;
+          const basePath = "tool_resources/add-and-run-service";
 
-              (when lang
-                (pt/call-module "_scaffold-language" {:language lang}))
+          function readDepsFile(name) {
+            try {
+              const path = `${basePath}/${name}/dependencies.yml`;
+              return pt.readYaml(pt.readRepoFile(path, { repo: pt.module_repo_ref }));
+            } catch (e) {
+              return null;
+            }
+          }
 
-              (when (seq unique-deps)
-                (pt/call-module "_scaffold-deps" {:deps unique-deps
-                                                   :on-conflict (:on-conflict params)
-                                                   :target (:target params)}))
-              
-              {:dependencies unique-deps :language lang}))
+          function collectDeps(name, visited) {
+            if (visited.has(name)) return [];
+
+            const data = readDepsFile(name);
+            if (!data) return [];
+
+            const deps = data.dependencies || [];
+            visited.add(name);
+
+            let result = [];
+            for (const dep of deps) {
+              const depName = dep.name;
+              const depPath = dep.path || depName;
+              result.push(dep);
+              result = result.concat(collectDeps(depPath, visited));
+            }
+            return result;
+          }
+
+          const mainData = readDepsFile(template);
+          const lang = mainData ? mainData.language : null;
+          const allDeps = collectDeps(template, new Set());
+
+          // Deduplicate by name
+          const uniqueDepsMap = {};
+          for (const dep of allDeps) {
+            if (!uniqueDepsMap[dep.name]) {
+              uniqueDepsMap[dep.name] = dep;
+            }
+          }
+          const uniqueDeps = Object.values(uniqueDepsMap);
+
+          if (lang) {
+            pt.callModule("_scaffold-language", { language: lang });
+          }
+
+          if (uniqueDeps.length > 0) {
+            pt.callModule("_scaffold-deps", {
+              deps: uniqueDeps,
+              "on-conflict": params["on-conflict"],
+              target: params.target
+            });
+          }
+
+          ({ dependencies: uniqueDeps, language: lang });
 
       - id: scaffold-services
         after: {step: read-dependencies}
@@ -263,8 +267,14 @@ tools:
                   with open(service_polytope_file, 'w') as f:
                       yaml.dump(config, f, default_flow_style=False, sort_keys=False)
 
-      - id: write-service-values-to-config
+      - id: set-service-values
         after: {step: apply-service-version}
+        tool: set-values-and-secrets
+        args:
+          source: "{pt.param template}"
+
+      - id: write-service-values-to-config
+        after: {step: set-service-values}
         tool: pt/run-script
         args:
           repo: {type: host, path: .}
@@ -289,8 +299,6 @@ tools:
               import os
 
               run = "{pt.param run}"
-              if run != "true":
-                  exit(0)
 
               with open("/source-values.yml") as f:
                   new_values = yaml.safe_load(f) or {}
@@ -368,8 +376,6 @@ tools:
               from pathlib import Path
 
               run_enabled = "{pt.param run}"
-              if run_enabled != "true":
-                  exit(0)
 
               template = "{pt.param template}"
 
@@ -501,8 +507,6 @@ tools:
               import os
 
               run_enabled = "{pt.param run}"
-              if run_enabled != "true":
-                  exit(0)
 
               repo_config_dir = Path("/repo/config")
               repo_config_dir.mkdir(parents=True, exist_ok=True)
@@ -601,5 +605,3 @@ tools:
         type: str
     run:
       - tool: stack
-        args:
-          target: "{pt.param name}"

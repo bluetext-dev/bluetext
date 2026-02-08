@@ -8,25 +8,18 @@ tools:
       # Check if Kong is present in the project and add it if missing
       - id: check-and-add-kong
         code: |-
-          #pt-clj
-          (let [container-id (pt/spawn {:image "registry.k8s.io/pause:3.9"
-                                        :id "check-kong-ctx"
-                                        :restart {:policy "never"}
-                                        :mounts [{:path "/polytope.yml"
-                                                  :source {:type "host"
-                                                           :path "polytope.yml"}}]})]
-            (pt/await-started {:type "deployment" :ref container-id})
-            (try
-              (let [poly-content (pt/read-container-file container-id "/polytope.yml")]
-                (if-not (clojure.string/includes? poly-content "template: kong")
-                  (do
-                    (pt/log "🚀 Kong not found. Adding Kong service...")
-                    (pt/call-module "add-and-run-service" {:template "kong" :name "kong" :run true}))
-                  (pt/log "✅ Kong already present in project.")))
-              (catch Exception e
-                (pt/log (str "⚠️ Could not read polytope.yml: " e)))
-              (finally
-                (pt/stop {:type "container" :ref container-id}))))
+          pt.js
+          try {
+            const polyContent = pt.readRepoFile("polytope.yml");
+            if (!polyContent.includes("template: kong")) {
+              pt.log("🚀 Kong not found. Adding Kong service...");
+              pt.callModule("add-and-run-service", { template: "kong", name: "kong", run: false });
+            } else {
+              pt.log("✅ Kong already present in project.");
+            }
+          } catch (e) {
+            pt.log(`⚠️ Could not read polytope.yml: ${e}`);
+          }
 
       - id: add-python-client
         after: {step: check-and-add-kong}
@@ -34,8 +27,9 @@ tools:
         args:
           name: jwt_validator
           language: python
+
       - id: add-typescript-client
-        after: {step: add-python-client}
+        after: {step: check-and-add-kong}
         tool: add-client
         args:
           name: phantom-token-handler
@@ -120,36 +114,20 @@ tools:
       - id: set-generated-secrets-in-runtime
         after: {step: generate-missing-secrets}
         code: |-
-          #pt-clj
-          (let [secrets-path "config/secrets.yml"
-                container-id (pt/spawn {:image "registry.k8s.io/pause:3.9"
-                                        :id "set-gen-secrets"
-                                        :restart {:policy "never"}
-                                        :mounts [{:path "/secrets.yml"
-                                                  :source {:type "host"
-                                                           :path secrets-path}}]})]
-            (pt/await-started {:type "deployment" :ref container-id})
-            (try
-              (let [secrets-content (pt/read-container-file container-id "/secrets.yml")
-                    secrets (pt/read-yaml secrets-content)]
-                (pt/log (str "🔐 Ensuring secrets are in context"))
-                (doseq [[k v] secrets]
-                  (pt/log (str "  Setting secret: " (name k) " = ***"))
-                  (pt/set-secret (name k) (str v))))
-              (catch Exception e
-                (pt/log (str "⚠️ Could not read secrets: " e))))
-            (pt/stop {:type "container" :ref container-id}))
-
-      - id: setup-kong-env-vars
-        after: {step: set-secrets}
-        tool: setup-environment-variables
-        args:
-          caller: implement
-          source: curity-phantom-token
-          target: kong
+          pt.js
+          try {
+            const secrets = pt.readYaml(pt.readRepoFile("config/secrets.yml")) || {};
+            pt.log("🔐 Ensuring secrets are in context");
+            for (const [k, v] of Object.entries(secrets)) {
+              pt.log(`  Setting secret: ${k} = ***`);
+              pt.setSecret(k, String(v));
+            }
+          } catch (e) {
+            pt.log(`⚠️ Could not read secrets: ${e}`);
+          }
 
       - id: update-kong-config
-        after: {step: setup-kong-env-vars}
+        after: {step: set-secrets}
         tool: pt/run-script
         args:
           repo: {type: host, path: .}
@@ -160,7 +138,7 @@ tools:
               source:
                 type: repo
                 repo: "#pt-clj pt/module-repo-ref"
-                path: tool_resources/implement/curity-phantom-token/kong-config
+                path: /tool_resources/implement/curity-phantom-token/kong-config
           script:
             type: string
             data: |
@@ -221,3 +199,11 @@ tools:
                   print(f"✅ Successfully added {added_count} services to {target_path}")
               else:
                   print("No new services added to kong.yml")
+
+      - id: setup-kong-env-vars
+        after: {step: update-kong-config}
+        tool: setup-environment-variables
+        args:
+          caller: implement
+          source: curity-phantom-token
+          target: kong

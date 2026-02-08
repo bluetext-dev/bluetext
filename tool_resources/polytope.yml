@@ -9,6 +9,7 @@ include:
   - implement/polytope.yml
   - setup-environment-variables/polytope.yml
   - add-and-run-service/polytope.yml
+  - add-client/polytope.yml
 
 tools:
 
@@ -75,36 +76,28 @@ tools:
     run:
       - id: load-values-and-secrets
         code: |-
-          #pt-clj
-          (let [container-id (pt/spawn {:image "registry.k8s.io/pause:3.9"
-                                        :id "load-config-ctx"
-                                        :restart {:policy "never"}
-                                        :mounts [{:path "/values.yml"
-                                                  :source {:type "host"
-                                                           :path "config/values.yml"}}
-                                                 {:path "/secrets.yml"
-                                                  :source {:type "host"
-                                                           :path "config/secrets.yml"}}]})]
-            (pt/await-started {:type "deployment" :ref container-id})
-            (try
-              (let [values-content (pt/read-container-file container-id "/values.yml")
-                    values (pt/read-yaml values-content)]
-                (pt/log (str "📦 Loading " (count values) " values from config/values.yml"))
-                (doseq [[k v] values]
-                  (pt/log (str "  Setting value: " (name k) " = " v))
-                  (pt/set-project-value (name k) (str v))))
-              (catch Exception e
-                (pt/log "ℹ️ No config/values.yml found or could not be read.")))
-            (try
-              (let [secrets-content (pt/read-container-file container-id "/secrets.yml")
-                    secrets (pt/read-yaml secrets-content)]
-                (pt/log (str "🔐 Loading " (count secrets) " secrets from config/secrets.yml"))
-                (doseq [[k v] secrets]
-                  (pt/log (str "  Setting secret: " (name k) " = ***"))
-                  (pt/set-secret (name k) (str v))))
-              (catch Exception e
-                (pt/log "ℹ️ No config/secrets.yml found or could not be read.")))
-            (pt/stop {:type "container" :ref container-id}))
+          pt.js
+          try {
+            const values = pt.readYaml(pt.readRepoFile("config/values.yml")) || {};
+            pt.log(`📦 Loading ${Object.keys(values).length} values from config/values.yml`);
+            for (const [k, v] of Object.entries(values)) {
+              pt.log(`  Setting value: ${k} = ${v}`);
+              pt.setProjectValue(k, String(v));
+            }
+          } catch (e) {
+            pt.log("ℹ️ No config/values.yml found or could not be read.");
+          }
+
+          try {
+            const secrets = pt.readYaml(pt.readRepoFile("config/secrets.yml")) || {};
+            pt.log(`🔐 Loading ${Object.keys(secrets).length} secrets from config/secrets.yml`);
+            for (const [k, v] of Object.entries(secrets)) {
+              pt.log(`  Setting secret: ${k} = ***`);
+              pt.setSecret(k, String(v));
+            }
+          } catch (e) {
+            pt.log("ℹ️ No config/secrets.yml found or could not be read.");
+          }
 
   initialize_session:
     info: |-
@@ -295,319 +288,7 @@ tools:
               path: "#pt-clj (str \"models/\" (:language params))"
               on-conflict: skip
 
-  add-client:
-    info: |
-      Adds a client to the project's clients directory.
-      Scaffolds the client code and updates pyproject.toml with dependencies.
-
-      Example: add-client(name: "couchbase", language: "python")
-    params:
-      - id: name
-        info: Client name (e.g., "couchbase", "temporal", "jwt_validator", "phantom-token-handler")
-        type: [enum, couchbase, temporal, jwt_validator, phantom-token-handler]
-      - id: language
-        info: Language for the client
-        type: [default, [enum, python, typescript], python]
-    run:
-      # Inlined setup-project-structure logic (chained tool resolution broken in Polytope)
-      - id: scaffold-base-structure
-        tool: polytope/scaffold
-        args:
-          container-id: scaffold-base-structure
-          actions:
-            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: setup-project-structure/base/clients}
-              path: clients
-              on-conflict: skip
-            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: setup-project-structure/base/models}
-              path: models
-              on-conflict: skip
-            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: setup-project-structure/base/services}
-              path: services
-              on-conflict: skip
-            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: setup-project-structure/base/config}
-              path: config
-              on-conflict: skip
-
-      - id: scaffold-language
-        after: {step: scaffold-base-structure}
-        tool: polytope/scaffold
-        args:
-          container-id: scaffold-language
-          actions:
-            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "#pt-clj (str \"setup-project-structure/languages/clients/\" (:language params))"}
-              path: "#pt-clj (str \"clients/\" (:language params))"
-              on-conflict: skip
-            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "#pt-clj (str \"setup-project-structure/languages/models/\" (:language params))"}
-              path: "#pt-clj (str \"models/\" (:language params))"
-              on-conflict: skip
-
-      - id: update-gitignore
-        after: {step: scaffold-base-structure}
-        tool: pt/run-script
-        args:
-          repo: {type: host, path: .}
-          language: bash
-          script:
-            type: string
-            data: |
-              #!/bin/bash
-              set -e
-
-              GITIGNORE_PATH="/repo/.gitignore"
-
-              # Create .gitignore if it doesn't exist
-              if [ ! -f "$GITIGNORE_PATH" ]; then
-                echo "Creating .gitignore file"
-                touch "$GITIGNORE_PATH"
-              fi
-
-              # Check if secrets.yml is already in .gitignore
-              if ! grep -q "secrets\.yml" "$GITIGNORE_PATH"; then
-                echo "Adding secrets.yml to .gitignore"
-                echo "" >> "$GITIGNORE_PATH"
-                echo "# Ignore secrets files" >> "$GITIGNORE_PATH"
-                echo "**/secrets.yml" >> "$GITIGNORE_PATH"
-              else
-                echo "✅ secrets.yml already in .gitignore"
-              fi
-
-              # Check if values.yml is already in .gitignore
-              if ! grep -q "values\.yml" "$GITIGNORE_PATH"; then
-                echo "Adding values.yml to .gitignore"
-                echo "**/values.yml" >> "$GITIGNORE_PATH"
-              else
-                echo "✅ values.yml already in .gitignore"
-              fi
-
-              echo "✅ .gitignore updated successfully"
-
-      - id: scaffold-client
-        after: {step: scaffold-language}
-        tool: polytope/scaffold
-        args:
-          actions:
-            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "#pt-clj (str \"add-client/\" (:language params) \"/\" (:name params) \"/template\")"}
-              path: "#pt-clj (str \"clients/\" (:language params) \"/clients/\" (:name params))"
-              on-conflict: skip
-      - id: update-pyproject
-        after: {step: scaffold-client}
-        tool: pt/run-script
-        args:
-          repo: {type: host, path: .}
-          language: python
-          script:
-            type: string
-            data: |
-              import re
-              from pathlib import Path
-
-              name = "{pt.param name}"
-              language = "{pt.param language}"
-
-              # Define dependency mapping
-              dependencies_map = {
-                  "couchbase": "couchbase>=4.4.0",
-                  "temporal": "temporalio>=1.6.0",
-                  "jwt_validator": "PyJWT>=2.8.0",
-              }
-
-              # Get the dependency to add
-              dependency = dependencies_map.get(name)
-              if not dependency:
-                  print(f"No dependency mapping found for {name}")
-                  exit(0)
-
-              # Path to pyproject.toml (scaffolded by the template)
-              pyproject_path = Path(f"/repo/clients/{language}/pyproject.toml")
-
-              # The pyproject.toml should have been scaffolded from the template
-              if not pyproject_path.exists():
-                  print(f"✅ pyproject.toml was scaffolded with the client template")
-                  exit(0)
-
-              # Read the file
-              content = pyproject_path.read_text()
-
-              # Check if dependency already exists
-              if dependency.split(">=")[0] in content:
-                  print(f"✅ Dependency {dependency} already exists in pyproject.toml")
-                  exit(0)
-
-              # Add dependency to the dependencies array
-              # Find the dependencies section and add the new dependency
-              pattern = r'(dependencies\s*=\s*\[)(.*?)(\])'
-
-              def add_dependency(match):
-                  deps_start = match.group(1)
-                  deps_content = match.group(2)
-                  deps_end = match.group(3)
-
-                  # Add the new dependency
-                  new_dep = f'\n    "{dependency}",'
-                  return deps_start + deps_content + new_dep + '\n' + deps_end
-
-              new_content = re.sub(pattern, add_dependency, content, flags=re.DOTALL)
-
-              # Write back
-              pyproject_path.write_text(new_content)
-              print(f"✅ Added {dependency} to pyproject.toml")
-
-      - id: update-tsconfig
-        after: {step: update-pyproject}
-        tool: pt/run-script
-        args:
-          repo: {type: host, path: .}
-          language: python
-          script:
-            type: string
-            data: |
-              import json
-              from pathlib import Path
-
-              name = "{pt.param name}"
-              language = "{pt.param language}"
-
-              if language != "typescript":
-                  exit(0)
-
-              tsconfig_path = Path(f"/repo/clients/{language}/tsconfig.json")
-              if not tsconfig_path.exists():
-                  print("⚠️ tsconfig.json not found")
-                  exit(0)
-
-              content = json.loads(tsconfig_path.read_text())
-              
-              # Ensure include array exists
-              if "include" not in content:
-                  content["include"] = []
-              
-              client_path = f"clients/{name}"
-              if client_path not in content["include"]:
-                  content["include"].append(client_path)
-                  tsconfig_path.write_text(json.dumps(content, indent=2))
-                  print(f"✅ Added {client_path} to tsconfig.json include")
-              else:
-                  print(f"✅ {client_path} already in tsconfig.json")
-
-      # Inlined set-values-and-secrets logic (chained tool resolution broken in Polytope)
-      - id: write-client-values-to-config
-        after: {step: update-tsconfig}
-        tool: pt/run-script
-        args:
-          repo: {type: host, path: .}
-          language: python
-          dependencies: [pyyaml]
-          mounts:
-            - path: /source-values.yml
-              source:
-                type: repo
-                repo: "#pt-clj pt/module-repo-ref"
-                path: "#pt-clj (str \"set-values-and-secrets/add-client/\" (:name params) \"/values.yml\")"
-            - path: /source-secrets.yml
-              source:
-                type: repo
-                repo: "#pt-clj pt/module-repo-ref"
-                path: "#pt-clj (str \"set-values-and-secrets/add-client/\" (:name params) \"/secrets.yml\")"
-          script:
-            type: string
-            data: |
-              import yaml
-              from pathlib import Path
-
-              # Read source values and secrets from mounted files
-              with open("/source-values.yml") as f:
-                  new_values = yaml.safe_load(f) or {}
-
-              with open("/source-secrets.yml") as f:
-                  new_secrets = yaml.safe_load(f) or {}
-
-              # Ensure config directory exists
-              config_dir = Path("/repo/config")
-              config_dir.mkdir(parents=True, exist_ok=True)
-
-              values_file = config_dir / "values.yml"
-              secrets_file = config_dir / "secrets.yml"
-
-              # Read existing values.yml or start fresh
-              if values_file.exists():
-                  with open(values_file) as f:
-                      existing_values = yaml.safe_load(f) or {}
-              else:
-                  existing_values = {}
-
-              # Read existing secrets.yml or start fresh
-              if secrets_file.exists():
-                  with open(secrets_file) as f:
-                      existing_secrets = yaml.safe_load(f) or {}
-              else:
-                  existing_secrets = {}
-
-              # Merge new values (new values take precedence)
-              for k, v in new_values.items():
-                  existing_values[k] = v
-
-              for k, v in new_secrets.items():
-                  existing_secrets[k] = v
-
-              # Write values.yml with header
-              values_header = """# Configuration values
-              # Non-sensitive configuration that can be committed to version control
-              # Generated and managed by Bluetext tools
-
-              """
-              with open(values_file, 'w') as f:
-                  f.write(values_header.replace("              ", ""))
-                  if existing_values:
-                      yaml.dump(existing_values, f, default_flow_style=False, sort_keys=True)
-
-              # Write secrets.yml with header
-              secrets_header = """# Configuration secrets
-              # Sensitive configuration that should NOT be committed to version control
-              # Add this file to .gitignore
-              # Generated and managed by Bluetext tools
-
-              """
-              with open(secrets_file, 'w') as f:
-                  f.write(secrets_header.replace("              ", ""))
-                  if existing_secrets:
-                      yaml.dump(existing_secrets, f, default_flow_style=False, sort_keys=True)
-
-              print(f"✅ Written {len(new_values)} values to config/values.yml")
-              print(f"✅ Written {len(new_secrets)} secrets to config/secrets.yml")
-
-      - id: set-client-values-in-runtime
-        after: {step: write-client-values-to-config}
-        code: |-
-          #pt-clj
-          (let [client-name (:name params)
-                safe-id (clojure.string/replace client-name #"[^a-z0-9-]" "-")
-                values-path (str "tool_resources/set-values-and-secrets/add-client/" client-name "/values.yml")
-                secrets-path (str "tool_resources/set-values-and-secrets/add-client/" client-name "/secrets.yml")
-                container-id (pt/spawn {:image "registry.k8s.io/pause:3.9"
-                                        :id (str "set-client-vals-" safe-id)
-                                        :restart {:policy "never"}
-                                        :mounts [{:path "/values.yml"
-                                                  :source {:type "repo"
-                                                           :repo pt/module-repo-ref
-                                                           :path values-path}}
-                                                 {:path "/secrets.yml"
-                                                  :source {:type "repo"
-                                                           :repo pt/module-repo-ref
-                                                           :path secrets-path}}]})]
-            (pt/await-started {:type "deployment" :ref container-id})
-            (let [values-content (pt/read-container-file container-id "/values.yml")
-                  secrets-content (pt/read-container-file container-id "/secrets.yml")
-                  values (pt/read-yaml values-content)
-                  secrets (pt/read-yaml secrets-content)]
-              (pt/log (str "📦 Setting " (count values) " values and " (count secrets) " secrets from source files"))
-              (doseq [[k v] values]
-                (pt/log (str "  Setting value: " (name k) " = " v))
-                (pt/set-project-value (name k) (str v)))
-              (doseq [[k v] secrets]
-                (pt/log (str "  Setting secret: " (name k) " = ***"))
-                (pt/set-secret (name k) (str v)))
-              (pt/log "✅ Successfully set all client bindings")
-              (pt/stop {:type "container" :ref container-id})))
+  # add-client has been moved to tool_resources/add-client/polytope.yml
 
   set-values-and-secrets:
     info: |
@@ -632,12 +313,12 @@ tools:
               source:
                 type: repo
                 repo: "#pt-clj pt/module-repo-ref"
-                path: "#pt-clj (let [source (:source params)] (cond (clojure.string/starts-with? source \"implement/\") (str \"set-values-and-secrets/\" source \"/values.yml\") (clojure.string/ends-with? source \"-client\") (str \"set-values-and-secrets/add-client/\" (clojure.string/replace source #\"-client$\" \"\") \"/values.yml\") :else (str \"set-values-and-secrets/add-and-run-service/\" source \"/values.yml\")))"
+                path: "#pt-clj (let [source (:source params)] (cond (clojure.string/starts-with? source \"implement/\") (str \"tool_resources/set-values-and-secrets/\" source \"/values.yml\") (clojure.string/ends-with? source \"-client\") (str \"tool_resources/set-values-and-secrets/add-client/\" (clojure.string/replace source #\"-client$\" \"\") \"/values.yml\") :else (str \"tool_resources/set-values-and-secrets/add-and-run-service/\" source \"/values.yml\")))"
             - path: /source-secrets.yml
               source:
                 type: repo
                 repo: "#pt-clj pt/module-repo-ref"
-                path: "#pt-clj (let [source (:source params)] (cond (clojure.string/starts-with? source \"implement/\") (str \"set-values-and-secrets/\" source \"/secrets.yml\") (clojure.string/ends-with? source \"-client\") (str \"set-values-and-secrets/add-client/\" (clojure.string/replace source #\"-client$\" \"\") \"/secrets.yml\") :else (str \"set-values-and-secrets/add-and-run-service/\" source \"/secrets.yml\")))"
+                path: "#pt-clj (let [source (:source params)] (cond (clojure.string/starts-with? source \"implement/\") (str \"tool_resources/set-values-and-secrets/\" source \"/secrets.yml\") (clojure.string/ends-with? source \"-client\") (str \"tool_resources/set-values-and-secrets/add-client/\" (clojure.string/replace source #\"-client$\" \"\") \"/secrets.yml\") :else (str \"tool_resources/set-values-and-secrets/add-and-run-service/\" source \"/secrets.yml\")))"
           script:
             type: string
             data: |
@@ -707,49 +388,28 @@ tools:
               print(f"✅ Written {len(new_values)} values to config/values.yml")
               print(f"✅ Written {len(new_secrets)} secrets to config/secrets.yml")
 
-      # Step 2: Read from source files and set in Polytope runtime
+      # Step 2: Read from user's config files (written by step 1) and set in Polytope runtime
       - id: set-from-config-files
         after: {step: write-to-config-files}
         code: |-
-          #pt-clj
-          (let [source (:source params)
-                safe-id (clojure.string/replace source #"[^a-z0-9-]" "-")
-                base-path (cond
-                            (clojure.string/starts-with? source "implement/")
-                              (str "tool_resources/set-values-and-secrets/" source)
-                            (clojure.string/ends-with? source "-client")
-                              (str "tool_resources/set-values-and-secrets/add-client/" (clojure.string/replace source #"-client$" ""))
-                            :else
-                              (str "tool_resources/set-values-and-secrets/add-and-run-service/" source))
-                values-path (str base-path "/values.yml")
-                secrets-path (str base-path "/secrets.yml")
-                container-id (pt/spawn {:image "registry.k8s.io/pause:3.9"
-                                        :id (str "set-vals-" safe-id)
-                                        :restart {:policy "never"}
-                                        :mounts [{:path "/values.yml"
-                                                  :source {:type "repo"
-                                                           :repo pt/module-repo-ref
-                                                           :path values-path}}
-                                                 {:path "/secrets.yml"
-                                                  :source {:type "repo"
-                                                           :repo pt/module-repo-ref
-                                                           :path secrets-path}}]})]
-            (pt/await-started {:type "deployment" :ref container-id})
-            (let [values-content (pt/read-container-file container-id "/values.yml")
-                  secrets-content (pt/read-container-file container-id "/secrets.yml")
-                  values (pt/read-yaml values-content)
-                  secrets (pt/read-yaml secrets-content)]
-              (pt/log (str "📦 Setting " (count values) " values and " (count secrets) " secrets from source files"))
-              ;; Set values in Polytope runtime
-              (doseq [[k v] values]
-                (pt/log (str "  Setting value: " (name k) " = " v))
-                (pt/set-project-value (name k) (str v)))
-              ;; Set secrets in Polytope runtime
-              (doseq [[k v] secrets]
-                (pt/log (str "  Setting secret: " (name k) " = ***"))
-                (pt/set-secret (name k) (str v)))
-              (pt/log "✅ Successfully set all bindings")
-              (pt/stop {:type "container" :ref container-id})))
+          pt.js
+          // Read from user's config files that were written by step 1
+          const values = pt.readYaml(pt.readRepoFile("config/values.yml")) || {};
+          const secrets = pt.readYaml(pt.readRepoFile("config/secrets.yml")) || {};
+
+          pt.log(`📦 Setting ${Object.keys(values).length} values and ${Object.keys(secrets).length} secrets from config files`);
+
+          for (const [k, v] of Object.entries(values)) {
+            pt.log(`  Setting value: ${k} = ${v}`);
+            pt.setProjectValue(k, String(v));
+          }
+
+          for (const [k, v] of Object.entries(secrets)) {
+            pt.log(`  Setting secret: ${k} = ***`);
+            pt.setSecret(k, String(v));
+          }
+
+          pt.log("✅ Successfully set all bindings");
 
   setup-service-for-client:
     info: |
@@ -932,11 +592,11 @@ tools:
                         [{:path (str "/source-values-" n ".yml")
                           :source {:type "repo"
                                    :repo pt/module-repo-ref
-                                   :path (str "set-values-and-secrets/add-and-run-service/" n "/values.yml")}}
+                                   :path (str "tool_resources/set-values-and-secrets/add-and-run-service/" n "/values.yml")}}
                          {:path (str "/source-secrets-" n ".yml")
                           :source {:type "repo"
                                    :repo pt/module-repo-ref
-                                   :path (str "set-values-and-secrets/add-and-run-service/" n "/secrets.yml")}}])
+                                   :path (str "tool_resources/set-values-and-secrets/add-and-run-service/" n "/secrets.yml")}}])
                       deps))
           script:
             type: string
@@ -1020,39 +680,25 @@ tools:
               print(f'✅ Written all dependency secrets to config/secrets.yml')
               "))
 
+      # Read from user's config files (written by previous step) and set in Polytope runtime
       - id: set-deps-values-in-runtime
         after: {step: write-deps-values-to-config}
         code: |-
-          #pt-clj
-          (let [deps (:deps params)
-                container-id (pt/spawn {:image "registry.k8s.io/pause:3.9"
-                                        :id "set-internal-deps-vals"
-                                        :restart {:policy "never"}
-                                        :mounts [{:path "/service-configs"
-                                                  :source {:type "repo"
-                                                           :repo pt/module-repo-ref
-                                                           :path "tool_resources/set-values-and-secrets/add-and-run-service"}}]})]
-            (pt/await-started {:type "deployment" :ref container-id})
-            (doseq [{dep-name :name} deps]
-              (let [values-path (str "/service-configs/" dep-name "/values.yml")
-                    secrets-path (str "/service-configs/" dep-name "/secrets.yml")]
-                (try
-                  (let [values-content (pt/read-container-file container-id values-path)
-                        values (pt/read-yaml values-content)]
-                    (pt/log (str "📦 Setting " (count values) " values for dependency " dep-name))
-                    (doseq [[k v] values]
-                      (pt/log (str "  Setting value: " (name k) " = " v))
-                      (pt/set-project-value (name k) (str v))))
-                  (catch Exception e
-                    (pt/log (str "⚠️ Could not read values for " dep-name))))
-                (try
-                  (let [secrets-content (pt/read-container-file container-id secrets-path)
-                        secrets (pt/read-yaml secrets-content)]
-                    (pt/log (str "🔐 Setting " (count secrets) " secrets for dependency " dep-name))
-                    (doseq [[k v] secrets]
-                      (pt/log (str "  Setting secret: " (name k) " = ***"))
-                      (pt/set-secret (name k) (str v))))
-                  (catch Exception e
-                    (pt/log (str "⚠️ Could not read secrets for " dep-name))))))
-            (pt/log "✅ Successfully set all dependency bindings")
-            (pt/stop {:type "container" :ref container-id})
+          pt.js
+          // Read from user's config files that were written by the previous step
+          const values = pt.readYaml(pt.readRepoFile("config/values.yml")) || {};
+          const secrets = pt.readYaml(pt.readRepoFile("config/secrets.yml")) || {};
+
+          pt.log(`📦 Setting ${Object.keys(values).length} values and ${Object.keys(secrets).length} secrets from config files`);
+
+          for (const [k, v] of Object.entries(values)) {
+            pt.log(`  Setting value: ${k} = ${v}`);
+            pt.setProjectValue(k, String(v));
+          }
+
+          for (const [k, v] of Object.entries(secrets)) {
+            pt.log(`  Setting secret: ${k} = ***`);
+            pt.setSecret(k, String(v));
+          }
+
+          pt.log("✅ Successfully set all dependency bindings");

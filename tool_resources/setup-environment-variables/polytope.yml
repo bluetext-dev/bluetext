@@ -25,7 +25,7 @@ tools:
               source:
                 type: repo
                 repo: "#pt-clj pt/module-repo-ref"
-                path: "#pt-clj (let [caller (:caller params) source (:source params) path (str \"setup-environment-variables/\" caller \"/\" source \"/required-env-vars.yml\")] path)"
+                path: "#pt-clj (let [caller (:caller params) source (:source params) path (str \"/tool_resources/setup-environment-variables/\" caller \"/\" source \"/required-env-vars.yml\")] path)"
           script:
             type: string
             data: |
@@ -124,10 +124,3 @@ tools:
               for var in vars_to_add:
                   print(f"   - {var['name']}")
 
-      - id: restart-service
-        after: {step: add-env-to-polytope}
-        code: |-
-          #pt-clj
-          (let [target (:target params)]
-            (pt/log (str "🔄 Restarting service to load new env vars: " target))
-            (pt/call-module target {}))
