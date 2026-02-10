@@ -11,9 +11,9 @@ tools:
         args:
           image: postgres:16.2
           env:
-            - { name: POSTGRES_DB, value: idsvr }
-            - { name: POSTGRES_USER, value: pt.secret {{ project-name }}-username }
-            - { name: POSTGRES_PASSWORD, value: pt.secret {{ project-name }}-password }
+            - { name: POSTGRES_DB, value: "{pt.value {{ project-name }}-database}" }
+            - { name: POSTGRES_USER, value: "{pt.value {{ project-name }}-username}" }
+            - { name: POSTGRES_PASSWORD, value: "{pt.secret {{ project-name }}-password}" }
             - { name: POSTGRES_HOST_AUTH_METHOD, value: scram-sha-256 }
           restart: { policy: always }
           data-path: /var/lib/postgresql/data
@@ -91,5 +91,5 @@ tools:
               ports:
                 - {protocol: http, port: 8081, expose-as: 8081}
           env:
-            - {name: PGWEB_DATABASE_URL, value: pt.secret {{ project-name }}-connection-string }
+            - {name: PGWEB_DATABASE_URL, value: "postgresql://{pt.value {{ project-name }}-username}:{pt.secret {{ project-name }}-password}@{{ project-name }}:5432/{pt.value {{ project-name }}-database}?sslmode=disable"}
           create: when-missing

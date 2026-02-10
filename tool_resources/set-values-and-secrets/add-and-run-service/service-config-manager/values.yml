@@ -8,3 +8,4 @@ service-config-manager-redpanda-host: redpanda
 service-config-manager-redpanda-port: 9092
 service-config-manager-postgres-host: postgres
 service-config-manager-postgres-db: postgres
+service-config-manager-postgres-user: postgres

@@ -1,4 +1,0 @@
-language: null
-dependencies:
-  - name: postgres
-    path: postgres

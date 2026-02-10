@@ -12,6 +12,7 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, '.'),
       '~': path.resolve(__dirname, './app'),
+      '@clients': path.resolve(__dirname, './clients'),
     },
   },
   plugins: [tailwindcss(), reactRouter(), tsconfigPaths()],

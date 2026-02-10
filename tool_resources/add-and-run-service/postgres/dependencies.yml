@@ -1,4 +1,0 @@
-language: null
-dependencies:
-  - name: service-config-manager
-    path: service-config-manager

@@ -9,7 +9,7 @@ tools:
     params:
       - id: template
         info: Template to scaffold
-        type: [enum, api_python_fastapi, frontend_typescript_react-router-v7, couchbase-server_enterprise-v7, temporal, temporal-ui, postgres, curity, kong]
+        type: [enum, python-fast-api, react-web-app, couchbase, temporal, temporal-ui, postgres, curity, kong, service-config-manager]
       - id: name
         info: Service name (e.g., "my-api"). Will be scaffolded to "services/<name>"
         type: str
@@ -128,70 +128,68 @@ tools:
               with open(target_file, 'w') as f:
                   yaml.dump(config, f, default_flow_style=False, sort_keys=False)
 
-      - id: read-dependencies
-        after: {step: scaffold-base-structure}
+      - id: validate-service-name
+        after: {step: ensure-load-config-in-stack}
+        tool: pt/run-script
+        args:
+          repo: {type: host, path: .}
+          language: python
+          dependencies: [pyyaml]
+          script:
+            type: string
+            data: |
+              import yaml
+              from pathlib import Path
+              import sys
+              import re
+
+              name = "{pt.param name}".lower()
+              name = re.sub(r"[^a-z0-9_-]", "-", name)
+
+              # Check if service directory already exists
+              service_path = Path(f"/repo/services/{name}")
+              if service_path.exists():
+                  print(f"ERROR: Service '{name}' already exists at services/{name}")
+                  sys.exit(1)
+
+              # Check if service is already registered in polytope.yml
+              polytope_path = Path("/repo/polytope.yml")
+              if polytope_path.exists():
+                  with open(polytope_path) as f:
+                      config = yaml.safe_load(f) or {}
+
+                  tools = config.get('tools', {})
+                  if name in tools:
+                      print(f"ERROR: Service '{name}' already registered in polytope.yml")
+                      sys.exit(1)
+
+              print(f"Service name '{name}' is available")
+
+      - id: scaffold-language
+        after: {step: validate-service-name}
         code: |-
           pt.js
           const template = params.template;
           const basePath = "tool_resources/add-and-run-service";
 
-          function readDepsFile(name) {
-            try {
-              const path = `${basePath}/${name}/dependencies.yml`;
-              return pt.readYaml(pt.readRepoFile(path, { repo: pt.module_repo_ref }));
-            } catch (e) {
-              return null;
-            }
+          // Try to read language from dependencies.yml (for backward compatibility)
+          let lang = null;
+          try {
+            const path = `${basePath}/${template}/dependencies.yml`;
+            const data = pt.readYaml(pt.readRepoFile(path, { repo: pt.module_repo_ref }));
+            lang = data ? data.language : null;
+          } catch (e) {
+            // No dependencies.yml or language specified
           }
-
-          function collectDeps(name, visited) {
-            if (visited.has(name)) return [];
-
-            const data = readDepsFile(name);
-            if (!data) return [];
-
-            const deps = data.dependencies || [];
-            visited.add(name);
-
-            let result = [];
-            for (const dep of deps) {
-              const depName = dep.name;
-              const depPath = dep.path || depName;
-              result.push(dep);
-              result = result.concat(collectDeps(depPath, visited));
-            }
-            return result;
-          }
-
-          const mainData = readDepsFile(template);
-          const lang = mainData ? mainData.language : null;
-          const allDeps = collectDeps(template, new Set());
-
-          // Deduplicate by name
-          const uniqueDepsMap = {};
-          for (const dep of allDeps) {
-            if (!uniqueDepsMap[dep.name]) {
-              uniqueDepsMap[dep.name] = dep;
-            }
-          }
-          const uniqueDeps = Object.values(uniqueDepsMap);
 
           if (lang) {
             pt.callModule("_scaffold-language", { language: lang });
           }
 
-          if (uniqueDeps.length > 0) {
-            pt.callModule("_scaffold-deps", {
-              deps: uniqueDeps,
-              "on-conflict": params["on-conflict"],
-              target: params.target
-            });
-          }
-
-          ({ dependencies: uniqueDeps, language: lang });
+          ({ language: lang });
 
       - id: scaffold-services
-        after: {step: read-dependencies}
+        after: {step: scaffold-language}
         tool: polytope/scaffold
         args:
           container-id: "#pt-clj (str \"scaffold-services-\" (:template params))"
@@ -267,14 +265,8 @@ tools:
                   with open(service_polytope_file, 'w') as f:
                       yaml.dump(config, f, default_flow_style=False, sort_keys=False)
 
-      - id: set-service-values
-        after: {step: apply-service-version}
-        tool: set-values-and-secrets
-        args:
-          source: "{pt.param template}"
-
       - id: write-service-values-to-config
-        after: {step: set-service-values}
+        after: {step: apply-service-version}
         tool: pt/run-script
         args:
           repo: {type: host, path: .}
@@ -296,15 +288,26 @@ tools:
             data: |
               import yaml
               from pathlib import Path
-              import os
+              import re
 
-              run = "{pt.param run}"
+              template = "{pt.param template}"
+              service_name = "{pt.param name}".lower()
+              service_name = re.sub(r"[^a-z0-9_-]", "-", service_name)
 
               with open("/source-values.yml") as f:
                   new_values = yaml.safe_load(f) or {}
 
               with open("/source-secrets.yml") as f:
                   new_secrets = yaml.safe_load(f) or {}
+
+              # Transform keys: replace template prefix with service name
+              def transform_key(key, template_name, svc_name):
+                  if key.startswith(f"{template_name}-"):
+                      return key.replace(f"{template_name}-", f"{svc_name}-", 1)
+                  return f"{svc_name}-{key}"
+
+              transformed_values = {transform_key(k, template, service_name): v for k, v in new_values.items()}
+              transformed_secrets = {transform_key(k, template, service_name): v for k, v in new_secrets.items()}
 
               config_dir = Path("/repo/config")
               config_dir.mkdir(parents=True, exist_ok=True)
@@ -324,10 +327,10 @@ tools:
               else:
                   existing_secrets = {}
 
-              for k, v in new_values.items():
+              for k, v in transformed_values.items():
                   existing_values[k] = v
 
-              for k, v in new_secrets.items():
+              for k, v in transformed_secrets.items():
                   existing_secrets[k] = v
 
               values_header = """# Configuration values
@@ -351,148 +354,32 @@ tools:
                   if existing_secrets:
                       yaml.dump(existing_secrets, f, default_flow_style=False, sort_keys=True)
 
-      - id: write-deps-values-to-config
-        after: {step: read-dependencies}
-        tool: pt/run-script
-        args:
-          repo: {type: host, path: .}
-          language: python
-          dependencies: [pyyaml]
-          mounts:
-            - path: /deps-root
-              source:
-                type: repo
-                repo: "#pt-clj pt/module-repo-ref"
-                path: /tool_resources/add-and-run-service
-            - path: /service-configs
-              source:
-                type: repo
-                repo: "#pt-clj pt/module-repo-ref"
-                path: /tool_resources/set-values-and-secrets/add-and-run-service
-          script:
-            type: string
-            data: |
-              import yaml
-              from pathlib import Path
+      - id: set-runtime-values
+        after: {step: write-service-values-to-config}
+        code: |-
+          pt.js
+          // Read from config files and set runtime values/secrets
+          const values = pt.readYaml(pt.readRepoFile("config/values.yml")) || {};
+          const secrets = pt.readYaml(pt.readRepoFile("config/secrets.yml")) || {};
 
-              run_enabled = "{pt.param run}"
+          pt.log(`📦 Setting ${Object.keys(values).length} values and ${Object.keys(secrets).length} secrets`);
 
-              template = "{pt.param template}"
+          for (const [k, v] of Object.entries(values)) {
+            pt.setProjectValue(k, String(v));
+          }
 
-              visited = set()
-              results = []
-
-              def collect_dependencies(dep_path):
-                  if dep_path in visited:
-                      return
-                  visited.add(dep_path)
-
-                  dep_file = Path(f"/deps-root/{dep_path}/dependencies.yml")
-                  if not dep_file.exists():
-                      return
-
-                  try:
-                      with open(dep_file) as f:
-                          data = yaml.safe_load(f) or {}
-                  except Exception as e:
-                      return
-
-                  current_deps = data.get("dependencies", [])
-                  if current_deps:
-                      for sub_dep in current_deps:
-                          sub_name = sub_dep.get("name")
-                          sub_path = sub_dep.get("path", sub_name)
-                          if sub_path:
-                              collect_dependencies(sub_path)
-                              
-                              exists = False
-                              for r in results:
-                                  if r.get("name") == sub_name:
-                                      exists = True
-                                      break
-                              if not exists:
-                                  results.append(sub_dep)
-
-              collect_dependencies(template)
-              
-              deps = results
-
-              if not deps:
-                  exit(0)
-
-              config_dir = Path("/repo/config")
-              config_dir.mkdir(parents=True, exist_ok=True)
-
-              values_file = config_dir / "values.yml"
-              secrets_file = config_dir / "secrets.yml"
-
-              if values_file.exists():
-                  with open(values_file) as f:
-                      existing_values = yaml.safe_load(f) or {}
-              else:
-                  existing_values = {}
-
-              if secrets_file.exists():
-                  with open(secrets_file) as f:
-                      existing_secrets = yaml.safe_load(f) or {}
-              else:
-                  existing_secrets = {}
-
-              for dep in deps:
-                  dep_name = dep.get("name")
-                  if not dep_name:
-                      continue
-
-                  values_path = Path(f"/service-configs/{dep_name}/values.yml")
-                  secrets_path = Path(f"/service-configs/{dep_name}/secrets.yml")
-
-                  if values_path.exists():
-                      with open(values_path) as f:
-                          new_values = yaml.safe_load(f) or {}
-                      for k, v in new_values.items():
-                          existing_values[k] = v
-
-                  if secrets_path.exists():
-                      with open(secrets_path) as f:
-                          new_secrets = yaml.safe_load(f) or {}
-                      for k, v in new_secrets.items():
-                          existing_secrets[k] = v
-
-              values_header = """# Configuration values
-              # Non-sensitive configuration that can be committed to version control
-              # Generated and managed by Bluetext tools
-
-              """
-              with open(values_file, "w") as f:
-                  f.write(values_header.replace("              ", ""))
-                  if existing_values:
-                      yaml.dump(existing_values, f, default_flow_style=False, sort_keys=True)
-
-              secrets_header = """# Configuration secrets
-              # Sensitive configuration that should NOT be committed to version control
-              # Add this file to .gitignore
-              # Generated and managed by Bluetext tools
-
-              """
-              with open(secrets_file, "w") as f:
-                  f.write(secrets_header.replace("              ", ""))
-                  if existing_secrets:
-                      yaml.dump(existing_secrets, f, default_flow_style=False, sort_keys=True)
-
+          for (const [k, v] of Object.entries(secrets)) {
+            pt.setSecret(k, String(v));
+          }
 
       - id: copy-config-files
-        after: {step: write-deps-values-to-config}
+        after: {step: set-runtime-values}
         tool: pt/run-script
         args:
           repo: {type: host, path: .}
           language: python
           dependencies: [pyyaml]
           mounts:
-            - path: /dependencies.yml
-              source:
-                type: repo
-                repo: "#pt-clj pt/module-repo-ref"
-                path: "#pt-clj (str \"/tool_resources/add-and-run-service/\" (:template params) \"/dependencies.yml\")"
             - path: /tool-resources
               source:
                 type: repo
@@ -504,14 +391,15 @@ tools:
               import yaml
               import shutil
               from pathlib import Path
-              import os
-
-              run_enabled = "{pt.param run}"
-
-              repo_config_dir = Path("/repo/config")
-              repo_config_dir.mkdir(parents=True, exist_ok=True)
+              import re
 
               template = "{pt.param template}"
+              service_name = "{pt.param name}".lower()
+              service_name = re.sub(r"[^a-z0-9_-]", "-", service_name)
+
+              # Create service-specific config directory
+              repo_config_dir = Path(f"/repo/config/{service_name}")
+              repo_config_dir.mkdir(parents=True, exist_ok=True)
 
               service_config_dir = Path(f"/tool-resources/{template}/config")
               if service_config_dir.exists() and service_config_dir.is_dir():
@@ -520,58 +408,16 @@ tools:
                       if item.is_file():
                           shutil.copy2(item, target_path)
                       elif item.is_dir():
-                          shutil.copytree(item, target_path, dirs_exist_ok=True)
-              
-              visited = set()
-              
-              def collect_dependencies(deps_list):
-                  results = []
-                  for dep in deps_list:
-                      dep_name = dep.get("name")
-                      if not dep_name or dep_name in visited:
-                          continue
-                      
-                      visited.add(dep_name)
-                      results.append(dep)
-                      
-                      dep_path = dep.get("path", dep_name)
-                      dep_deps_file = Path(f"/tool-resources/{dep_path}/dependencies.yml")
-                      
-                      if dep_deps_file.exists():
-                          try:
-                              with open(dep_deps_file) as f:
-                                  nested_data = yaml.safe_load(f) or {}
-                                  nested_deps = nested_data.get("dependencies", [])
-                                  if nested_deps:
-                                      results.extend(collect_dependencies(nested_deps))
-                          except Exception as e:
-                              pass
-                  return results
-
-              with open("/dependencies.yml") as f:
-                  initial_data = yaml.safe_load(f) or {}
-              
-              initial_deps = initial_data.get("dependencies", [])
-              all_deps = collect_dependencies(initial_deps)
-
-              if all_deps:
-                  for dep in all_deps:
-                      dep_name = dep.get("name")
-                      dep_path = dep.get("path", dep_name)
-
-                      source_config_dir = Path(f"/tool-resources/{dep_path}/config")
-                      if source_config_dir.exists() and source_config_dir.is_dir():
-                          for item in source_config_dir.iterdir():
-                              target_path = repo_config_dir / item.name
-                              if item.is_file():
-                                  shutil.copy2(item, target_path)
-                              elif item.is_dir():
-                                  shutil.copytree(item, target_path, dirs_exist_ok=True)
+                          # Flatten: copy contents directly, not the directory itself
+                          for sub_item in item.iterdir():
+                              sub_target = repo_config_dir / sub_item.name
+                              if sub_item.is_file():
+                                  shutil.copy2(sub_item, sub_target)
+                              elif sub_item.is_dir():
+                                  shutil.copytree(sub_item, sub_target, dirs_exist_ok=True)
 
       - id: run-stack
         after:
-          - step: write-service-values-to-config
-          - step: write-deps-values-to-config
           - step: copy-config-files
         code: |
           #pt-clj
@@ -584,7 +430,7 @@ tools:
     info: Scaffolds a service
     params:
       - id: template
-        type: [enum, api_python_fastapi, frontend_typescript_react-router-v7, couchbase-server_enterprise-v7, temporal, temporal-ui, postgres, curity, kong]
+        type: [enum, python-fast-api, react-web-app, couchbase, temporal, temporal-ui, postgres, curity, kong, service-config-manager]
       - id: name
         type: str
       - id: on-conflict
