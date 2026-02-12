@@ -1,0 +1,4 @@
+env_vars:
+  - name: RESONATE_ADDRESS
+    key: resonate-address
+    secret: false

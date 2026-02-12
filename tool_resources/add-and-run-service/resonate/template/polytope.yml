@@ -1,0 +1,21 @@
+tools:
+  resonate:
+    info: "Runs the Resonate server with in-memory database"
+    await: [set-values-and-secrets]
+    run:
+      - tool: polytope/container
+        args:
+          await: false
+          image: resonatehqio/resonate:0.8.2
+          id: resonate
+          restart:
+            policy: always
+          services:
+            - id: resonate
+              ports:
+                - { port: 8001, protocol: http, expose-as: 8001 }
+                - { port: 8002, protocol: http, expose-as: 8002 }
+                - { port: 50051, protocol: http, expose-as: 50051 }
+          mounts:
+            - { path: /app, source: { type: volume, scope: project, id: resonate-database } }
+          create: when-missing
