@@ -9,7 +9,7 @@ tools:
     params:
       - id: template
         info: Template to scaffold
-        type: [enum, api_python_fastapi, frontend_typescript_react-router-v7, couchbase-server_enterprise-v7, temporal, temporal-ui, postgres, curity, kong]
+        type: [enum, api_python_fastapi, frontend_typescript_react-router-v7, couchbase-server_enterprise-v7, temporal, temporal-ui, postgres, curity, kong, resonate]
       - id: name
         info: Service name (e.g., "my-api"). Will be scaffolded to "services/<name>"
         type: str
@@ -584,7 +584,7 @@ tools:
     info: Scaffolds a service
     params:
       - id: template
-        type: [enum, api_python_fastapi, frontend_typescript_react-router-v7, couchbase-server_enterprise-v7, temporal, temporal-ui, postgres, curity, kong]
+        type: [enum, api_python_fastapi, frontend_typescript_react-router-v7, couchbase-server_enterprise-v7, temporal, temporal-ui, postgres, curity, kong, resonate]
       - id: name
         type: str
       - id: on-conflict
