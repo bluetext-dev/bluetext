@@ -1,0 +1,10 @@
+{
+  "name": "@clients/{{ project-name }}",
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    ".": "./client.ts",
+    "./types": "./types.ts",
+    "./endpoints": "./endpoints.ts"
+  }
+}

@@ -1,0 +1,8 @@
+env_vars:
+  - name: TWILIO_ACCOUNT_SID
+    key: "{upstream}-account-sid"
+  - name: TWILIO_AUTH_TOKEN
+    key: "{upstream}-auth-token"
+    secret: true
+  - name: TWILIO_FROM_PHONE_NUMBER
+    key: "{upstream}-from-phone-number"

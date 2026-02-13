@@ -1,0 +1,13 @@
+env_vars:
+  - name: COUCHBASE_HOST
+    key: "{upstream}-host"
+  - name: COUCHBASE_USERNAME
+    key: "{upstream}-username"
+    secret: true
+  - name: COUCHBASE_PASSWORD
+    key: "{upstream}-password"
+    secret: true
+  - name: COUCHBASE_BUCKET
+    key: "{upstream}-main-bucket-name"
+  - name: COUCHBASE_PROTOCOL
+    key: "{upstream}-protocol"

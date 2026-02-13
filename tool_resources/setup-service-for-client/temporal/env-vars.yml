@@ -1,0 +1,9 @@
+env_vars:
+  - name: TEMPORAL_HOST
+    key: "{upstream}-host"
+  - name: TEMPORAL_PORT
+    key: "{upstream}-port"
+  - name: TEMPORAL_NAMESPACE
+    key: "{upstream}-namespace"
+  - name: TEMPORAL_TASK_QUEUE
+    key: "{upstream}-task-queue"

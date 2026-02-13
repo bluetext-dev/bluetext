@@ -439,19 +439,127 @@ tools:
       Environment variables reference the values/secrets set by set-values-and-secrets.
       Call set-values-and-secrets first.
     inputs:
-      service:
-        info: Service to set up (api, frontend, config-manager, etc.)
+      client-type:
+        info: Client type
+        type: [enum, python-fast-api, couchbase, postgres, temporal, twilio]
+      consumer:
+        info: Service to configure (where env vars go)
         type: str
-      client:
-        info: Client providing the configuration
-        type: [enum, couchbase-client, temporal-client, twilio-client, postgres-client]
+      upstream:
+        info: Service the client connects to (derives config keys)
+        type: str
     run:
-      - id: set-vars
-        tool: setup-environment-variables
-        args:
-          caller: setup-service-for-client
-          source: "pt.clj (let [client (:client inputs) base-name (clojure.string/replace client #\"-client$\" \"\") clients #{\"couchbase\" \"postgres\" \"temporal\" \"twilio\"}] (if (contains? clients base-name) base-name (str \"services/\" client)))"
-          target: "{pt.input service}"
+      - id: inject-env-vars
+        code: |-
+          pt.js
+          // pt.param() camelCases values, convert back to kebab-case for file paths
+          const clientType = pt.param("client-type").replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
+          const consumer = pt.param("consumer");
+          const upstream = pt.param("upstream");
+
+          const script = `
+          import yaml
+          import re
+          from pathlib import Path
+
+          consumer = "${consumer}"
+          upstream = "${upstream}"
+          target = upstream.upper().replace("-", "_")
+
+          # Read env vars template from mounted file
+          with open("/env-vars.yml") as f:
+              config = yaml.safe_load(f) or {}
+          raw_env_vars = config.get('env_vars', [])
+
+          # Replace {upstream} and {TARGET} in all string fields
+          env_vars = []
+          for var in raw_env_vars:
+              resolved = {}
+              for field, val in var.items():
+                  if isinstance(val, str):
+                      val = val.replace("{upstream}", upstream).replace("{TARGET}", target)
+                  resolved[field] = val
+              env_vars.append(resolved)
+
+          # Read consumer service's polytope.yml
+          service_polytope_path = Path(f"/repo/services/{consumer}/polytope.yml")
+          if not service_polytope_path.exists():
+              print(f"Error: Target service polytope.yml not found: services/{consumer}/polytope.yml")
+              exit(1)
+
+          with open(service_polytope_path) as f:
+              content = f.read()
+
+          # Check which env vars already exist
+          vars_to_add = []
+          for var in env_vars:
+              if var['name'] in content:
+                  print(f"  {var['name']} already exists in {consumer}, skipping")
+              else:
+                  vars_to_add.append(var)
+
+          if not vars_to_add:
+              print(f"All env vars already exist in services/{consumer}/polytope.yml")
+              exit(0)
+
+          # Build env var entries
+          env_entries = []
+          for var in vars_to_add:
+              name = var['name']
+              if 'value' in var:
+                  env_entries.append(f'            - {{ name: {name}, value: "{var["value"]}" }}')
+              else:
+                  key = var['key']
+                  is_secret = var.get('secret', False)
+                  if is_secret:
+                      env_entries.append(f'            - {{ name: {name}, value: pt.secret {key} }}')
+                  else:
+                      env_entries.append(f'            - {{ name: {name}, value: pt.value {key} }}')
+
+          env_block = '\\n'.join(env_entries)
+
+          # Find the env: section and insert after the last env var
+          env_pattern = r'(env:\\s*\\n(?:\\s+-[^\\n]*\\n)*)'
+          match = re.search(env_pattern, content)
+          if match:
+              env_section = match.group(1)
+              new_env_section = env_section.rstrip('\\n') + '\\n' + env_block + '\\n'
+              new_content = content[:match.start()] + new_env_section + content[match.end():]
+          else:
+              print(f"Warning: No 'env:' section found in services/{consumer}/polytope.yml.")
+              print(f"Please manually add the following environment variables:")
+              print(env_block)
+              exit(0)
+
+          with open(service_polytope_path, 'w') as f:
+              f.write(new_content)
+
+          print(f"Added {len(vars_to_add)} env vars to services/{consumer}/polytope.yml")
+          for var in vars_to_add:
+              print(f"   - {var['name']}")
+          `;
+
+          pt.callModule("pt/run-script", {
+            repo: { type: "host", path: "." },
+            language: "python",
+            dependencies: ["pyyaml"],
+            mounts: [{
+              path: "/env-vars.yml",
+              source: {
+                type: "repo",
+                repo: pt.moduleRepoRef,
+                path: `/tool_resources/setup-service-for-client/${clientType}/env-vars.yml`
+              }
+            }],
+            script: { type: "string", data: script }
+          });
+
+      - id: reapply-consumer
+        after: {step: inject-env-vars}
+        code: |-
+          pt.js
+          pt.log("Reapplying stack to pick up updated env vars...");
+          pt.callModule("stack", {});
 
   add-entity:
     info: |

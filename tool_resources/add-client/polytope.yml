@@ -4,46 +4,51 @@ tools:
       Adds a client to the project's clients directory.
       Scaffolds the client code and updates pyproject.toml with dependencies.
 
-      Example: add-client(name: "couchbase", language: "python")
+      Example: add-client(template: "couchbase", language: "python")
     inputs:
-      name:
-        info: Client name (e.g., "couchbase", "temporal", "jwt_validator", "phantom-token-handler")
-        type: [enum, couchbase, temporal, jwt_validator, phantom-token-handler]
+      template:
+        info: Client template to scaffold (e.g., "couchbase", "temporal", "jwt_validator", "phantom-token-handler", "api")
+        type: [enum, couchbase, temporal, jwt_validator, phantom-token-handler, api]
       language:
         info: Language for the client
         type: [default, [enum, python, typescript], python]
+      target:
+        info: "Target service name. Required for api client — identifies which API service to connect to (e.g., 'my-api')."
+        type: [default, str, ""]
     run:
-      # Inlined setup-project-structure logic (chained tool resolution broken in Polytope)
+      # Inlined setup-project-structure logic
       - id: scaffold-base-structure
-        tool: polytope/scaffold
-        args:
-          container-id: scaffold-base-structure
-          actions:
-            - template: {type: repo, repo: "pt.clj pt/module-repo-ref", path: /tool_resources/setup-project-structure/base/clients}
-              path: clients
-              on-conflict: skip
-            - template: {type: repo, repo: "pt.clj pt/module-repo-ref", path: /tool_resources/setup-project-structure/base/models}
-              path: models
-              on-conflict: skip
-            - template: {type: repo, repo: "pt.clj pt/module-repo-ref", path: /tool_resources/setup-project-structure/base/services}
-              path: services
-              on-conflict: skip
-            - template: {type: repo, repo: "pt.clj pt/module-repo-ref", path: /tool_resources/setup-project-structure/base/config}
-              path: config
-              on-conflict: skip
+        code: |-
+          pt.js
+          pt.callModule("polytope/scaffold", {
+            "container-id": "scaffold-base-structure",
+            actions: ["clients", "models", "services", "config"].map(dir => ({
+              template: { type: "repo", repo: pt.moduleRepoRef, path: `/tool_resources/setup-project-structure/base/${dir}` },
+              path: dir,
+              "on-conflict": "skip"
+            }))
+          });
 
       - id: scaffold-language
         after: {step: scaffold-base-structure}
-        tool: polytope/scaffold
-        args:
-          container-id: scaffold-language
-          actions:
-            - template: {type: repo, repo: "pt.clj pt/module-repo-ref", path: "pt.clj (str \"/tool_resources/setup-project-structure/languages/clients/\" (:language inputs))"}
-              path: "pt.clj (str \"clients/\" (:language inputs))"
-              on-conflict: skip
-            - template: {type: repo, repo: "pt.clj pt/module-repo-ref", path: "pt.clj (str \"/tool_resources/setup-project-structure/languages/models/\" (:language inputs))"}
-              path: "pt.clj (str \"models/\" (:language inputs))"
-              on-conflict: skip
+        code: |-
+          pt.js
+          const lang = pt.param("language");
+          pt.callModule("polytope/scaffold", {
+            "container-id": "scaffold-language",
+            actions: [
+              {
+                template: { type: "repo", repo: pt.moduleRepoRef, path: `/tool_resources/setup-project-structure/languages/clients/${lang}` },
+                path: `clients/${lang}`,
+                "on-conflict": "skip"
+              },
+              {
+                template: { type: "repo", repo: pt.moduleRepoRef, path: `/tool_resources/setup-project-structure/languages/models/${lang}` },
+                path: `models/${lang}`,
+                "on-conflict": "skip"
+              }
+            ]
+          });
 
       - id: update-gitignore
         after: {step: scaffold-base-structure}
@@ -87,199 +92,178 @@ tools:
 
       - id: scaffold-client
         after: {step: scaffold-language}
-        tool: polytope/scaffold
-        args:
-          actions:
-            - template: {type: repo, repo: "pt.clj pt/module-repo-ref", path: "pt.clj (str \"/tool_resources/add-client/\" (:language inputs) \"/\" (:name inputs) \"/template\")"}
-              path: "pt.clj (str \"clients/\" (:language inputs) \"/clients/\" (:name inputs))"
-              on-conflict: skip
+        code: |-
+          pt.js
+          const tmpl = pt.param("template");
+          const lang = pt.param("language");
+          const target = pt.param("target");
+          const resolvedName = target ? `${target}-client` : tmpl;
+          pt.callModule("polytope/scaffold", {
+            actions: [{
+              template: { type: "repo", repo: pt.moduleRepoRef, path: `/tool_resources/add-client/${lang}/${tmpl}/template` },
+              path: `clients/${lang}/${resolvedName}`,
+              "on-conflict": "skip"
+            }]
+          });
+
       - id: update-pyproject
         after: {step: scaffold-client}
-        tool: pt/run-script
-        args:
-          repo: {type: host, path: .}
-          language: python
-          script:
-            type: string
-            data: |
-              import re
-              from pathlib import Path
+        code: |-
+          pt.js
+          const tmpl = pt.param("template");
+          const lang = pt.param("language");
 
-              name = "{pt.input name}"
-              language = "{pt.input language}"
+          if (lang !== "python") {
+            pt.log("Skipping pyproject update for non-python client");
+          } else {
+            const depsMap = {
+              couchbase: "couchbase>=4.4.0",
+              temporal: "temporalio>=1.6.0",
+              jwt_validator: "PyJWT>=2.8.0",
+            };
+            const dep = depsMap[tmpl];
+            if (!dep) {
+              pt.log(`No dependency mapping for ${tmpl}`);
+            } else {
+              const script = `
+          import re
+          from pathlib import Path
 
-              # Define dependency mapping
-              dependencies_map = {
-                  "couchbase": "couchbase>=4.4.0",
-                  "temporal": "temporalio>=1.6.0",
-                  "jwt_validator": "PyJWT>=2.8.0",
-              }
+          dep = "${dep}"
+          pyproject_path = Path("/repo/clients/${lang}/pyproject.toml")
 
-              # Get the dependency to add
-              dependency = dependencies_map.get(name)
-              if not dependency:
-                  print(f"No dependency mapping found for {name}")
-                  exit(0)
+          if not pyproject_path.exists():
+              print("pyproject.toml not found")
+              exit(0)
 
-              # Path to pyproject.toml (scaffolded by the template)
-              pyproject_path = Path(f"/repo/clients/{language}/pyproject.toml")
+          content = pyproject_path.read_text()
+          if dep.split(">=")[0] in content:
+              print(f"Dependency {dep} already exists")
+              exit(0)
 
-              # The pyproject.toml should have been scaffolded from the template
-              if not pyproject_path.exists():
-                  print(f"✅ pyproject.toml was scaffolded with the client template")
-                  exit(0)
-
-              # Read the file
-              content = pyproject_path.read_text()
-
-              # Check if dependency already exists
-              if dependency.split(">=")[0] in content:
-                  print(f"✅ Dependency {dependency} already exists in pyproject.toml")
-                  exit(0)
-
-              # Add dependency to the dependencies array
-              # Find the dependencies section and add the new dependency
-              pattern = r'(dependencies\s*=\s*\[)(.*?)(\])'
-
-              def add_dependency(match):
-                  deps_start = match.group(1)
-                  deps_content = match.group(2)
-                  deps_end = match.group(3)
-
-                  # Add the new dependency
-                  new_dep = f'\n    "{dependency}",'
-                  return deps_start + deps_content + new_dep + '\n' + deps_end
-
-              new_content = re.sub(pattern, add_dependency, content, flags=re.DOTALL)
-
-              # Write back
-              pyproject_path.write_text(new_content)
-              print(f"✅ Added {dependency} to pyproject.toml")
+          pattern = r'(dependencies\\s*=\\s*\\[)(.*?)(\\])'
+          def add_dep(m):
+              return m.group(1) + m.group(2) + f'\\n    "{dep}",' + '\\n' + m.group(3)
+          new_content = re.sub(pattern, add_dep, content, flags=re.DOTALL)
+          pyproject_path.write_text(new_content)
+          print(f"Added {dep} to pyproject.toml")
+              `;
+              pt.callModule("pt/run-script", {
+                repo: { type: "host", path: "." },
+                language: "python",
+                script: { type: "string", data: script }
+              });
+            }
+          }
 
       - id: update-tsconfig
         after: {step: update-pyproject}
-        tool: pt/run-script
-        args:
-          repo: {type: host, path: .}
-          language: python
-          script:
-            type: string
-            data: |
-              import json
-              from pathlib import Path
+        code: |-
+          pt.js
+          const tmpl = pt.param("template");
+          const lang = pt.param("language");
+          const target = pt.param("target");
 
-              name = "{pt.input name}"
-              language = "{pt.input language}"
+          if (lang !== "typescript") {
+            pt.log("Skipping tsconfig update for non-typescript client");
+          } else {
+            const resolvedName = target ? `${target}-client` : tmpl;
+            const script = `
+          import json
+          from pathlib import Path
 
-              if language != "typescript":
-                  exit(0)
+          resolved_name = "${resolvedName}"
+          tsconfig_path = Path("/repo/clients/typescript/tsconfig.json")
 
-              tsconfig_path = Path(f"/repo/clients/{language}/tsconfig.json")
-              if not tsconfig_path.exists():
-                  print("⚠️ tsconfig.json not found")
-                  exit(0)
+          if not tsconfig_path.exists():
+              print("tsconfig.json not found")
+              exit(0)
 
-              content = json.loads(tsconfig_path.read_text())
+          content = json.loads(tsconfig_path.read_text())
+          if "include" not in content:
+              content["include"] = []
 
-              # Ensure include array exists
-              if "include" not in content:
-                  content["include"] = []
+          client_path = f"{resolved_name}"
+          if client_path not in content["include"]:
+              content["include"].append(client_path)
+              tsconfig_path.write_text(json.dumps(content, indent=2))
+              print(f"Added {client_path} to tsconfig.json include")
+          else:
+              print(f"{client_path} already in tsconfig.json")
+            `;
+            pt.callModule("pt/run-script", {
+              repo: { type: "host", path: "." },
+              language: "python",
+              script: { type: "string", data: script }
+            });
+          }
 
-              client_path = f"clients/{name}"
-              if client_path not in content["include"]:
-                  content["include"].append(client_path)
-                  tsconfig_path.write_text(json.dumps(content, indent=2))
-                  print(f"✅ Added {client_path} to tsconfig.json include")
-              else:
-                  print(f"✅ {client_path} already in tsconfig.json")
-
-      # Inlined set-values-and-secrets logic (chained tool resolution broken in Polytope)
+      # Inlined set-values-and-secrets logic
       - id: write-client-values-to-config
         after: {step: update-tsconfig}
-        tool: pt/run-script
-        args:
-          repo: {type: host, path: .}
-          language: python
-          dependencies: [pyyaml]
-          mounts:
-            - path: /source-values.yml
-              source:
-                type: repo
-                repo: "pt.clj pt/module-repo-ref"
-                path: "pt.clj (str \"/tool_resources/set-values-and-secrets/add-client/\" (:name inputs) \"/values.yml\")"
-            - path: /source-secrets.yml
-              source:
-                type: repo
-                repo: "pt.clj pt/module-repo-ref"
-                path: "pt.clj (str \"/tool_resources/set-values-and-secrets/add-client/\" (:name inputs) \"/secrets.yml\")"
-          script:
-            type: string
-            data: |
-              import yaml
-              from pathlib import Path
+        code: |-
+          pt.js
+          const tmpl = pt.param("template");
 
-              # Read source values and secrets from mounted files
-              with open("/source-values.yml") as f:
-                  new_values = yaml.safe_load(f) or {}
+          // Read source values/secrets from module repo
+          let sourceValues = "";
+          let sourceSecrets = "";
+          try {
+            sourceValues = pt.readRepoFile(
+              `tool_resources/set-values-and-secrets/add-client/${tmpl}/values.yml`,
+              { repo: pt.moduleRepoRef }
+            );
+          } catch (e) { pt.log("No source values.yml found"); }
+          try {
+            sourceSecrets = pt.readRepoFile(
+              `tool_resources/set-values-and-secrets/add-client/${tmpl}/secrets.yml`,
+              { repo: pt.moduleRepoRef }
+            );
+          } catch (e) { pt.log("No source secrets.yml found"); }
 
-              with open("/source-secrets.yml") as f:
-                  new_secrets = yaml.safe_load(f) or {}
+          const escValues = sourceValues.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+          const escSecrets = sourceSecrets.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
 
-              # Ensure config directory exists
-              config_dir = Path("/repo/config")
-              config_dir.mkdir(parents=True, exist_ok=True)
+          const script = `
+          import yaml
+          from pathlib import Path
 
-              values_file = config_dir / "values.yml"
-              secrets_file = config_dir / "secrets.yml"
+          new_values = yaml.safe_load('''${escValues}''') or {}
+          new_secrets = yaml.safe_load('''${escSecrets}''') or {}
 
-              # Read existing values.yml or start fresh
-              if values_file.exists():
-                  with open(values_file) as f:
-                      existing_values = yaml.safe_load(f) or {}
-              else:
-                  existing_values = {}
+          config_dir = Path('/repo/config')
+          config_dir.mkdir(parents=True, exist_ok=True)
 
-              # Read existing secrets.yml or start fresh
-              if secrets_file.exists():
-                  with open(secrets_file) as f:
-                      existing_secrets = yaml.safe_load(f) or {}
-              else:
-                  existing_secrets = {}
+          values_file = config_dir / 'values.yml'
+          secrets_file = config_dir / 'secrets.yml'
 
-              # Merge new values (new values take precedence)
-              for k, v in new_values.items():
-                  existing_values[k] = v
+          existing_values = yaml.safe_load(open(values_file).read()) if values_file.exists() else {}
+          existing_values = existing_values or {}
+          existing_secrets = yaml.safe_load(open(secrets_file).read()) if secrets_file.exists() else {}
+          existing_secrets = existing_secrets or {}
 
-              for k, v in new_secrets.items():
-                  existing_secrets[k] = v
+          existing_values.update(new_values)
+          existing_secrets.update(new_secrets)
 
-              # Write values.yml with header
-              values_header = """# Configuration values
-              # Non-sensitive configuration that can be committed to version control
-              # Generated and managed by Bluetext tools
+          with open(values_file, 'w') as f:
+              f.write('# Configuration values\\n# Generated and managed by Bluetext tools\\n\\n')
+              if existing_values:
+                  yaml.dump(existing_values, f, default_flow_style=False, sort_keys=True)
 
-              """
-              with open(values_file, 'w') as f:
-                  f.write(values_header.replace("              ", ""))
-                  if existing_values:
-                  # Force sort_keys=True
-                      yaml.dump(existing_values, f, default_flow_style=False, sort_keys=True)
+          with open(secrets_file, 'w') as f:
+              f.write('# Configuration secrets\\n# Add this file to .gitignore\\n# Generated and managed by Bluetext tools\\n\\n')
+              if existing_secrets:
+                  yaml.dump(existing_secrets, f, default_flow_style=False, sort_keys=True)
 
-              # Write secrets.yml with header
-              secrets_header = """# Configuration secrets
-              # Sensitive configuration that should NOT be committed to version control
-              # Add this file to .gitignore
-              # Generated and managed by Bluetext tools
+          print(f'Written {len(new_values)} values and {len(new_secrets)} secrets to config/')
+          `;
 
-              """
-              with open(secrets_file, 'w') as f:
-                  f.write(secrets_header.replace("              ", ""))
-                  if existing_secrets:
-                  # Force sort_keys=True
-                      yaml.dump(existing_secrets, f, default_flow_style=False, sort_keys=True)
-
-              print(f"✅ Written {len(new_values)} values to config/values.yml")
-              print(f"✅ Written {len(new_secrets)} secrets to config/secrets.yml")
+          pt.callModule("pt/run-script", {
+            repo: { type: "host", path: "." },
+            language: "python",
+            dependencies: ["pyyaml"],
+            script: { type: "string", data: script }
+          });
 
       # Read from user's config files (written by previous step) and set in Polytope runtime
       - id: set-client-values-in-runtime

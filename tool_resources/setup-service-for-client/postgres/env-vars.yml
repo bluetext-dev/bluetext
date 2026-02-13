@@ -1,0 +1,12 @@
+env_vars:
+  - name: POSTGRES_HOST
+    key: "{upstream}-host"
+  - name: POSTGRES_PORT
+    key: "{upstream}-port"
+  - name: POSTGRES_DATABASE
+    key: "{upstream}-database"
+  - name: POSTGRES_USER
+    key: "{upstream}-username"
+  - name: POSTGRES_PASSWORD
+    key: "{upstream}-password"
+    secret: true

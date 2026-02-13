@@ -1,0 +1,363 @@
+tools:
+  sync-api-client:
+    info: |
+      Syncs a TypeScript API client with the OpenAPI spec from a running API service.
+      Generates TypeScript types and endpoint functions.
+      The API service must be running. The client must already be added via add-client.
+
+      Example: sync-api-client(target: "my-api")
+    inputs:
+      target:
+        info: "The API service to sync from (e.g., 'my-api')"
+        type: str
+    run:
+      - id: sync
+        tool: pt/run-script
+        args:
+          repo: {type: host, path: .}
+          language: python
+          dependencies: [pyyaml]
+          script:
+            type: string
+            data: |
+              import json
+              import re
+              import urllib.request
+              import yaml
+              from pathlib import Path
+
+              target = "{pt.param target}"
+
+              # Read port from config/values.yml
+              values_path = Path("/repo/config/values.yml")
+              if not values_path.exists():
+                  print(f"config/values.yml not found. Run add-and-run-service first.")
+                  exit(1)
+
+              with open(values_path) as f:
+                  values = yaml.safe_load(f) or {}
+
+              port_key = f"{target}-http-port"
+              port = values.get(port_key)
+              if not port:
+                  print(f"Could not find '{port_key}' in config/values.yml")
+                  print(f"Available keys: {list(values.keys())}")
+                  exit(1)
+
+              # Fetch OpenAPI spec
+              url = f"http://{target}:{port}/openapi.json"
+              print(f"Fetching OpenAPI spec from {url}")
+              try:
+                  with urllib.request.urlopen(url, timeout=10) as resp:
+                      spec = json.loads(resp.read().decode())
+              except Exception as e:
+                  print(f"Failed to fetch OpenAPI spec: {e}")
+                  print(f"Make sure the '{target}' service is running.")
+                  exit(1)
+
+              print(f"Got OpenAPI spec: {spec.get('info', {}).get('title', 'unknown')} v{spec.get('info', {}).get('version', '?')}")
+
+              schemas = spec.get("components", {}).get("schemas", {})
+              paths = spec.get("paths", {})
+
+              # ---- Type generation ----
+
+              def resolve_ref(ref_str):
+                  """Extract schema name from $ref string."""
+                  return ref_str.split("/")[-1]
+
+              def schema_to_ts(schema, indent=0):
+                  """Convert an OpenAPI schema to a TypeScript type string."""
+                  if not schema:
+                      return "unknown"
+
+                  if "$ref" in schema:
+                      return resolve_ref(schema["$ref"])
+
+                  if "allOf" in schema:
+                      parts = [schema_to_ts(s, indent) for s in schema["allOf"]]
+                      return " & ".join(parts)
+
+                  if "anyOf" in schema:
+                      parts = [schema_to_ts(s, indent) for s in schema["anyOf"] if s.get("type") != "null"]
+                      null_present = any(s.get("type") == "null" for s in schema["anyOf"])
+                      result = " | ".join(parts) if len(parts) > 1 else parts[0] if parts else "unknown"
+                      if null_present:
+                          result += " | null"
+                      return result
+
+                  if "oneOf" in schema:
+                      parts = [schema_to_ts(s, indent) for s in schema["oneOf"] if s.get("type") != "null"]
+                      null_present = any(s.get("type") == "null" for s in schema["oneOf"])
+                      result = " | ".join(parts) if len(parts) > 1 else parts[0] if parts else "unknown"
+                      if null_present:
+                          result += " | null"
+                      return result
+
+                  if "enum" in schema:
+                      vals = schema["enum"]
+                      if all(isinstance(v, str) for v in vals):
+                          return " | ".join(f'"{v}"' for v in vals)
+                      return " | ".join(str(v) for v in vals)
+
+                  schema_type = schema.get("type")
+
+                  if schema_type == "array":
+                      items = schema.get("items", {})
+                      item_type = schema_to_ts(items, indent)
+                      if " | " in item_type or " & " in item_type:
+                          return f"({item_type})[]"
+                      return f"{item_type}[]"
+
+                  if schema_type == "object" or "properties" in schema:
+                      props = schema.get("properties", {})
+                      required = set(schema.get("required", []))
+                      if not props:
+                          return "Record<string, unknown>"
+                      pad = "  " * (indent + 1)
+                      close_pad = "  " * indent
+                      lines = []
+                      for prop_name, prop_schema in props.items():
+                          opt = "" if prop_name in required else "?"
+                          prop_type = schema_to_ts(prop_schema, indent + 1)
+                          nullable = prop_schema.get("nullable", False)
+                          if nullable and "| null" not in prop_type:
+                              prop_type += " | null"
+                          lines.append(f"{pad}{prop_name}{opt}: {prop_type};")
+                      return "{\n" + "\n".join(lines) + f"\n{close_pad}}}"
+
+                  if schema_type == "string":
+                      return "string"
+                  if schema_type == "integer" or schema_type == "number":
+                      return "number"
+                  if schema_type == "boolean":
+                      return "boolean"
+                  if schema_type == "null":
+                      return "null"
+
+                  return "unknown"
+
+              def generate_interface(name, schema):
+                  """Generate a TypeScript interface from a named schema."""
+                  if "enum" in schema:
+                      vals = schema["enum"]
+                      if all(isinstance(v, str) for v in vals):
+                          members = " | ".join(f'"{v}"' for v in vals)
+                      else:
+                          members = " | ".join(str(v) for v in vals)
+                      return f"export type {name} = {members};\n"
+
+                  if schema.get("type") == "object" or "properties" in schema:
+                      props = schema.get("properties", {})
+                      required = set(schema.get("required", []))
+                      lines = [f"export interface {name} {{"]
+                      for prop_name, prop_schema in props.items():
+                          opt = "" if prop_name in required else "?"
+                          prop_type = schema_to_ts(prop_schema, 1)
+                          nullable = prop_schema.get("nullable", False)
+                          if nullable and "| null" not in prop_type:
+                              prop_type += " | null"
+                          lines.append(f"  {prop_name}{opt}: {prop_type};")
+                      lines.append("}")
+                      return "\n".join(lines) + "\n"
+
+                  if "allOf" in schema or "anyOf" in schema or "oneOf" in schema:
+                      ts_type = schema_to_ts(schema)
+                      return f"export type {name} = {ts_type};\n"
+
+                  # Fallback: type alias
+                  ts_type = schema_to_ts(schema)
+                  return f"export type {name} = {ts_type};\n"
+
+              # Generate types.ts
+              types_lines = [
+                  f"// Auto-generated by sync-api-client from {target}'s OpenAPI spec.",
+                  "// Re-run sync-api-client to regenerate. Manual edits will be overwritten.",
+                  "",
+              ]
+
+              # Track which schema names we generate
+              generated_types = set()
+
+              for schema_name, schema_def in schemas.items():
+                  # Skip FastAPI internal schemas
+                  if schema_name in ("HTTPValidationError", "ValidationError"):
+                      continue
+                  types_lines.append(generate_interface(schema_name, schema_def))
+                  generated_types.add(schema_name)
+
+              if not generated_types:
+                  types_lines.append("export {};")
+
+              types_content = "\n".join(types_lines) + "\n"
+
+              # ---- Endpoint generation ----
+
+              def method_to_fn_name(method, path_parts, has_path_param):
+                  """Derive a function name from HTTP method and path structure."""
+                  if method == "get":
+                      return "get" if has_path_param else "list"
+                  if method == "post":
+                      return "create"
+                  if method == "put":
+                      return "update"
+                  if method == "patch":
+                      return "patch"
+                  if method == "delete":
+                      return "delete"
+                  return method
+
+              def get_response_type(operation):
+                  """Extract the response type from an operation's 200/201 response."""
+                  responses = operation.get("responses", {})
+                  for code in ("200", "201"):
+                      resp = responses.get(code, {})
+                      content = resp.get("content", {})
+                      json_content = content.get("application/json", {})
+                      resp_schema = json_content.get("schema")
+                      if resp_schema:
+                          return schema_to_ts(resp_schema)
+                  return "void"
+
+              def get_request_body_type(operation):
+                  """Extract request body type from an operation."""
+                  body = operation.get("requestBody", {})
+                  content = body.get("content", {})
+                  json_content = content.get("application/json", {})
+                  body_schema = json_content.get("schema")
+                  if body_schema:
+                      return schema_to_ts(body_schema)
+                  return None
+
+              def extract_path_params(path):
+                  """Extract path parameter names from a path template."""
+                  return re.findall(r"\{(\w+)\}", path)
+
+              def path_to_template_literal(path):
+                  """Convert /users/{id} to JS template literal `/users/${id}`."""
+                  result = re.sub(r"\{(\w+)\}", r"${\1}", path)
+                  return f"`{result}`"
+
+              def get_param_type(param_name, operation):
+                  """Get the TypeScript type for a path parameter from the operation spec."""
+                  for param in operation.get("parameters", []):
+                      if param.get("name") == param_name and param.get("in") == "path":
+                          param_schema = param.get("schema", {})
+                          return schema_to_ts(param_schema)
+                  return "string"
+
+              # Group paths by first segment
+              groups = {}
+              for path, methods in paths.items():
+                  parts = [p for p in path.split("/") if p and not p.startswith("{")]
+                  if not parts:
+                      continue
+                  group_name = parts[0]
+                  if group_name not in groups:
+                      groups[group_name] = []
+                  for method in ("get", "post", "put", "patch", "delete"):
+                      if method not in methods:
+                          continue
+                      operation = methods[method]
+                      groups[group_name].append({
+                          "method": method,
+                          "path": path,
+                          "operation": operation,
+                          "path_parts": parts,
+                      })
+
+              # Collect all type names used in endpoints
+              used_types = set()
+
+              def collect_types_from_ts(ts_str):
+                  """Find generated type references in a TS type string."""
+                  for t in generated_types:
+                      if t in ts_str:
+                          used_types.add(t)
+
+              # Pre-pass: collect used types
+              for group_name, endpoints in groups.items():
+                  for ep in endpoints:
+                      resp_type = get_response_type(ep["operation"])
+                      collect_types_from_ts(resp_type)
+                      body_type = get_request_body_type(ep["operation"])
+                      if body_type:
+                          collect_types_from_ts(body_type)
+
+              # Generate endpoints.ts
+              ep_lines = [
+                  f"// Auto-generated by sync-api-client from {target}'s OpenAPI spec.",
+                  "// Re-run sync-api-client to regenerate. Manual edits will be overwritten.",
+                  "",
+                  'import { api } from "./client";',
+              ]
+
+              if used_types:
+                  sorted_types = sorted(used_types)
+                  ep_lines.append(f'import type {{ {", ".join(sorted_types)} }} from "./types";')
+
+              for group_name, endpoints in sorted(groups.items()):
+                  ep_lines.append("")
+                  ep_lines.append(f"export const {group_name} = {{")
+                  fn_entries = []
+                  for ep in endpoints:
+                      path_params = extract_path_params(ep["path"])
+                      has_path_param = len(path_params) > 0
+                      fn_name = method_to_fn_name(ep["method"], ep["path_parts"], has_path_param)
+
+                      # Build parameter list
+                      params = []
+                      for pp in path_params:
+                          pp_type = get_param_type(pp, ep["operation"])
+                          params.append(f"{pp}: {pp_type}")
+
+                      body_type = get_request_body_type(ep["operation"])
+                      if body_type:
+                          params.append(f"data: {body_type}")
+
+                      resp_type = get_response_type(ep["operation"])
+
+                      # Build path expression
+                      if path_params:
+                          path_expr = path_to_template_literal(ep["path"])
+                      else:
+                          path_expr = f'"{ep["path"]}"'
+
+                      # Build function body
+                      param_str = ", ".join(params)
+                      if ep["method"] == "get":
+                          fn_entries.append(f"  {fn_name}: ({param_str}) => api.get<{resp_type}>({path_expr}),")
+                      elif ep["method"] == "delete":
+                          fn_entries.append(f"  {fn_name}: ({param_str}) => api.del<{resp_type}>({path_expr}),")
+                      elif body_type:
+                          fn_entries.append(f"  {fn_name}: ({param_str}) => api.{ep['method']}<{resp_type}>({path_expr}, data),")
+                      else:
+                          fn_entries.append(f"  {fn_name}: ({param_str}) => api.{ep['method']}<{resp_type}>({path_expr}),")
+
+                  ep_lines.extend(fn_entries)
+                  ep_lines.append("};")
+
+              if not groups:
+                  ep_lines.append("")
+                  ep_lines.append("export {};")
+
+              endpoints_content = "\n".join(ep_lines) + "\n"
+
+              # ---- Write files ----
+
+              client_dir = Path(f"/repo/clients/typescript/clients/{target}-client")
+              if not client_dir.exists():
+                  print(f"Client directory {client_dir} not found. Run add-client first.")
+                  exit(1)
+
+              types_path = client_dir / "types.ts"
+              endpoints_path = client_dir / "endpoints.ts"
+
+              types_path.write_text(types_content)
+              print(f"Wrote {len(generated_types)} types to {types_path}")
+
+              endpoints_path.write_text(endpoints_content)
+              fn_count = sum(len(eps) for eps in groups.values())
+              print(f"Wrote {len(groups)} endpoint groups ({fn_count} functions) to {endpoints_path}")
+
+              print("Sync complete.")

@@ -1,0 +1,3 @@
+env_vars:
+  - name: "VITE_{TARGET}_CLIENT_URL"
+    value: "http://{upstream}:{pt.value {upstream}-http-port}"
