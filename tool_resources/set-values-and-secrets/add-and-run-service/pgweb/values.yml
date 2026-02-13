@@ -1,0 +1,3 @@
+# pgweb service values
+# Connection values are provided via template-and-variables overrides
+# pointing to the postgres server's values (e.g., {postgres-host: "pt.value my-db-host"})

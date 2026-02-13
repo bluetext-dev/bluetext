@@ -3,11 +3,15 @@ import type {LoginOptions, SessionResponse} from '@curity/token-handler-js-assis
 import {ApiRemoteError} from './utilities/apiRemoteError';
 import {SessionExpiredError} from './utilities/sessionExpiredError';
 
-const baseUrl = window.location.origin + '/api';
+// SSR-safe: only access window in browser environment
+const isBrowser = typeof window !== 'undefined';
+const baseUrl = isBrowser ? window.location.origin + '/api' : '';
 
-const oauthAgentClient = new OAuthAgentClient({
-    oauthAgentBaseUrl: `${window.location.origin}/apps/token-handler`
-});
+const oauthAgentClient = isBrowser
+    ? new OAuthAgentClient({
+        oauthAgentBaseUrl: `${window.location.origin}/apps/token-handler`
+    })
+    : (null as unknown as OAuthAgentClient);
 
 export async function onPageLoad(url: string): Promise<SessionResponse> {
     return await oauthAgentClient.onPageLoad(url);

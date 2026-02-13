@@ -1,0 +1,22 @@
+tools:
+  {{ project-name }}:
+    info: |
+      Runs pgweb - a web-based PostgreSQL database browser service.
+      The pgweb service will be available at http://localhost:8081.
+      Connects to the configured postgres server.
+    await: [load-config]
+    run:
+      - tool: polytope/container
+        args:
+          image: sosedoff/pgweb:0.15.0
+          id: {{ project-name }}
+          restart:
+            policy: always
+          services:
+            - id: {{ project-name }}
+              ports:
+                - {protocol: http, port: 8081, expose-as: 8081}
+          env:
+            - name: PGWEB_DATABASE_URL
+              value: "postgresql://{ {{ postgres-username }} }:{ {{ postgres-password }} }@{ {{ postgres-host }} }:{ {{ postgres-port }} }/{ {{ postgres-database }} }?sslmode=disable"
+          create: when-missing

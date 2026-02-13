@@ -1,11 +1,3 @@
-# Config Manager service values
-service-config-manager-environment: dev
-service-config-manager-services: couchbase
-service-config-manager-couchbase-host: couchbase
-service-config-manager-couchbase-username: user
-service-config-manager-couchbase-main-bucket-name: main
-service-config-manager-redpanda-host: redpanda
-service-config-manager-redpanda-port: 9092
-service-config-manager-postgres-host: postgres
-service-config-manager-postgres-db: postgres
-service-config-manager-postgres-user: postgres
+# Service Config Manager values
+# Server connections are auto-discovered via mounted config directories
+"{name}-environment": dev

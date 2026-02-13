@@ -35,3 +35,7 @@ env_vars:
   - name: CURITY_PORT
     key: curity-port
     secret: false
+  - name: WEB_APP_URL
+    value: 'pt.clj (str (pt/value "web-app-host") ":" (pt/value "web-app-port"))'
+  - name: CURITY_BASE_URL
+    value: 'pt.clj (str (pt/value "curity-host") ":" (pt/value "curity-port"))'

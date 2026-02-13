@@ -3,14 +3,14 @@ tools:
     info: |
       Adds environment variables to a service's polytope.yml from a defined source.
       The source file should be located at tool_resources/setup-environment-variables/{caller}/{source}/required-env-vars.yml.
-    params:
-      - id: caller
+    inputs:
+      caller:
         info: The tool calling this (e.g., setup-service-for-client, implement)
         type: str
-      - id: source
+      source:
         info: The source of the environment variables (e.g., couchbase, curity-phantom-token, or a relative path component)
         type: str
-      - id: target
+      target:
         info: The target service to update (e.g., api, frontend)
         type: str
     run:
@@ -24,8 +24,8 @@ tools:
             - path: /env-vars.yml
               source:
                 type: repo
-                repo: "#pt-clj pt/module-repo-ref"
-                path: "#pt-clj (let [caller (:caller params) source (:source params) path (str \"/tool_resources/setup-environment-variables/\" caller \"/\" source \"/required-env-vars.yml\")] path)"
+                repo: "pt.clj pt/module-repo-ref"
+                path: "pt.clj (let [caller (:caller inputs) source (:source inputs) path (str \"/tool_resources/setup-environment-variables/\" caller \"/\" source \"/required-env-vars.yml\")] path)"
           script:
             type: string
             data: |
@@ -34,9 +34,9 @@ tools:
               from pathlib import Path
               import os
 
-              target = "{pt.param target}"
-              source = "{pt.param source}"
-              caller = "{pt.param caller}"
+              target = "{pt.input target}"
+              source = "{pt.input source}"
+              caller = "{pt.input caller}"
 
               # Read env vars from mounted file
               env_vars_path = Path("/env-vars.yml")
@@ -87,14 +87,21 @@ tools:
               env_entries = []
               for var in vars_to_add:
                   name = var['name']
-                  key = var['key']
-                  is_secret = var['secret']
 
-                  # Reference the value/secret using pt.value or pt.secret
-                  if is_secret:
-                      env_entries.append(f'            - {{ name: {name}, value: "#pt-clj (pt/secret \\"{key}\\")" }}')
+                  # Check if there's an explicit value expression
+                  if 'value' in var:
+                      # Use the explicit value expression directly
+                      env_entries.append(f'            - {{ name: {name}, value: "{var["value"]}" }}')
                   else:
-                      env_entries.append(f'            - {{ name: {name}, value: "#pt-clj (pt/value \\"{key}\\")" }}')
+                      # Use key-based lookup
+                      key = var['key']
+                      is_secret = var.get('secret', False)
+
+                      # Reference the value/secret using pt.value or pt.secret
+                      if is_secret:
+                          env_entries.append(f'            - {{ name: {name}, value: "pt.clj (pt/secret \\"{key}\\")" }}')
+                      else:
+                          env_entries.append(f'            - {{ name: {name}, value: "pt.clj (pt/value \\"{key}\\")" }}')
 
               env_block = '\n'.join(env_entries)
 

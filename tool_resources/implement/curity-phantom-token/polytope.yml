@@ -3,33 +3,20 @@ tools:
     info: |
       Implements the Curity Phantom Token Pattern.
       Adds JWT Validator to Python clients and Phantom Token Handler to TypeScript clients.
-      Appends Kong configuration to config/kong.yml.
+      Appends Kong configuration to config/kong/kong.yml.
+      Requires Kong service to already be added to the project.
+    inputs:
+      kong-service:
+        info: Name of your Kong service (the directory name under services/)
+        type: str
     run:
-      # Check if Kong is present in the project and add it if missing
-      - id: check-and-add-kong
-        code: |-
-          pt.js
-          try {
-            const polyContent = pt.readRepoFile("polytope.yml");
-            if (!polyContent.includes("template: kong")) {
-              pt.log("🚀 Kong not found. Adding Kong service...");
-              pt.callModule("add-and-run-service", { template: "kong", name: "kong", run: false });
-            } else {
-              pt.log("✅ Kong already present in project.");
-            }
-          } catch (e) {
-            pt.log(`⚠️ Could not read polytope.yml: ${e}`);
-          }
-
       - id: add-python-client
-        after: {step: check-and-add-kong}
         tool: add-client
         args:
           name: jwt_validator
           language: python
 
       - id: add-typescript-client
-        after: {step: check-and-add-kong}
         tool: add-client
         args:
           name: phantom-token-handler
@@ -137,7 +124,7 @@ tools:
             - path: /kong-config
               source:
                 type: repo
-                repo: "#pt-clj pt/module-repo-ref"
+                repo: "pt.clj pt/module-repo-ref"
                 path: /tool_resources/implement/curity-phantom-token/kong-config
           script:
             type: string
@@ -147,17 +134,11 @@ tools:
               import os
 
               # Define target path
-              target_path = Path("/repo/config/kong.yml")
-              
+              target_path = Path("/repo/config/kong/kong.yml")
+
               if not target_path.exists():
-                  print(f"⚠️ {target_path} does not exist. Checking for services/kong/kong.yml")
-                  fallback_path = Path("/repo/services/kong/kong.yml")
-                  if fallback_path.exists():
-                      target_path = fallback_path
-                      print(f"Using {target_path}")
-                  else:
-                      print(f"❌ No kong.yml found. Please ensure Kong service is added.")
-                      exit(0)
+                  print(f"❌ {target_path} does not exist. Please ensure Kong service is added and config/kong/kong.yml exists.")
+                  exit(1)
 
               # Read existing config
               with open(target_path) as f:
@@ -206,4 +187,4 @@ tools:
         args:
           caller: implement
           source: curity-phantom-token
-          target: kong
+          target: "{pt.input kong-service}"

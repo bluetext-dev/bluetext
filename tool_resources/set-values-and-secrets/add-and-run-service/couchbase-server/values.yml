@@ -1,0 +1,5 @@
+# Couchbase server values
+"{name}-host": "{name}"
+"{name}-image": "couchbase:enterprise-7.6.6"
+"{name}-main-bucket-name": main
+"{name}-username": asdf

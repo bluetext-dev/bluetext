@@ -1,6 +1,6 @@
 services:
 - name: web-app
-  url: http://web-app:${WEB_APP_PORT}
+  url: "http://web-app:${WEB_APP_PORT}"
   routes:
   - name: web-app-route
     strip_path: false
@@ -10,7 +10,7 @@ services:
     - name: cors
       config:
         origins:
-        - ${WEB_APP_URL}
+        - "${WEB_APP_URL}"
         methods:
         - GET
         - POST

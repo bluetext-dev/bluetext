@@ -1,23 +1,26 @@
-tools: 
+tools:
 
   {{ project-name }}:
     info: "Runs the Curity Identity Server (blueprint: curity-identity-provider)"
-    await: [set-values-and-secrets]
+    await: [load-config]
     run:
       - tool: polytope/curity
         args:
           image: curity.azurecr.io/curity/idsvr:10.4.0
-          config-file: { type: repo, path: /config/curity/config.xml }
+          config-file: { type: repo, path: /config/{{ project-name }}/config.xml }
           restart: { policy: always }
           create: when-missing
-          password: "{pt.secret curity-password}"
+          password: "{pt.secret {{ project-name }}-password}"
           env:
             - { name: ADMIN, value: true }
-            - { name: CURITY_BASE_URL, value: "{pt.value curity-external-host}:{pt.value curity-external-port}" }
-            - { name: POSTGRES_USERNAME, value: pt.secret postgres-username }
+            - { name: CURITY_BASE_URL, value: "{pt.value {{ project-name }}-external-host}:{pt.value {{ project-name }}-external-port}" }
+            - { name: POSTGRES_HOST, value: "{{ postgres-host }}" }
+            - { name: POSTGRES_PORT, value: "{{ postgres-port }}" }
+            - { name: POSTGRES_USERNAME, value: "{{ postgres-username }}" }
+            - { name: POSTGRES_PASSWORD, value: "{{ postgres-password }}" }
           mounts:
-            - { path: /opt/idsvr/usr/bin/post-commit-cli-scripts, source: { type: repo, path: /config/curity/post-commit-cli-scripts }}
-            - { path: /opt/idsvr/etc/init/curity-users.xml, source: { type: repo, path: /config/curity/users.xml }}
+            - { path: /opt/idsvr/usr/bin/post-commit-cli-scripts, source: { type: repo, path: /config/{{ project-name }}/post-commit-cli-scripts }}
+            - { path: /opt/idsvr/etc/init/curity-users.xml, source: { type: repo, path: /config/{{ project-name }}/users.xml }}
             - { path: /opt/idsvr/usr/share/templates, source: { type: repo, path: ./curity-ui-build/curity/templates }}
             - { path: /opt/idsvr/usr/share/messages, source: { type: repo, path: ./curity-ui-build/curity/messages }}
             - { path: /opt/idsvr/usr/share/webroot, source: { type: repo, path: ./curity-ui-build/curity/webroot }}

@@ -10,6 +10,7 @@ include:
   - setup-environment-variables/polytope.yml
   - add-and-run-service/polytope.yml
   - add-client/polytope.yml
+  - register-service-with-config-manager/polytope.yml
 
 tools:
 
@@ -116,14 +117,16 @@ tools:
         after:
           - step: scaffold-local-overwrite
         tool: get_dev_context
+        args:
+          scope: general
 
   get_dev_context:
     info: |
       Outputs development guidelines for a specific scope.
       Call this tool to get detailed documentation about models, clients, api, or frontend.
       If no scope is provided, returns general development context.
-    params:
-      - id: scope
+    inputs:
+      scope:
         info: "The scope to fetch (optional, defaults to general context)"
         type: [default, [enum, general, models, clients, api, frontend], general]
     run:
@@ -133,11 +136,11 @@ tools:
           repo: {type: host, path: .}
           language: bash
           mounts:
-            - { path: /general.md, source: { type: repo, repo: "#pt-clj pt/module-repo-ref", path: initialize-session/context.md } }
-            - { path: /models.md, source: { type: repo, repo: "#pt-clj pt/module-repo-ref", path: setup-project-structure/base/models/README.md } }
-            - { path: /clients.md, source: { type: repo, repo: "#pt-clj pt/module-repo-ref", path: setup-project-structure/base/clients/README.md } }
-            - { path: /api.md, source: { type: repo, repo: "#pt-clj pt/module-repo-ref", path: scopes/api.md } }
-            - { path: /frontend.md, source: { type: repo, repo: "#pt-clj pt/module-repo-ref", path: scopes/frontend.md } }
+            - { path: /general.md, source: { type: repo, path: tool_resources/initialize-session/context.md } }
+            - { path: /models.md, source: { type: repo, path: tool_resources/setup-project-structure/base/models/README.md } }
+            - { path: /clients.md, source: { type: repo, path: tool_resources/setup-project-structure/base/clients/README.md } }
+            - { path: /api.md, source: { type: repo, path: tool_resources/scopes/api.md } }
+            - { path: /frontend.md, source: { type: repo, path: tool_resources/scopes/frontend.md } }
           script:
             type: string
             data: |
@@ -155,7 +158,7 @@ tools:
   #   info: |
   #     Adds packages to a service's dependency file.
   #     Automatically detects the package manager for the target service.
-  #   params:
+  #   inputs:
   #     - id: target
   #       info: The service to add dependencies to (e.g., api, frontend)
   #       type: str
@@ -165,9 +168,9 @@ tools:
   #   run:
   #     - id: run-add-deps
   #       code: |
-  #         #pt-clj
-  #         (let [target (:target params)
-  #               packages (clojure.string/replace (:packages params) #"[\s,]+" " ")
+  #         pt.clj
+  #         (let [target (:target inputs)
+  #               packages (clojure.string/replace (:packages inputs) #"[\s,]+" " ")
   #               [cmd restart-policy] (case target
   #                                      "api" [(str "./bin/add-dependencies " packages) "never"]
   #                                      "frontend" [(str "bun add " packages) "on-failure"]
@@ -181,11 +184,11 @@ tools:
     info: |
       Sets up the base directory structure for a Bluetext project.
       Projects are organised by models, services, and clients.
-    params:
-      - id: language
+    inputs:
+      language:
         info: Language to scaffold (python).
         type: [enum, python]
-      - id: skip-language
+      skip-language:
         info: Skip scaffolding language-specific structure even if language is provided
         type: [default, bool, false]
     run:
@@ -194,16 +197,28 @@ tools:
         args:
           container-id: scaffold-readme
           actions:
-            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: tool_resources/setup-project-structure/base/clients}
+            - template:
+                type: repo
+                repo: pt.js pt.moduleRepoRef
+                path: tool_resources/setup-project-structure/base/clients
               path: clients
               on-conflict: skip
-            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: tool_resources/setup-project-structure/base/models}
+            - template:
+                type: repo
+                repo: pt.js pt.moduleRepoRef
+                path: tool_resources/setup-project-structure/base/models
               path: models
               on-conflict: skip
-            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: tool_resources/setup-project-structure/base/services}
+            - template:
+                type: repo
+                repo: pt.js pt.moduleRepoRef
+                path: tool_resources/setup-project-structure/base/services
               path: services
               on-conflict: skip
-            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: tool_resources/setup-project-structure/base/config}
+            - template:
+                type: repo
+                repo: pt.js pt.moduleRepoRef
+                path: tool_resources/setup-project-structure/base/config
               path: config
               on-conflict: skip
       - id: scaffold-language
@@ -212,13 +227,13 @@ tools:
         args:
           container-id: scaffold-language
           actions: |-
-            #pt-clj
-            (if (and (:language params) (not (:skip-language params)))
-              [{:template {:type "repo" :repo pt/module-repo-ref :path (str "tool_resources/setup-project-structure/languages/clients/" (:language params))}
-                :path (str "clients/" (:language params))
+            pt.clj
+            (if (and (:language inputs) (not (:skip-language inputs)))
+              [{:template {:type "repo" :repo pt/module-repo-ref :path (str "tool_resources/setup-project-structure/languages/clients/" (:language inputs))}
+                :path (str "clients/" (:language inputs))
                 :on-conflict "skip"}
-               {:template {:type "repo" :repo pt/module-repo-ref :path (str "tool_resources/setup-project-structure/languages/models/" (:language params))}
-                :path (str "models/" (:language params))
+               {:template {:type "repo" :repo pt/module-repo-ref :path (str "tool_resources/setup-project-structure/languages/models/" (:language inputs))}
+                :path (str "models/" (:language inputs))
                 :on-conflict "skip"}]
               [])
       - id: update-gitignore
@@ -272,8 +287,8 @@ tools:
       This creates language-specific library structures in:
       - clients/<language>/
       - models/<language>/
-    params:
-      - id: language
+    inputs:
+      language:
         info: Language to add (currently only supports python)
         type: [enum, python]
     run:
@@ -281,11 +296,17 @@ tools:
         args:
           container-id: scaffold-readme
           actions:
-            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "#pt-clj (str \"setup-project-structure/languages/clients/\" (:language params))"}
-              path: "#pt-clj (str \"clients/\" (:language params))"
+            - template:
+                type: repo
+                repo: pt.js pt.moduleRepoRef
+                path: pt.js `setup-project-structure/languages/clients/${inputs.language}`
+              path: pt.js `clients/${inputs.language}`
               on-conflict: skip
-            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "#pt-clj (str \"setup-project-structure/languages/models/\" (:language params))"}
-              path: "#pt-clj (str \"models/\" (:language params))"
+            - template:
+                type: repo
+                repo: pt.js pt.moduleRepoRef
+                path: pt.js `setup-project-structure/languages/models/${inputs.language}`
+              path: pt.js `models/${inputs.language}`
               on-conflict: skip
 
   # add-client has been moved to tool_resources/add-client/polytope.yml
@@ -296,8 +317,8 @@ tools:
       Reads from pre-existing values.yml and secrets.yml files in set-values-and-secrets/add-client/{source}/ or set-values-and-secrets/add-and-run-service/{source}/.
       Also writes the values to the user's config/values.yml and config/secrets.yml files.
       This must be called before setup-service-for-client.
-    params:
-      - id: source
+    inputs:
+      source:
         info: Source to configure (service, client name, or implement path)
         type: str
     run:
@@ -312,20 +333,20 @@ tools:
             - path: /source-values.yml
               source:
                 type: repo
-                repo: "#pt-clj pt/module-repo-ref"
-                path: "#pt-clj (let [source (:source params)] (cond (clojure.string/starts-with? source \"implement/\") (str \"tool_resources/set-values-and-secrets/\" source \"/values.yml\") (clojure.string/ends-with? source \"-client\") (str \"tool_resources/set-values-and-secrets/add-client/\" (clojure.string/replace source #\"-client$\" \"\") \"/values.yml\") :else (str \"tool_resources/set-values-and-secrets/add-and-run-service/\" source \"/values.yml\")))"
+                repo: "pt.clj pt/module-repo-ref"
+                path: "pt.clj (let [source (:source inputs)] (cond (clojure.string/starts-with? source \"implement/\") (str \"tool_resources/set-values-and-secrets/\" source \"/values.yml\") (clojure.string/ends-with? source \"-client\") (str \"tool_resources/set-values-and-secrets/add-client/\" (clojure.string/replace source #\"-client$\" \"\") \"/values.yml\") :else (str \"tool_resources/set-values-and-secrets/add-and-run-service/\" source \"/values.yml\")))"
             - path: /source-secrets.yml
               source:
                 type: repo
-                repo: "#pt-clj pt/module-repo-ref"
-                path: "#pt-clj (let [source (:source params)] (cond (clojure.string/starts-with? source \"implement/\") (str \"tool_resources/set-values-and-secrets/\" source \"/secrets.yml\") (clojure.string/ends-with? source \"-client\") (str \"tool_resources/set-values-and-secrets/add-client/\" (clojure.string/replace source #\"-client$\" \"\") \"/secrets.yml\") :else (str \"tool_resources/set-values-and-secrets/add-and-run-service/\" source \"/secrets.yml\")))"
+                repo: "pt.clj pt/module-repo-ref"
+                path: "pt.clj (let [source (:source inputs)] (cond (clojure.string/starts-with? source \"implement/\") (str \"tool_resources/set-values-and-secrets/\" source \"/secrets.yml\") (clojure.string/ends-with? source \"-client\") (str \"tool_resources/set-values-and-secrets/add-client/\" (clojure.string/replace source #\"-client$\" \"\") \"/secrets.yml\") :else (str \"tool_resources/set-values-and-secrets/add-and-run-service/\" source \"/secrets.yml\")))"
           script:
             type: string
             data: |
               import yaml
               from pathlib import Path
 
-              source = "{pt.param source}"
+              source = "{pt.input source}"
 
               # Read source values and secrets from mounted files
               with open("/source-values.yml") as f:
@@ -417,11 +438,11 @@ tools:
       Adds environment variables to a service's polytope.yml.
       Environment variables reference the values/secrets set by set-values-and-secrets.
       Call set-values-and-secrets first.
-    params:
-      - id: service
+    inputs:
+      service:
         info: Service to set up (api, frontend, config-manager, etc.)
         type: str
-      - id: client
+      client:
         info: Client providing the configuration
         type: [enum, couchbase-client, temporal-client, twilio-client, postgres-client]
     run:
@@ -429,24 +450,24 @@ tools:
         tool: setup-environment-variables
         args:
           caller: setup-service-for-client
-          source: "#pt-clj (let [client (:client params) base-name (clojure.string/replace client #\"-client$\" \"\") clients #{\"couchbase\" \"postgres\" \"temporal\" \"twilio\"}] (if (contains? clients base-name) base-name (str \"services/\" client)))"
-          target: "{pt.param service}"
+          source: "pt.clj (let [client (:client inputs) base-name (clojure.string/replace client #\"-client$\" \"\") clients #{\"couchbase\" \"postgres\" \"temporal\" \"twilio\"}] (if (contains? clients base-name) base-name (str \"services/\" client)))"
+          target: "{pt.input service}"
 
   add-entity:
     info: |
       Scaffolds entity models for data store clients.
       Creates entity files in models/python/models/entities/ with proper structure.
-    params:
-      - id: client
+    inputs:
+      client:
         info: Data store client type
         type: [enum, couchbase]
-      - id: language
+      language:
         info: Language for the entity
         type: [enum, python]
-      - id: entity-singular
+      entity-singular:
         info: Entity name in singular form (e.g., "project")
         type: str
-      - id: entity-plural
+      entity-plural:
         info: Entity name in plural form (e.g., "projects")
         type: str
     run:
@@ -456,16 +477,28 @@ tools:
         args:
           container-id: scaffold-base-structure
           actions:
-            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: setup-project-structure/base/clients}
+            - template:
+                type: repo
+                repo: pt.js pt.moduleRepoRef
+                path: setup-project-structure/base/clients
               path: clients
               on-conflict: skip
-            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: setup-project-structure/base/models}
+            - template:
+                type: repo
+                repo: pt.js pt.moduleRepoRef
+                path: setup-project-structure/base/models
               path: models
               on-conflict: skip
-            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: setup-project-structure/base/services}
+            - template:
+                type: repo
+                repo: pt.js pt.moduleRepoRef
+                path: setup-project-structure/base/services
               path: services
               on-conflict: skip
-            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: setup-project-structure/base/config}
+            - template:
+                type: repo
+                repo: pt.js pt.moduleRepoRef
+                path: setup-project-structure/base/config
               path: config
               on-conflict: skip
 
@@ -475,11 +508,17 @@ tools:
         args:
           container-id: scaffold-language
           actions:
-            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "#pt-clj (str \"setup-project-structure/languages/clients/\" (:language params))"}
-              path: "#pt-clj (str \"clients/\" (:language params))"
+            - template:
+                type: repo
+                repo: pt.js pt.moduleRepoRef
+                path: pt.js `setup-project-structure/languages/clients/${inputs.language}`
+              path: pt.js `clients/${inputs.language}`
               on-conflict: skip
-            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: "#pt-clj (str \"setup-project-structure/languages/models/\" (:language params))"}
-              path: "#pt-clj (str \"models/\" (:language params))"
+            - template:
+                type: repo
+                repo: pt.js pt.moduleRepoRef
+                path: pt.js `setup-project-structure/languages/models/${inputs.language}`
+              path: pt.js `models/${inputs.language}`
               on-conflict: skip
 
       - id: scaffold-entity
@@ -493,10 +532,10 @@ tools:
             data: |
               from pathlib import Path
 
-              client = "{pt.param client}"
-              language = "{pt.param language}"
-              entity_singular = "{pt.param entity-singular}"
-              entity_plural = "{pt.param entity-plural}"
+              client = "{pt.input client}"
+              language = "{pt.input language}"
+              entity_singular = "{pt.input entity-singular}"
+              entity_plural = "{pt.input entity-plural}"
 
               # Read the template file
               template_path = Path(f"/template/entity.py")
@@ -527,56 +566,60 @@ tools:
             - path: /template
               source:
                 type: repo
-                repo: "#pt-clj pt/module-repo-ref"
-                path: "#pt-clj (str \"add-entity/\" (:client params) \"/\" (:language params))"
+                repo: "pt.clj pt/module-repo-ref"
+                path: "pt.clj (str \"add-entity/\" (:client inputs) \"/\" (:language inputs))"
 
   # Internal tools for dependency handling (called by read-dependencies)
   _scaffold-deps:
-    params:
-      - id: deps
+    inputs:
+      deps:
         type: any
-      - id: on-conflict
+      on-conflict:
         type: str
-      - id: target
+      target:
         type: str
     run:
       - tool: polytope/scaffold
         args:
-          container-id: "#pt-clj (str \"scaffold-deps-\" (hash (:deps params)))"
+          container-id: "pt.clj (str \"scaffold-deps-\" (hash (:deps inputs)))"
           actions: |-
-            #pt-js
-            const deps = params.deps;
-            const onConflict = params["on-conflict"];
-            const target = params.target;
+            pt.js
+            const deps = inputs.deps;
+            const onConflict = inputs["on-conflict"];
+            const target = inputs.target;
             deps.map(dep => ({
-              template: {type: "repo", repo: "#pt-clj pt/module-repo-ref", path: "tool_resources/add-and-run-service/" + dep.path + "/template"},
+              template: {type: "repo", repo: pt.moduleRepoRef, path: "tool_resources/add-and-run-service/" + dep.path + "/template"},
               path: "services/" + dep.name,
               "on-conflict": onConflict,
               "add-to-tools": [{tool: target, call: dep.name}]
             }));
 
   _scaffold-language:
-    params:
-      - id: language
+    inputs:
+      language:
         type: str
     run:
       - tool: polytope/scaffold
         args:
-          container-id: "#pt-clj (str \"scaffold-lang-\" (:language params))"
-          actions: |-
-            #pt-clj
-            (let [lang (:language params)]
-              [{:template {:type "repo" :repo pt/module-repo-ref :path (str "setup-project-structure/languages/clients/" lang)}
-                :path (str "clients/" lang)
-                :on-conflict "skip"}
-               {:template {:type "repo" :repo pt/module-repo-ref :path (str "setup-project-structure/languages/models/" lang)}
-                :path (str "models/" lang)
-                :on-conflict "skip"}])
+          container-id: pt.js `scaffold-lang-${inputs.language}`
+          actions:
+            - template:
+                type: repo
+                repo: pt.js pt.moduleRepoRef
+                path: pt.js `/tool_resources/setup-project-structure/languages/clients/${inputs.language}`
+              path: pt.js `clients/${inputs.language}`
+              on-conflict: skip
+            - template:
+                type: repo
+                repo: pt.js pt.moduleRepoRef
+                path: pt.js `/tool_resources/setup-project-structure/languages/models/${inputs.language}`
+              path: pt.js `models/${inputs.language}`
+              on-conflict: skip
 
   # Inlined set-values-and-secrets logic for dependencies (chained tool resolution broken in Polytope)
   _set-values-for-deps:
-    params:
-      - id: deps
+    inputs:
+      deps:
         type: any
     run:
       - id: write-deps-values-to-config
@@ -586,8 +629,8 @@ tools:
           language: python
           dependencies: [pyyaml]
           mounts: |-
-            #pt-clj
-            (let [deps (:deps params)]
+            pt.clj
+            (let [deps (:deps inputs)]
               (mapcat (fn [{n :name}]
                         [{:path (str "/source-values-" n ".yml")
                           :source {:type "repo"
@@ -601,8 +644,8 @@ tools:
           script:
             type: string
             data: |-
-              #pt-clj
-              (let [deps (:deps params)
+              pt.clj
+              (let [deps (:deps inputs)
                     dep-names (clojure.string/join "," (map :name deps))]
                 (str "import yaml
               from pathlib import Path

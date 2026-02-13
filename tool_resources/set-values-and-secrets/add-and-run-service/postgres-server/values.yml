@@ -1,0 +1,5 @@
+# Postgres server configuration values
+"{name}-host": "{name}"
+"{name}-port": "5432"
+"{name}-database": postgres
+"{name}-username": asdf

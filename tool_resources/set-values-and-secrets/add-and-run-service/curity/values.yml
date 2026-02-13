@@ -1,5 +1,5 @@
-# Values for curity service
-curity-host: curity
-curity-port: 8443
-curity-external-host: https://localhost
-curity-external-port: 8443
+# Curity service values
+"{name}-host": "{name}"
+"{name}-port": "8443"
+"{name}-external-host": "https://localhost"
+"{name}-external-port": "8443"

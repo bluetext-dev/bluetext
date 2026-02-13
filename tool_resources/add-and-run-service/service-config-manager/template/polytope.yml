@@ -1,34 +1,23 @@
 tools:
-  service-config-manager:
-    info: Manages Redpanda topics and Couchbase buckets/scopes/collections
-    await: [set-values-and-secrets]
+  {{ project-name }}:
+    info: |
+      Service Config Manager - auto-discovers and manages registered database servers.
+      Servers are mounted at /couchbase-servers/<name>/ and /postgres-servers/<name>/.
+      The manager scans these directories at runtime to discover which servers to manage.
+    await: [load-config]
 
     run:
       - tool: polytope/python
         args:
           await: false
           image: python:3.11.8-slim-bookworm
-          id: service-config-manager
+          id: {{ project-name }}
           restart: { policy: always }
           code: { type: repo, path: . }
           cmd: ./bin/run
           create: when-missing
           env:
-            - { name: ENVIRONMENT, value: pt.value service-config-manager-environment }
-            - { name: SERVICES, value: pt.value service-config-manager-services }
-
-            - { name: COUCHBASE_HOST, value: pt.value service-config-manager-couchbase-host }
-            - { name: COUCHBASE_USERNAME, value: pt.value service-config-manager-couchbase-username }
-            - { name: COUCHBASE_PASSWORD, value: pt.secret service-config-manager-couchbase-password }
-            - { name: COUCHBASE_MAIN_BUCKET_NAME, value: pt.value service-config-manager-couchbase-main-bucket-name }
-
-            - { name: REDPANDA_HOST, value: pt.value service-config-manager-redpanda-host }
-            - { name: REDPANDA_PORT, value: pt.value service-config-manager-redpanda-port }
-
-            - { name: POSTGRES_HOST, value: pt.value service-config-manager-postgres-host }
-            - { name: POSTGRES_DB, value: pt.value service-config-manager-postgres-db }
-            - { name: POSTGRES_USER, value: pt.secret service-config-manager-postgres-user }
-            - { name: POSTGRES_PASSWORD, value: pt.secret service-config-manager-postgres-password }
+            - { name: ENVIRONMENT, value: "pt.value {{ project-name }}-environment" }
           mounts:
-            - { path: /config/, source: { type: repo, path: /config }}
             - { path: /root/.cache/, source: { type: volume, scope: project, id: dependency-cache } }
+            # Dynamic server mounts are injected by the scaffolding step based on couchbase-servers and postgres-servers variables

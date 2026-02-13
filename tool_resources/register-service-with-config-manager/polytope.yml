@@ -1,0 +1,127 @@
+tools:
+  register-service-with-config-manager:
+    info: |
+      Registers a database server with the service-config-manager.
+      Adds a mount for the server's config directory into the config manager's container.
+      Use this to add servers to an existing config-manager without re-scaffolding.
+
+      Example: register-service-with-config-manager(service: "cache-db", type: "couchbase")
+    inputs:
+      service:
+        info: Service name to register (e.g., "main-db", "cache-db")
+        type: str
+      type:
+        info: Server type (couchbase or postgres)
+        type: [enum, couchbase, postgres]
+    run:
+      - id: register-service
+        tool: pt/run-script
+        args:
+          repo: {type: host, path: .}
+          language: python
+          dependencies: [pyyaml]
+          script:
+            type: string
+            data: |
+              import yaml
+              from pathlib import Path
+              import sys
+              import re
+
+              service_name = "{pt.input service}".lower()
+              service_name = re.sub(r"[^a-z0-9_-]", "-", service_name)
+              server_type = "{pt.input type}"
+
+              # Find the service-config-manager in the project
+              project_polytope = Path("/repo/polytope.yml")
+              if not project_polytope.exists():
+                  print("ERROR: polytope.yml not found in project root")
+                  sys.exit(1)
+
+              with open(project_polytope) as f:
+                  project_config = yaml.safe_load(f) or {}
+
+              tools = project_config.get('tools', {})
+
+              # Find service-config-manager by looking for services that have config-manager in the name
+              config_manager_service = None
+              for tool_name in tools.keys():
+                  if 'config-manager' in tool_name.lower() or 'configmanager' in tool_name.lower():
+                      service_dir = Path(f"/repo/services/{tool_name}/polytope.yml")
+                      if service_dir.exists():
+                          config_manager_service = tool_name
+                          break
+
+              if not config_manager_service:
+                  print("ERROR: service-config-manager not found in project. Add it first with:")
+                  print("  add-and-run-service(template-and-variables: {service-config-manager: {couchbase-servers: [...]}}, name: \"config-mgr\")")
+                  sys.exit(1)
+
+              print(f"Found config manager: {config_manager_service}")
+
+              # Check if service config directory exists
+              service_config_dir = Path(f"/repo/config/{service_name}")
+              if not service_config_dir.exists():
+                  print(f"WARNING: config/{service_name}/ directory not found. Make sure the service was added first.")
+
+              # Update the service-config-manager's polytope.yml
+              config_manager_polytope = Path(f"/repo/services/{config_manager_service}/polytope.yml")
+              with open(config_manager_polytope) as f:
+                  cm_config = yaml.safe_load(f) or {}
+
+              cm_tools = cm_config.get('tools', {})
+              if config_manager_service not in cm_tools:
+                  print(f"ERROR: Tool {config_manager_service} not found in its polytope.yml")
+                  sys.exit(1)
+
+              cm_tool = cm_tools[config_manager_service]
+              run_steps = cm_tool.get('run', [])
+
+              for step in run_steps:
+                  if isinstance(step, dict) and 'args' in step:
+                      args = step['args']
+                      mounts = args.get('mounts', [])
+
+                      # Add mount for server config directory
+                      mount_path = f"/{server_type}-servers/{service_name}/"
+                      mount_exists = any(
+                          isinstance(m, dict) and m.get('path') == mount_path
+                          for m in mounts
+                      )
+
+                      if not mount_exists:
+                          mounts.append({
+                              'path': mount_path,
+                              'source': {'type': 'repo', 'path': f'/config/{service_name}'}
+                          })
+                          args['mounts'] = mounts
+                          print(f"Added mount: {mount_path} -> /config/{service_name}")
+                      else:
+                          print(f"Mount for {mount_path} already exists")
+
+              with open(config_manager_polytope, 'w') as f:
+                  yaml.dump(cm_config, f, default_flow_style=False, sort_keys=False)
+
+              print(f"Successfully registered {service_name} as {server_type} server with {config_manager_service}")
+
+      - id: reapply-config-manager
+        after: {step: register-service}
+        code: |-
+          pt.js
+          const serviceName = inputs.service.toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+
+          // Find config manager name from project polytope.yml
+          const projectConfig = pt.readYaml(pt.readRepoFile("polytope.yml"));
+          const tools = projectConfig.tools || {};
+
+          const configManagerName = Object.keys(tools).find(name =>
+            name.toLowerCase().includes("config-manager") ||
+            name.toLowerCase().includes("configmanager")
+          );
+
+          if (configManagerName) {
+            pt.log(`Reapplying ${configManagerName} to pick up new mount for ${serviceName}...`);
+            pt.callModule(configManagerName, {});
+          } else {
+            pt.log("Could not find config manager to reapply");
+          }

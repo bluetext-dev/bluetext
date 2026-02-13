@@ -1,30 +1,30 @@
 tools:
-  temporal:
+  {{ project-name }}:
     info: "Runs Temporal with auto-initialization"
-    await: [set-values-and-secrets]
+    await: [load-config]
     run:
       - tool: polytope/container
         args:
           await: false
           image: temporalio/auto-setup:1.26.3.0
-          id: temporal
+          id: {{ project-name }}
           restart:
             policy: always
           services:
-            - id: temporal
+            - id: {{ project-name }}
               ports:
                 - {label: grpc, protocol: tcp, port: 7233, expose-as: 7233}
           env:
-            - {name: DB, value: pt.value temporal-db}
-            - {name: DB_PORT, value: pt.value temporal-db-port}
-            - {name: DYNAMIC_CONFIG_FILE, value: pt.value temporal-dynamic-config-file}
-            - {name: LOG_LEVEL, value: pt.value temporal-log-level}
-            - {name: POSTGRES_PWD, value: pt.secret temporal-postgres-pwd}
-            - {name: POSTGRES_SEEDS, value: pt.value temporal-postgres-seeds}
-            - {name: POSTGRES_USER, value: pt.value temporal-postgres-user}
-            - {name: TEMPORAL_ADDRESS, value: pt.value temporal-address}
-            - {name: TEMPORAL_CLI_ADDRESS, value: pt.value temporal-cli-address}
+            - {name: DB, value: "pt.value {{ project-name }}-db"}
+            - {name: DB_PORT, value: "{{ postgres-port }}"}
+            - {name: DYNAMIC_CONFIG_FILE, value: "pt.value {{ project-name }}-dynamic-config-file"}
+            - {name: LOG_LEVEL, value: "pt.value {{ project-name }}-log-level"}
+            - {name: POSTGRES_PWD, value: "{{ postgres-password }}"}
+            - {name: POSTGRES_SEEDS, value: "{{ postgres-host }}"}
+            - {name: POSTGRES_USER, value: "{{ postgres-user }}"}
+            - {name: TEMPORAL_ADDRESS, value: "pt.value {{ project-name }}-address"}
+            - {name: TEMPORAL_CLI_ADDRESS, value: "pt.value {{ project-name }}-cli-address"}
           mounts:
             - path: /etc/temporal/config
-              source: {type: volume, scope: project, id: temporal-config}
+              source: {type: volume, scope: project, id: {{ project-name }}-config}
           create: when-missing

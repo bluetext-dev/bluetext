@@ -1,2 +1,2 @@
-temporal-ui-address: temporal:7233
-temporal-ui-port: 8233
+"{name}-address": "temporal:7233"
+"{name}-port": "8233"

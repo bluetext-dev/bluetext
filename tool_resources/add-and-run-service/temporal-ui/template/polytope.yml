@@ -1,20 +1,20 @@
 tools:
-  temporal-ui:
+  {{ project-name }}:
     info: "Runs the Temporal Web UI"
-    await: [set-values-and-secrets]
+    await: [load-config]
     run:
       - tool: polytope/container
         args:
           await: false
           image: temporalio/ui:2.40.0
-          id: temporal-ui
+          id: {{ project-name }}
           restart:
             policy: always
           services:
-            - id: temporal-ui
+            - id: {{ project-name }}
               ports:
                 - {protocol: http, port: 8233, expose-as: 8233}
           env:
-            - {name: TEMPORAL_ADDRESS, value: pt.value temporal-ui-address}
-            - {name: TEMPORAL_UI_PORT, value: pt.value temporal-ui-port}
+            - {name: TEMPORAL_ADDRESS, value: pt.value {{ project-name }}-address}
+            - {name: TEMPORAL_UI_PORT, value: pt.value {{ project-name }}-port}
           create: when-missing

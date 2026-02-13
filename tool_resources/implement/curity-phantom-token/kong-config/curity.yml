@@ -1,6 +1,6 @@
 services:
 - name: curity
-  url: http://curity:${CURITY_PORT}
+  url: "http://curity:${CURITY_PORT}"
   routes:
   - name: curity-route
     strip_path: false
@@ -14,7 +14,7 @@ services:
     - name: cors
       config:
         origins:
-        - ${WEB_APP_URL}
+        - "${WEB_APP_URL}"
         methods:
         - GET
         - POST
@@ -32,7 +32,7 @@ services:
         preflight_continue: false
 
 - name: curity-proxied
-  url: http://curity:${CURITY_PORT}/oauth/v2/oauth-userinfo
+  url: "http://curity:${CURITY_PORT}/oauth/v2/oauth-userinfo"
   routes:
   - name: curity-proxied-route
     strip_path: true
@@ -42,8 +42,8 @@ services:
     - name: cors
       config:
         origins:
-        - ${WEB_APP_URL}
-        - ${CURITY_BASE_URL}
+        - "${WEB_APP_URL}"
+        - "${CURITY_BASE_URL}"
         methods:
         - GET
         - POST
@@ -63,5 +63,5 @@ services:
     - name: oauth-proxy
       config:
         cookie_prefix: th-
-        cookie_key: ${OAUTH_PROXY_COOKIE_KEY_PEM}
-        cookie_key_pass: ${KONG_OAUTH_PROXY_COOKIE_KEY}
+        cookie_key: "${OAUTH_PROXY_COOKIE_KEY_PEM}"
+        cookie_key_pass: "${KONG_OAUTH_PROXY_COOKIE_KEY}"

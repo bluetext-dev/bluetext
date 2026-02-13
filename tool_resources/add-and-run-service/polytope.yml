@@ -4,47 +4,88 @@ tools:
       Scaffolds a service, adds it to includes, adds it to a run graph, and optionally runs it.
       This is a convenience tool that combines scaffold and add-to-run-graph.
 
-      Example: add-and-run-service(template: "api", name: "my-api", run: true)
-      This scaffolds to "services/my-api", adds it to stack, and runs it.
-    params:
-      - id: template
-        info: Template to scaffold
-        type: [enum, python-fast-api, react-web-app, couchbase, temporal, temporal-ui, postgres, curity, kong, service-config-manager]
-      - id: name
+      Example: add-and-run-service(template-and-variables: {postgres-server: {}}, name: "my-db", run: true)
+      This scaffolds postgres-server template to "services/my-db", adds it to stack, and runs it.
+
+      Example with variable overrides (linking to an existing service):
+      add-and-run-service(
+        template-and-variables: {curity: {postgres-host: "pt.value my-db-host", postgres-username: "pt.value my-db-username"}},
+        name: "auth"
+      )
+      This scaffolds curity but configures it to use the "my-db" postgres service instead of defaults.
+    inputs:
+      template-and-variables:
+        info: |
+          Template to scaffold with optional variable overrides for linking to existing services.
+          The key is the template name, the value is an object with variable overrides.
+          Variables default to pt.value/pt.secret references that can be overridden to point to differently-named services.
+        type:
+          - either
+          - postgres-server:
+              host: [default, str, "postgres"]
+              port: [default, str, "5432"]
+              database: [default, str, "postgres"]
+              username: [default, str, "postgres"]
+              password: [default, str, "postgres"]
+          - pgweb:
+              postgres-host: [default, str, "pt.value postgres-server-host"]
+              postgres-port: [default, str, "pt.value postgres-server-port"]
+              postgres-database: [default, str, "pt.value postgres-server-database"]
+              postgres-username: [default, str, "pt.value postgres-server-username"]
+              postgres-password: [default, str, "pt.secret postgres-server-password"]
+          - psql:
+              postgres-host: [default, str, "pt.value postgres-server-host"]
+              postgres-port: [default, str, "pt.value postgres-server-port"]
+              postgres-database: [default, str, "pt.value postgres-server-database"]
+              postgres-username: [default, str, "pt.value postgres-server-username"]
+              postgres-password: [default, str, "pt.secret postgres-server-password"]
+          - curity:
+              postgres-host: [default, str, "pt.value postgres-server-host"]
+              postgres-port: [default, str, "pt.value postgres-server-port"]
+              postgres-username: [default, str, "pt.value postgres-server-username"]
+              postgres-password: [default, str, "pt.secret postgres-server-password"]
+          - kong: {}
+          - couchbase-server: {}
+          - python-fast-api: {}
+          - react-web-app: {}
+          - temporal:
+              postgres-host: [default, str, "pt.value postgres-server-host"]
+              postgres-port: [default, str, "pt.value postgres-server-port"]
+              postgres-user: [default, str, "pt.value postgres-server-username"]
+              postgres-password: [default, str, "pt.secret postgres-server-password"]
+          - temporal-ui: {}
+          - service-config-manager:
+              couchbase-servers: [default, [str], ["couchbase-server"]]
+              postgres-servers: [default, [str], ["postgres-server"]]
+      name:
         info: Service name (e.g., "my-api"). Will be scaffolded to "services/<name>"
         type: str
-      - id: target
+      target:
         info: Which graph/tool to add to
         type: [default, str, stack]
-      - id: run
+      run:
         info: Whether to run the service after adding
         type: [default, bool, true]
-      - id: version
+      version:
         info: Optional version tag for the service image (e.g. "3.4"). If provided, it overrides the default image tag.
         type: [maybe, str]
-      - id: on-conflict
+      on-conflict:
         info: What to do if files already exist
         type: [default, [enum, skip, overwrite], skip]
     run:
 
       # Inlined setup-project-structure logic
       - id: scaffold-base-structure
-        tool: polytope/scaffold
-        args:
-          container-id: scaffold-base-structure
-          actions:
-            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: /tool_resources/setup-project-structure/base/clients}
-              path: clients
-              on-conflict: skip
-            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: /tool_resources/setup-project-structure/base/models}
-              path: models
-              on-conflict: skip
-            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: /tool_resources/setup-project-structure/base/services}
-              path: services
-              on-conflict: skip
-            - template: {type: repo, repo: "#pt-clj pt/module-repo-ref", path: /tool_resources/setup-project-structure/base/config}
-              path: config
-              on-conflict: skip
+        code: |-
+          pt.js
+          pt.callModule("polytope/scaffold", {
+            "container-id": "scaffold-base-structure",
+            actions: ["clients", "models", "services", "config"].map(dir => ({
+              template: { type: "repo", repo: pt.moduleRepoRef, path: `/tool_resources/setup-project-structure/base/${dir}` },
+              path: dir,
+              "on-conflict": "skip"
+            }))
+          });
 
       - id: update-gitignore
         after: {step: scaffold-base-structure}
@@ -169,42 +210,69 @@ tools:
         after: {step: validate-service-name}
         code: |-
           pt.js
-          const template = params.template;
+          // Extract template name from template-and-variables param
+          // Note: pt.param() converts kebab-case keys to camelCase, so we convert back
+          const templateAndVars = pt.param("template-and-variables");
+          const rawKey = Object.keys(templateAndVars)[0];
+          const template = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
+          const variables = templateAndVars[rawKey] || {};
           const basePath = "tool_resources/add-and-run-service";
 
           // Try to read language from dependencies.yml (for backward compatibility)
           let lang = null;
           try {
             const path = `${basePath}/${template}/dependencies.yml`;
-            const data = pt.readYaml(pt.readRepoFile(path, { repo: pt.module_repo_ref }));
+            const data = pt.readYaml(pt.readRepoFile(path, { repo: pt.moduleRepoRef }));
             lang = data ? data.language : null;
           } catch (e) {
             // No dependencies.yml or language specified
           }
 
           if (lang) {
-            pt.callModule("_scaffold-language", { language: lang });
+            pt.callModule("polytope/scaffold", {
+              "container-id": `scaffold-lang-${lang}`,
+              actions: [
+                {
+                  template: { type: "repo", repo: pt.moduleRepoRef, path: `/tool_resources/setup-project-structure/languages/clients/${lang}` },
+                  path: `clients/${lang}`,
+                  "on-conflict": "skip"
+                },
+                {
+                  template: { type: "repo", repo: pt.moduleRepoRef, path: `/tool_resources/setup-project-structure/languages/models/${lang}` },
+                  path: `models/${lang}`,
+                  "on-conflict": "skip"
+                }
+              ]
+            });
           }
 
-          ({ language: lang });
+          ({ language: lang, template: template, variables: variables });
 
       - id: scaffold-services
         after: {step: scaffold-language}
-        tool: polytope/scaffold
-        args:
-          container-id: "#pt-clj (str \"scaffold-services-\" (:template params))"
-          actions: |-
-            #pt-clj
-            (let [template (:template params)
-                  name (-> (:name params)
-                           clojure.string/lower-case
-                           (clojure.string/replace #"[^a-z0-9_-]" "-"))
-                  on-conflict (:on-conflict params)
-                  target (:target params)]
-              [{:template {:type "repo" :repo pt/module-repo-ref :path (str "/tool_resources/add-and-run-service/" template "/template")}
-                        :path (str "services/" name)
-                        :on-conflict on-conflict
-                        :add-to-tools [{:tool target :call name}] }])
+        code: |-
+          pt.js
+          const templateAndVars = pt.param("template-and-variables");
+          const rawKey = Object.keys(templateAndVars)[0];
+          const template = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
+          const variables = templateAndVars[rawKey] || {};
+          const name = pt.param("name").toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+          const onConflict = pt.param("on-conflict");
+          const target = pt.param("target");
+          const scaffoldParams = {};
+          for (const [k, v] of Object.entries(variables)) {
+            scaffoldParams[k] = String(v);
+          }
+          pt.callModule("polytope/scaffold", {
+            "container-id": `scaffold-services-${template}`,
+            actions: [{
+              template: { type: "repo", repo: pt.moduleRepoRef, path: `/tool_resources/add-and-run-service/${template}/template` },
+              path: `services/${name}`,
+              "on-conflict": onConflict,
+              inputs: scaffoldParams,
+              "add-to-tools": [{ tool: target, call: name }]
+            }]
+          });
 
       - id: apply-service-version
         after: {step: scaffold-services}
@@ -265,180 +333,299 @@ tools:
                   with open(service_polytope_file, 'w') as f:
                       yaml.dump(config, f, default_flow_style=False, sort_keys=False)
 
-      - id: write-service-values-to-config
+      - id: inject-config-manager-mounts
         after: {step: apply-service-version}
-        tool: pt/run-script
-        args:
-          repo: {type: host, path: .}
-          language: python
-          dependencies: [pyyaml]
-          mounts:
-            - path: /source-values.yml
-              source:
-                type: repo
-                repo: "#pt-clj pt/module-repo-ref"
-                path: "#pt-clj (str \"/tool_resources/set-values-and-secrets/add-and-run-service/\" (:template params) \"/values.yml\")"
-            - path: /source-secrets.yml
-              source:
-                type: repo
-                repo: "#pt-clj pt/module-repo-ref"
-                path: "#pt-clj (str \"/tool_resources/set-values-and-secrets/add-and-run-service/\" (:template params) \"/secrets.yml\")"
-          script:
-            type: string
-            data: |
-              import yaml
-              from pathlib import Path
-              import re
+        code: |-
+          pt.js
+          const templateAndVars = pt.param("template-and-variables");
+          const rawKey = Object.keys(templateAndVars)[0];
+          const template = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
 
-              template = "{pt.param template}"
-              service_name = "{pt.param name}".lower()
-              service_name = re.sub(r"[^a-z0-9_-]", "-", service_name)
+          // Only process service-config-manager template
+          if (template !== "service-config-manager") {
+            pt.log("Skipping inject-config-manager-mounts: not service-config-manager template");
+          } else {
+            const variables = templateAndVars[rawKey] || {};
+            const name = pt.param("name").toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+            const couchbaseServers = variables.couchbaseServers || variables["couchbase-servers"] || [];
+            const postgresServers = variables.postgresServers || variables["postgres-servers"] || [];
 
-              with open("/source-values.yml") as f:
-                  new_values = yaml.safe_load(f) or {}
+            const script = `
+          import yaml
+          import json
+          from pathlib import Path
+          import sys
 
-              with open("/source-secrets.yml") as f:
-                  new_secrets = yaml.safe_load(f) or {}
+          template = "${template}"
+          service_name = "${name}"
+          couchbase_servers = json.loads('${JSON.stringify(couchbaseServers)}')
+          postgres_servers = json.loads('${JSON.stringify(postgresServers)}')
 
-              # Transform keys: replace template prefix with service name
-              def transform_key(key, template_name, svc_name):
-                  if key.startswith(f"{template_name}-"):
-                      return key.replace(f"{template_name}-", f"{svc_name}-", 1)
-                  return f"{svc_name}-{key}"
+          service_polytope_file = Path(f'/repo/services/{service_name}/polytope.yml')
+          if not service_polytope_file.exists():
+              print(f'Service polytope.yml not found: {service_polytope_file}')
+              sys.exit(0)
 
-              transformed_values = {transform_key(k, template, service_name): v for k, v in new_values.items()}
-              transformed_secrets = {transform_key(k, template, service_name): v for k, v in new_secrets.items()}
+          with open(service_polytope_file, 'r') as f:
+              config = yaml.safe_load(f) or {}
 
-              config_dir = Path("/repo/config")
-              config_dir.mkdir(parents=True, exist_ok=True)
+          tools = config.get('tools', {})
+          if service_name not in tools:
+              print(f'Tool {service_name} not found in polytope.yml')
+              sys.exit(0)
 
-              values_file = config_dir / "values.yml"
-              secrets_file = config_dir / "secrets.yml"
+          tool_def = tools[service_name]
+          run_steps = tool_def.get('run', [])
 
-              if values_file.exists():
-                  with open(values_file) as f:
-                      existing_values = yaml.safe_load(f) or {}
-              else:
-                  existing_values = {}
+          for step in run_steps:
+              if isinstance(step, dict) and 'args' in step:
+                  args = step['args']
+                  mounts = args.get('mounts', [])
+                  for server in couchbase_servers:
+                      mount = {'path': f'/couchbase-servers/{server}/', 'source': {'type': 'repo', 'path': f'/config/{server}'}}
+                      if mount not in mounts:
+                          mounts.append(mount)
+                  for server in postgres_servers:
+                      mount = {'path': f'/postgres-servers/{server}/', 'source': {'type': 'repo', 'path': f'/config/{server}'}}
+                      if mount not in mounts:
+                          mounts.append(mount)
+                  args['mounts'] = mounts
 
-              if secrets_file.exists():
-                  with open(secrets_file) as f:
-                      existing_secrets = yaml.safe_load(f) or {}
-              else:
-                  existing_secrets = {}
+          with open(service_polytope_file, 'w') as f:
+              yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+          print(f'Injected {len(couchbase_servers)} couchbase and {len(postgres_servers)} postgres server mounts')
+          `;
 
-              for k, v in transformed_values.items():
-                  existing_values[k] = v
+            pt.callModule("pt/run-script", {
+              repo: { type: "host", path: "." },
+              language: "python",
+              dependencies: ["pyyaml"],
+              script: { type: "string", data: script }
+            });
+          }
 
-              for k, v in transformed_secrets.items():
-                  existing_secrets[k] = v
+      - id: write-service-values-to-config
+        after: {step: inject-config-manager-mounts}
+        code: |-
+          pt.js
+          const templateAndVars = pt.param("template-and-variables");
+          const rawKey = Object.keys(templateAndVars)[0];
+          const template = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
+          const name = pt.param("name").toLowerCase().replace(/[^a-z0-9_-]/g, "-");
 
-              values_header = """# Configuration values
-              # Non-sensitive configuration that can be committed to version control
-              # Generated and managed by Bluetext tools
+          // Read source values and secrets from module repo
+          let sourceValues = "";
+          let sourceSecrets = "";
+          try {
+            sourceValues = pt.readRepoFile(
+              `tool_resources/set-values-and-secrets/add-and-run-service/${template}/values.yml`,
+              { repo: pt.moduleRepoRef }
+            );
+          } catch (e) { pt.log("No source values.yml found"); }
+          try {
+            sourceSecrets = pt.readRepoFile(
+              `tool_resources/set-values-and-secrets/add-and-run-service/${template}/secrets.yml`,
+              { repo: pt.moduleRepoRef }
+            );
+          } catch (e) { pt.log("No source secrets.yml found"); }
 
-              """
-              with open(values_file, 'w') as f:
-                  f.write(values_header.replace("              ", ""))
-                  if existing_values:
-                      yaml.dump(existing_values, f, default_flow_style=False, sort_keys=True)
+          // Escape for embedding in Python string
+          const escValues = sourceValues.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+          const escSecrets = sourceSecrets.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
 
-              secrets_header = """# Configuration secrets
-              # Sensitive configuration that should NOT be committed to version control
-              # Add this file to .gitignore
-              # Generated and managed by Bluetext tools
+          const script = `
+          import yaml
+          import re as _re
+          from pathlib import Path
 
-              """
-              with open(secrets_file, 'w') as f:
-                  f.write(secrets_header.replace("              ", ""))
-                  if existing_secrets:
-                      yaml.dump(existing_secrets, f, default_flow_style=False, sort_keys=True)
+          template = "${template}"
+          service_name = "${name}"
+
+          new_values = yaml.safe_load('''${escValues}''') or {}
+          new_secrets = yaml.safe_load('''${escSecrets}''') or {}
+
+          def to_kebab_case(s):
+              # Insert hyphen before uppercase letters (camelCase/PascalCase)
+              s = _re.sub(r'([a-z0-9])([A-Z])', r'\\1-\\2', s)
+              # Replace underscores and spaces with hyphens
+              s = _re.sub(r'[_ ]+', '-', s)
+              return s.lower()
+
+          def transform_key(key, svc_name):
+              key = to_kebab_case(key)
+              return key.replace("{name}", svc_name) if "{name}" in key else key
+
+          def transform_value(val, svc_name):
+              if isinstance(val, str) and "{name}" in val:
+                  return val.replace("{name}", svc_name)
+              return val
+
+          transformed_values = {transform_key(k, service_name): transform_value(v, service_name) for k, v in new_values.items()}
+          transformed_secrets = {transform_key(k, service_name): transform_value(v, service_name) for k, v in new_secrets.items()}
+
+          config_dir = Path('/repo/config')
+          config_dir.mkdir(parents=True, exist_ok=True)
+          values_file = config_dir / 'values.yml'
+          secrets_file = config_dir / 'secrets.yml'
+
+          existing_values = yaml.safe_load(open(values_file).read()) if values_file.exists() else {}
+          existing_values = existing_values or {}
+          existing_secrets = yaml.safe_load(open(secrets_file).read()) if secrets_file.exists() else {}
+          existing_secrets = existing_secrets or {}
+
+          existing_values.update(transformed_values)
+          existing_secrets.update(transformed_secrets)
+
+          with open(values_file, 'w') as f:
+              f.write('# Configuration values\\n# Generated and managed by Bluetext tools\\n\\n')
+              if existing_values:
+                  yaml.dump(existing_values, f, default_flow_style=False, sort_keys=True)
+
+          with open(secrets_file, 'w') as f:
+              f.write('# Configuration secrets\\n# Add this file to .gitignore\\n# Generated and managed by Bluetext tools\\n\\n')
+              if existing_secrets:
+                  yaml.dump(existing_secrets, f, default_flow_style=False, sort_keys=True)
+          `;
+
+          pt.callModule("pt/run-script", {
+            repo: { type: "host", path: "." },
+            language: "python",
+            dependencies: ["pyyaml"],
+            script: { type: "string", data: script }
+          });
 
       - id: set-runtime-values
         after: {step: write-service-values-to-config}
         code: |-
           pt.js
+          // pt.readYaml converts kebab-case keys to camelCase, so convert back
+          function toKebabCase(s) {
+            return s.replace(/([a-z0-9])([A-Z])/g, "$1-$2").replace(/[_ ]+/g, "-").toLowerCase();
+          }
+
           // Read from config files and set runtime values/secrets
           const values = pt.readYaml(pt.readRepoFile("config/values.yml")) || {};
           const secrets = pt.readYaml(pt.readRepoFile("config/secrets.yml")) || {};
 
-          pt.log(`📦 Setting ${Object.keys(values).length} values and ${Object.keys(secrets).length} secrets`);
+          pt.log(`Setting ${Object.keys(values).length} values and ${Object.keys(secrets).length} secrets`);
 
           for (const [k, v] of Object.entries(values)) {
-            pt.setProjectValue(k, String(v));
+            pt.setProjectValue(toKebabCase(k), String(v));
           }
 
           for (const [k, v] of Object.entries(secrets)) {
-            pt.setSecret(k, String(v));
+            pt.setSecret(toKebabCase(k), String(v));
           }
 
       - id: copy-config-files
         after: {step: set-runtime-values}
-        tool: pt/run-script
-        args:
-          repo: {type: host, path: .}
-          language: python
-          dependencies: [pyyaml]
-          mounts:
-            - path: /tool-resources
-              source:
-                type: repo
-                repo: "#pt-clj pt/module-repo-ref"
-                path: /tool_resources/add-and-run-service
-          script:
-            type: string
-            data: |
-              import yaml
-              import shutil
-              from pathlib import Path
-              import re
+        code: |-
+          pt.js
+          const templateAndVars = pt.param("template-and-variables");
+          const rawKey = Object.keys(templateAndVars)[0];
+          const template = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
+          const name = pt.param("name").toLowerCase().replace(/[^a-z0-9_-]/g, "-");
 
-              template = "{pt.param template}"
-              service_name = "{pt.param name}".lower()
-              service_name = re.sub(r"[^a-z0-9_-]", "-", service_name)
+          const script = `
+          import shutil
+          from pathlib import Path
 
-              # Create service-specific config directory
-              repo_config_dir = Path(f"/repo/config/{service_name}")
-              repo_config_dir.mkdir(parents=True, exist_ok=True)
+          template = "${template}"
+          service_name = "${name}"
 
-              service_config_dir = Path(f"/tool-resources/{template}/config")
-              if service_config_dir.exists() and service_config_dir.is_dir():
-                  for item in service_config_dir.iterdir():
-                      target_path = repo_config_dir / item.name
-                      if item.is_file():
-                          shutil.copy2(item, target_path)
-                      elif item.is_dir():
-                          # Flatten: copy contents directly, not the directory itself
-                          for sub_item in item.iterdir():
-                              sub_target = repo_config_dir / sub_item.name
-                              if sub_item.is_file():
-                                  shutil.copy2(sub_item, sub_target)
-                              elif sub_item.is_dir():
-                                  shutil.copytree(sub_item, sub_target, dirs_exist_ok=True)
+          repo_config_dir = Path(f'/repo/config/{service_name}')
+          repo_config_dir.mkdir(parents=True, exist_ok=True)
 
-      - id: run-stack
+          service_config_dir = Path(f'/tool-resources/{template}/config')
+          if service_config_dir.exists() and service_config_dir.is_dir():
+              for item in service_config_dir.iterdir():
+                  target_path = repo_config_dir / item.name
+                  if item.is_file():
+                      shutil.copy2(item, target_path)
+                  elif item.is_dir():
+                      for sub_item in item.iterdir():
+                          sub_target = repo_config_dir / sub_item.name
+                          if sub_item.is_file():
+                              shutil.copy2(sub_item, sub_target)
+                          elif sub_item.is_dir():
+                              shutil.copytree(sub_item, sub_target, dirs_exist_ok=True)
+          `;
+
+          pt.callModule("pt/run-script", {
+            repo: { type: "host", path: "." },
+            language: "python",
+            mounts: [{
+              path: "/tool-resources",
+              source: { type: "repo", repo: pt.moduleRepoRef, path: "/tool_resources/add-and-run-service" }
+            }],
+            script: { type: "string", data: script }
+          });
+
+      - id: run-service
         after:
           - step: copy-config-files
-        code: |
-          #pt-clj
-          (when (:run params)
-            (let [target (:target params)]
-              (pt/log (str "🚀 Running execution graph: " target))
-              (pt/call-module target {})))
+        code: |-
+          pt.js
+          const run = pt.param("run");
+          if (run) {
+            const name = pt.param("name").toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+            pt.log(`Running service: ${name}`);
+            pt.callModule(name, {});
+          }
 
   add-service:
-    info: Scaffolds a service
-    params:
-      - id: template
-        type: [enum, python-fast-api, react-web-app, couchbase, temporal, temporal-ui, postgres, curity, kong, service-config-manager]
-      - id: name
+    info: Scaffolds a service without running it
+    inputs:
+      template-and-variables:
+        info: |
+          Template to scaffold with optional variable overrides.
+          Same as add-and-run-service but with run=false.
+        type:
+          - either
+          - postgres-server:
+              host: [default, str, "postgres"]
+              port: [default, str, "5432"]
+              database: [default, str, "postgres"]
+              username: [default, str, "postgres"]
+              password: [default, str, "postgres"]
+          - pgweb:
+              postgres-host: [default, str, "pt.value postgres-server-host"]
+              postgres-port: [default, str, "pt.value postgres-server-port"]
+              postgres-database: [default, str, "pt.value postgres-server-database"]
+              postgres-username: [default, str, "pt.value postgres-server-username"]
+              postgres-password: [default, str, "pt.secret postgres-server-password"]
+          - psql:
+              postgres-host: [default, str, "pt.value postgres-server-host"]
+              postgres-port: [default, str, "pt.value postgres-server-port"]
+              postgres-database: [default, str, "pt.value postgres-server-database"]
+              postgres-username: [default, str, "pt.value postgres-server-username"]
+              postgres-password: [default, str, "pt.secret postgres-server-password"]
+          - curity:
+              postgres-host: [default, str, "pt.value postgres-server-host"]
+              postgres-port: [default, str, "pt.value postgres-server-port"]
+              postgres-username: [default, str, "pt.value postgres-server-username"]
+              postgres-password: [default, str, "pt.secret postgres-server-password"]
+          - kong: {}
+          - couchbase-server: {}
+          - python-fast-api: {}
+          - react-web-app: {}
+          - temporal:
+              postgres-host: [default, str, "pt.value postgres-server-host"]
+              postgres-port: [default, str, "pt.value postgres-server-port"]
+              postgres-user: [default, str, "pt.value postgres-server-username"]
+              postgres-password: [default, str, "pt.secret postgres-server-password"]
+          - temporal-ui: {}
+          - service-config-manager:
+              couchbase-servers: [default, [str], ["couchbase-server"]]
+              postgres-servers: [default, [str], ["postgres-server"]]
+      name:
         type: str
-      - id: on-conflict
+      on-conflict:
         type: [default, [enum, skip, overwrite], skip]
     run:
       - tool: add-and-run-service
         args:
-          template: "{pt.param template}"
+          template-and-variables: "pt.clj (:template-and-variables inputs)"
           name: "{pt.param name}"
           target: "stack"
           run: false
@@ -446,8 +633,8 @@ tools:
 
   run-service:
     info: Runs a service
-    params:
-      - id: name
+    inputs:
+      name:
         type: str
     run:
       - tool: stack

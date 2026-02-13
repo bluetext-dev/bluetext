@@ -1,0 +1,14 @@
+{
+  "name": "@clients/phantom-token-handler",
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    ".": "./client.ts",
+    "./auth": "./AuthContext.tsx",
+    "./hooks": "./usePhantomTokenHandlerAuth.ts",
+    "./utilities/*": "./utilities/*.ts"
+  },
+  "dependencies": {
+    "@curity/token-handler-js-assistant": "^1.0.0"
+  }
+}

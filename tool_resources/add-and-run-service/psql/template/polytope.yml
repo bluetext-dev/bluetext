@@ -1,0 +1,34 @@
+tools:
+  {{ project-name }}:
+    info: |
+      Runs the PSQL shell connected to the configured postgres server.
+      Use this tool to execute SQL commands interactively.
+    inputs:
+      image:
+        info: The Docker image to run.
+        name: Image
+        type:
+          - default
+          - docker-image
+          - public.ecr.aws/docker/library/postgres:16.2
+      command:
+        info: The SQL command to run. If unset, runs an interactive session.
+        name: Command
+        type: [maybe, str]
+    run:
+      - tool: polytope/container
+        args:
+          image: pt.input image
+          env:
+            - { name: PGHOST, value: "{{ postgres-host }}" }
+            - { name: PGPORT, value: "{{ postgres-port }}" }
+            - { name: PGUSER, value: "{{ postgres-username }}" }
+            - { name: PGDATABASE, value: "{{ postgres-database }}" }
+            - { name: PGPASSWORD, value: "{{ postgres-password }}" }
+          id: {{ project-name }}
+          cmd: |
+            pt.clj
+            (->> ["psql"
+                  (when (:command inputs)
+                    (str "--command=" (:command inputs)))]
+                 (remove nil?))

@@ -1,5 +1,5 @@
 # Values for kong service
-kong-proxy-port: 8000
-kong-admin-port: 8001
-kong-host: kong
-kong-external-host: http://localhost
+"{name}-proxy-port": "8000"
+"{name}-admin-port": "8001"
+"{name}-host": "{name}"
+"{name}-external-host": "http://localhost"

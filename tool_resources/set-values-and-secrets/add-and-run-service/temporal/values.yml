@@ -1,8 +1,6 @@
-temporal-db: postgres12
-temporal-db-port: 5432
-temporal-dynamic-config-file: /etc/temporal/config/dynamicconfig/development.yaml
-temporal-log-level: warn
-temporal-postgres-seeds: postgres
-temporal-postgres-user: postgres
-temporal-address: temporal:7233
-temporal-cli-address: temporal:7233
+# Temporal service values
+"{name}-db": postgres12
+"{name}-dynamic-config-file": /etc/temporal/config/dynamicconfig/development.yaml
+"{name}-log-level": warn
+"{name}-address": "{name}:7233"
+"{name}-cli-address": "{name}:7233"

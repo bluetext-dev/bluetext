@@ -1,49 +1,36 @@
 tools:
   {{ project-name }}:
     info: "'Base' module for other modules in this file to build on."
-    await: [set-values-and-secrets]
-    params:
-      - id: cmd
-        info: The command to run
-        type: [default, str, ./bin/run]
-      - id: dev-mode
-        info: Whether to run in dev mode (with hot reload, debugging)
-        type: [default, bool, true]
-      - id: port
-        info: The port the API will run on
-        type: [default, int, 3030]
-      - id: restart-policy
+    await: [load-config]
+    inputs:
+      restart-policy:
         info: Restart policy for the container.
         type: [default, [enum, always, never, on-failure], always]
-      - id: id
-        info: The container ID to use.
-        type: [default, str, {{ project-name }}]
-      - id: create
+      create:
         info: Whether to create the container.
         type: [default, [enum, never, always, when-missing], when-missing]
     run:
       - tool: polytope/python
         args:
-          id: pt.param id
-          create: pt.param create
+          id: {{ project-name }}
+          create: pt.input create
           image: astral/uv:python3.13-bookworm-slim
           code: { type: repo, path: . }
           await: false
-          cmd: pt.param cmd
+          cmd: ./bin/run
           restart:
-            policy: pt.param restart-policy
-          services: |-
-            #pt-js
-            params.cmd === "./bin/run"
-              ? [{ id: "{{ project-name }}", ports: [{ protocol: "http", port: params.port, 'expose-as': params.port }] }]
-              : null;
+            policy: pt.input restart-policy
+          services:
+            - id: {{ project-name }}
+              ports:
+                - { protocol: http, port: pt.value {{ project-name }}-http-port, expose-as: pt.value {{ project-name }}-http-port }
           env:
-            - { name: HTTP_EXPOSE_ERRORS, value: pt.param dev-mode }
-            - { name: HTTP_AUTORELOAD, value: pt.param dev-mode }
-            - { name: HTTP_PORT, value: pt.param port }
-            - { name: LOG_LEVEL, value: pt.value api-log-level }
+            - { name: HTTP_EXPOSE_ERRORS, value: pt.value {{ project-name }}-dev-mode }
+            - { name: HTTP_AUTORELOAD, value: pt.value {{ project-name }}-dev-mode }
+            - { name: HTTP_PORT, value: pt.value {{ project-name }}-http-port }
+            - { name: LOG_LEVEL, value: pt.value {{ project-name }}-log-level }
           mounts:
             - { path: /root/.cache/, source: { type: volume, scope: project, id: {{ project-name | kebab_case}}-dependency-cache } }
-            - { path: /clients/python, source: { type: repo, path: /clients/python, repo: "#pt-clj pt/module-project-ref" } }
-            - { path: /models/python, source: { type: repo, path: /models/python, repo: "#pt-clj pt/module-project-ref" } }
+            - { path: /clients/python, source: { type: repo, path: /clients/python } }
+            - { path: /models/python, source: { type: repo, path: /models/python } }
 

@@ -1,5 +1,0 @@
-# Postgres configuration values
-postgres-host: postgres
-postgres-port: 5432
-postgres-database: postgres
-postgres-username: postgres
