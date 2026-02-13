@@ -4,7 +4,6 @@ tools:
       Runs pgweb - a web-based PostgreSQL database browser service.
       The pgweb service will be available at http://localhost:8081.
       Connects to the configured postgres server.
-    await: [load-config]
     run:
       - tool: polytope/container
         args:

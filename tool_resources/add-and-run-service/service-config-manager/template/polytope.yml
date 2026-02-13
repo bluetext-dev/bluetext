@@ -4,8 +4,6 @@ tools:
       Service Config Manager - auto-discovers and manages registered database servers.
       Servers are mounted at /couchbase-servers/<name>/ and /postgres-servers/<name>/.
       The manager scans these directories at runtime to discover which servers to manage.
-    await: [load-config]
-
     run:
       - tool: polytope/python
         args:

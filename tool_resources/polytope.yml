@@ -15,10 +15,24 @@ include:
 tools:
 
   stack:
+    info: |
+      Loads configuration from config files and then runs all services.
+      Use stack-apply-services instead if config is already loaded and you just want to (re)start services.
+    run:
+      - id: load-config
+        tool: load-config
+      - id: run-stack
+        after: {step: load-config}
+        tool: stack-apply-services
+
+  stack-apply-services:
+    info: |
+      Runs all services without reloading configuration.
+      Config must already be loaded in the Polytope context (e.g. by calling stack or load-config first).
     run:
       - tool: polytope/hello-world
         args:
-          message: Nothing to run yet! Call an "add" tool, to add a components to your project.
+          message: Nothing to run yet! Call an "add" tool, to add components to your project.
 
   scaffold-initialize-session:
     run:

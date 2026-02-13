@@ -2,7 +2,6 @@ tools:
 
   {{ project-name }}:
     info: "Runs the Curity Identity Server (blueprint: curity-identity-provider)"
-    await: [load-config]
     run:
       - tool: polytope/curity
         args:

@@ -1,7 +1,6 @@
 tools:
   {{ project-name }}:
     info: "Runs the Temporal Web UI"
-    await: [load-config]
     run:
       - tool: polytope/container
         args:

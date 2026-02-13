@@ -1,7 +1,6 @@
 tools:
   {{ project-name }}:
     info: "Runs Temporal with auto-initialization"
-    await: [load-config]
     run:
       - tool: polytope/container
         args:

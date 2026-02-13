@@ -1,7 +1,6 @@
 tools:
   {{ project-name }}:
     info: "Runs the Couchbase cluster"
-    await: [load-config]
     run:
       - tool: polytope/couchbase
         args:

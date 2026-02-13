@@ -4,7 +4,6 @@ tools:
       Runs a PostgreSQL database server in dev mode.
       Uses the persistent volume `postgres-data-{{ project-name }}`.
       Exposes the PostgreSQL port on `{{ project-name }}:5432` within the job, and at `localhost:5432` on the host.
-    await: [load-config]
     run:
       - tool: polytope/postgres
         args:

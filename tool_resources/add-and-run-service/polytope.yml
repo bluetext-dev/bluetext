@@ -7,6 +7,10 @@ tools:
       Example: add-and-run-service(template-and-variables: {postgres-server: {}}, name: "my-db", run: true)
       This scaffolds postgres-server template to "services/my-db", adds it to stack, and runs it.
 
+      Example without name (defaults to template name):
+      add-and-run-service(template-and-variables: {postgres-server: {}})
+      This scaffolds postgres-server template to "services/postgres-server".
+
       Example with variable overrides (linking to an existing service):
       add-and-run-service(
         template-and-variables: {curity: {postgres-host: "pt.value my-db-host", postgres-username: "pt.value my-db-username"}},
@@ -21,12 +25,7 @@ tools:
           Variables default to pt.value/pt.secret references that can be overridden to point to differently-named services.
         type:
           - either
-          - postgres-server:
-              host: [default, str, "postgres"]
-              port: [default, str, "5432"]
-              database: [default, str, "postgres"]
-              username: [default, str, "postgres"]
-              password: [default, str, "postgres"]
+          - postgres-server: {}
           - pgweb:
               postgres-host: [default, str, "pt.value postgres-server-host"]
               postgres-port: [default, str, "pt.value postgres-server-port"]
@@ -54,12 +53,13 @@ tools:
               postgres-user: [default, str, "pt.value postgres-server-username"]
               postgres-password: [default, str, "pt.secret postgres-server-password"]
           - temporal-ui: {}
+          - resonate: {}
           - service-config-manager:
               couchbase-servers: [default, [str], ["couchbase-server"]]
               postgres-servers: [default, [str], ["postgres-server"]]
       name:
-        info: Service name (e.g., "my-api"). Will be scaffolded to "services/<name>"
-        type: str
+        info: Optional service name (e.g., "my-api"). Defaults to the template name if not provided.
+        type: [maybe, str]
       target:
         info: Which graph/tool to add to
         type: [default, str, stack]
@@ -171,40 +171,34 @@ tools:
 
       - id: validate-service-name
         after: {step: ensure-load-config-in-stack}
-        tool: pt/run-script
-        args:
-          repo: {type: host, path: .}
-          language: python
-          dependencies: [pyyaml]
-          script:
-            type: string
-            data: |
-              import yaml
-              from pathlib import Path
-              import sys
-              import re
+        code: |-
+          pt.js
+          const templateAndVars = pt.param("template-and-variables");
+          const rawKey = Object.keys(templateAndVars)[0];
+          const template = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
+          const nameParam = pt.param("name");
+          const name = (nameParam || template).toLowerCase().replace(/[^a-z0-9_-]/g, "-");
 
-              name = "{pt.param name}".lower()
-              name = re.sub(r"[^a-z0-9_-]", "-", name)
+          // Check if service is already registered in polytope.yml
+          try {
+            const config = pt.readYaml(pt.readRepoFile("polytope.yml")) || {};
+            const tools = config.tools || {};
+            if (tools[name]) {
+              throw new Error("Service '" + name + "' already registered in polytope.yml");
+            }
+          } catch (e) {
+            if (e.message && e.message.includes("already registered")) throw e;
+          }
 
-              # Check if service directory already exists
-              service_path = Path(f"/repo/services/{name}")
-              if service_path.exists():
-                  print(f"ERROR: Service '{name}' already exists at services/{name}")
-                  sys.exit(1)
+          // Check if service directory already exists by trying to read its polytope.yml
+          try {
+            pt.readRepoFile("services/" + name + "/polytope.yml");
+            throw new Error("Service '" + name + "' already exists at services/" + name);
+          } catch (e) {
+            if (e.message && e.message.includes("already exists")) throw e;
+          }
 
-              # Check if service is already registered in polytope.yml
-              polytope_path = Path("/repo/polytope.yml")
-              if polytope_path.exists():
-                  with open(polytope_path) as f:
-                      config = yaml.safe_load(f) or {}
-
-                  tools = config.get('tools', {})
-                  if name in tools:
-                      print(f"ERROR: Service '{name}' already registered in polytope.yml")
-                      sys.exit(1)
-
-              print(f"Service name '{name}' is available")
+          pt.log("Service name '" + name + "' is available");
 
       - id: scaffold-language
         after: {step: validate-service-name}
@@ -256,7 +250,8 @@ tools:
           const rawKey = Object.keys(templateAndVars)[0];
           const template = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
           const variables = templateAndVars[rawKey] || {};
-          const name = pt.param("name").toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+          const nameParam = pt.param("name");
+          const name = (nameParam || template).toLowerCase().replace(/[^a-z0-9_-]/g, "-");
           const onConflict = pt.param("on-conflict");
           const target = pt.param("target");
           const scaffoldParams = {};
@@ -276,62 +271,71 @@ tools:
 
       - id: apply-service-version
         after: {step: scaffold-services}
-        tool: pt/run-script
-        args:
-          repo: {type: host, path: .}
-          language: python
-          dependencies: [pyyaml]
-          script:
-            type: string
-            data: |
-              import yaml
-              from pathlib import Path
-              import sys
-              import re
+        code: |-
+          pt.js
+          const templateAndVars = pt.param("template-and-variables");
+          const rawKey = Object.keys(templateAndVars)[0];
+          const template = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
+          const nameParam = pt.param("name");
+          const name = (nameParam || template).toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+          const version = pt.param("version");
 
-              version = "{pt.param version}"
-              if not version or version == "null" or version == "":
-                  sys.exit(0)
+          if (!version) {
+            pt.log("No version specified, skipping");
+          } else {
+            const script = `
+          import yaml
+          from pathlib import Path
+          import sys
 
-              name = "{pt.param name}".lower().replace(" ", "-")
-              name = re.sub(r"[^a-z0-9_-]", "-", name)
-              
-              service_polytope_file = Path(f"services/{name}/polytope.yml")
-              
-              if not service_polytope_file.exists():
-                  sys.exit(0)
+          version = "${version}"
+          name = "${name}"
 
-              with open(service_polytope_file, 'r') as f:
-                  try:
-                      config = yaml.safe_load(f) or {}
-                  except yaml.YAMLError as exc:
-                      sys.exit(1)
+          service_polytope_file = Path(f"/repo/services/{name}/polytope.yml")
 
-              updated = False
-              tools = config.get('tools', {})
-              for tool_name, tool_def in tools.items():
-                  run_steps = tool_def.get('run', [])
-                  if isinstance(run_steps, dict): 
-                       run_steps = [run_steps]
-                  
-                  for step in run_steps:
-                      if isinstance(step, dict):
-                          args = step.get('args', {})
-                          image = args.get('image')
-                          if image and isinstance(image, str):
-                              if ':' in image:
-                                  base_image = image.rsplit(':', 1)[0]
-                                  new_image = f"{base_image}:{version}"
-                              else:
-                                  new_image = f"{image}:{version}"
-                              
-                              if new_image != image:
-                                  args['image'] = new_image
-                                  updated = True
+          if not service_polytope_file.exists():
+              sys.exit(0)
 
-              if updated:
-                  with open(service_polytope_file, 'w') as f:
-                      yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+          with open(service_polytope_file, 'r') as f:
+              try:
+                  config = yaml.safe_load(f) or {}
+              except yaml.YAMLError as exc:
+                  sys.exit(1)
+
+          updated = False
+          tools = config.get('tools', {})
+          for tool_name, tool_def in tools.items():
+              run_steps = tool_def.get('run', [])
+              if isinstance(run_steps, dict):
+                   run_steps = [run_steps]
+
+              for step in run_steps:
+                  if isinstance(step, dict):
+                      args = step.get('args', {})
+                      image = args.get('image')
+                      if image and isinstance(image, str):
+                          if ':' in image:
+                              base_image = image.rsplit(':', 1)[0]
+                              new_image = f"{base_image}:{version}"
+                          else:
+                              new_image = f"{image}:{version}"
+
+                          if new_image != image:
+                              args['image'] = new_image
+                              updated = True
+
+          if updated:
+              with open(service_polytope_file, 'w') as f:
+                  yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+            `;
+
+            pt.callModule("pt/run-script", {
+              repo: { type: "host", path: "." },
+              language: "python",
+              dependencies: ["pyyaml"],
+              script: { type: "string", data: script }
+            });
+          }
 
       - id: inject-config-manager-mounts
         after: {step: apply-service-version}
@@ -346,7 +350,8 @@ tools:
             pt.log("Skipping inject-config-manager-mounts: not service-config-manager template");
           } else {
             const variables = templateAndVars[rawKey] || {};
-            const name = pt.param("name").toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+            const nameParam = pt.param("name");
+            const name = (nameParam || template).toLowerCase().replace(/[^a-z0-9_-]/g, "-");
             const couchbaseServers = variables.couchbaseServers || variables["couchbase-servers"] || [];
             const postgresServers = variables.postgresServers || variables["postgres-servers"] || [];
 
@@ -411,7 +416,8 @@ tools:
           const templateAndVars = pt.param("template-and-variables");
           const rawKey = Object.keys(templateAndVars)[0];
           const template = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
-          const name = pt.param("name").toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+          const nameParam = pt.param("name");
+          const name = (nameParam || template).toLowerCase().replace(/[^a-z0-9_-]/g, "-");
 
           // Read source values and secrets from module repo
           let sourceValues = "";
@@ -524,7 +530,8 @@ tools:
           const templateAndVars = pt.param("template-and-variables");
           const rawKey = Object.keys(templateAndVars)[0];
           const template = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
-          const name = pt.param("name").toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+          const nameParam = pt.param("name");
+          const name = (nameParam || template).toLowerCase().replace(/[^a-z0-9_-]/g, "-");
 
           const script = `
           import shutil
@@ -568,7 +575,11 @@ tools:
           pt.js
           const run = pt.param("run");
           if (run) {
-            const name = pt.param("name").toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+            const templateAndVars = pt.param("template-and-variables");
+            const rawKey = Object.keys(templateAndVars)[0];
+            const template = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
+            const nameParam = pt.param("name");
+            const name = (nameParam || template).toLowerCase().replace(/[^a-z0-9_-]/g, "-");
             pt.log(`Running service: ${name}`);
             pt.callModule(name, {});
           }
@@ -582,12 +593,7 @@ tools:
           Same as add-and-run-service but with run=false.
         type:
           - either
-          - postgres-server:
-              host: [default, str, "postgres"]
-              port: [default, str, "5432"]
-              database: [default, str, "postgres"]
-              username: [default, str, "postgres"]
-              password: [default, str, "postgres"]
+          - postgres-server: {}
           - pgweb:
               postgres-host: [default, str, "pt.value postgres-server-host"]
               postgres-port: [default, str, "pt.value postgres-server-port"]
@@ -615,21 +621,23 @@ tools:
               postgres-user: [default, str, "pt.value postgres-server-username"]
               postgres-password: [default, str, "pt.secret postgres-server-password"]
           - temporal-ui: {}
+          - resonate: {}
           - service-config-manager:
               couchbase-servers: [default, [str], ["couchbase-server"]]
               postgres-servers: [default, [str], ["postgres-server"]]
       name:
-        type: str
+        info: Optional service name. Defaults to the template name if not provided.
+        type: [maybe, str]
       on-conflict:
         type: [default, [enum, skip, overwrite], skip]
     run:
       - tool: add-and-run-service
         args:
           template-and-variables: "pt.clj (:template-and-variables inputs)"
-          name: "{pt.param name}"
+          name: pt.param name
           target: "stack"
           run: false
-          on-conflict: "{pt.param on-conflict}"
+          on-conflict: pt.param on-conflict
 
   run-service:
     info: Runs a service

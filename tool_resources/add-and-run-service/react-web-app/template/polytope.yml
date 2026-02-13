@@ -1,7 +1,6 @@
 tools:
   {{ project-name }}:
     info: "Base module for other modules in this file to build on."
-    await: [load-config]
     inputs:
       restart-policy:
         info: Restart policy for the container.

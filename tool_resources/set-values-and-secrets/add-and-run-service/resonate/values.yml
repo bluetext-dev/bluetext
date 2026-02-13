@@ -1,0 +1,3 @@
+# Resonate service values
+"{name}-host": "{name}"
+"{name}-port": "8001"

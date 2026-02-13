@@ -1,0 +1,16 @@
+tools:
+  {{ project-name }}:
+    info: "Runs the Resonate durable execution engine"
+    run:
+      - tool: polytope/container
+        args:
+          await: false
+          image: resonatehqio/resonate
+          id: {{ project-name }}
+          restart:
+            policy: always
+          services:
+            - id: {{ project-name }}
+              ports:
+                - {label: http, protocol: tcp, port: 8001, expose-as: 8001}
+          create: when-missing

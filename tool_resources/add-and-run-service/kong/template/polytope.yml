@@ -1,7 +1,6 @@
 tools:
   {{ project-name }}:
     info: "Runs the Kong API Gateway"
-    await: [load-config]
     run:
       - tool: polytope/kong!simple
         args:
