@@ -13,18 +13,22 @@ from utils.logger import get_logger
 class RedpandaController:
     """Controls Redpanda topic operations."""
     
-    def __init__(self, environment: str, config: Config = None, host: str = None, port: int = None):
+    def __init__(self, environment: str, config: Config, service_name: str, config_dir: str):
         self.environment = environment
         self.config = config
-        self.logger = get_logger('redpanda-controller')
+        self.service_name = service_name
+        self.config_dir = config_dir
+        self.logger = get_logger(f'redpanda-{service_name}')
         
-        # Load from environment variables if not provided
-        self.host = host or self._get_env_var('REDPANDA_HOST', 'redpanda')
-        self.port = port or int(self._get_env_var('REDPANDA_PORT', '9092'))
+        self.prefix = service_name.upper().replace('-', '_')
+        self.logger.info(f"🔧 Initializing Redpanda controller for {service_name} (Env Prefix: {self.prefix})")
+        
+        # Load from environment variables
+        self.host = self._get_env_var(f'{self.prefix}_HOST')
+        self.port = int(self._get_env_var(f'{self.prefix}_PORT', '9092'))
         self.bootstrap_servers = f"{self.host}:{self.port}"
         self.admin_client = None
         
-        self.logger.info(f"🔧 Initializing Redpanda controller for environment: {environment}")
         self.logger.info(f"📡 Bootstrap servers: {self.bootstrap_servers}")
     
     def _get_env_var(self, name: str, default: str = None) -> str:
@@ -35,7 +39,10 @@ class RedpandaController:
             else:
                 return os.environ[name]
         except KeyError:
-            raise KeyError(f"Environment variable '{name}' is not set")
+            if default is None:
+                 self.logger.error(f"❌ Missing required environment variable: {name}")
+                 raise KeyError(f"Environment variable '{name}' is not set")
+            return default
     
     def get_admin_client(self) -> KafkaAdminClient:
         """Get Kafka admin client."""
@@ -120,7 +127,7 @@ class RedpandaController:
         """Load Redpanda configuration from YAML file using the config object."""
         if self.config is None:
             raise ValueError("Config object is required but not provided")
-        return self.config.load_target_config('redpanda')
+        return self.config.load_service_config(self.config_dir, 'redpanda')
     
     def _merge_settings(self, global_defaults: Dict[str, Any], 
                        item_defaults: Dict[str, Any], 
@@ -155,8 +162,11 @@ class RedpandaController:
         """Run all Redpanda operations for the configured environment."""
         self.logger.info("🔄 Processing Redpanda topics...")
         redpanda_config = self._load_redpanda_config()
-        self._ensure_topics(redpanda_config)
-        self.logger.info("🎉 Redpanda topics processed successfully")
+        if redpanda_config:
+            self._ensure_topics(redpanda_config)
+            self.logger.info("🎉 Redpanda topics processed successfully")
+        else:
+            self.logger.warning("⚠️ No Redpanda configuration found to process")
     
     def _ensure_topics(self, redpanda_config: Dict[str, Any]) -> None:
         """Ensure all topics exist according to configuration."""

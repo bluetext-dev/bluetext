@@ -5,19 +5,26 @@ from utils.logger import get_logger
 class PostgresController:
     """Manages Postgres configuration and SQL execution."""
 
-    def __init__(self, environment, config):
+    def __init__(self, environment, config, service_name, config_dir):
         self.environment = environment
         self.config = config
-        self.logger = get_logger('postgres')
-        self.host = self._get_env('POSTGRES_HOST')
-        self.database = self._get_env('POSTGRES_DB')
-        self.user = self._get_env('POSTGRES_USER')
-        self.password = self._get_env('POSTGRES_PASSWORD')
+        self.service_name = service_name
+        self.config_dir = config_dir
+        self.logger = get_logger(f'postgres-{service_name}')
+        
+        self.prefix = service_name.upper().replace('-', '_')
+        self.logger.info(f"🔧 Initializing Postgres controller for {service_name} (Env Prefix: {self.prefix})")
+
+        self.host = self._get_env(f'{self.prefix}_HOST')
+        self.database = self._get_env(f'{self.prefix}_DB')
+        self.user = self._get_env(f'{self.prefix}_USER')
+        self.password = self._get_env(f'{self.prefix}_PASSWORD')
 
     def _get_env(self, key):
         import os
         val = os.environ.get(key)
         if not val:
+            self.logger.error(f"❌ Missing required environment variable: {key}")
             raise ValueError(f"Missing environment variable: {key}")
         return val
 
@@ -48,9 +55,9 @@ class PostgresController:
             return
 
         # Load SQL script
-        sql_script_path = self.config.load_target_config('postgres')
+        sql_script_path = self.config.load_service_config(self.config_dir, 'postgres')
         if not sql_script_path:
-            self.logger.warning("⚠️ No postgres.sql config found")
+            self.logger.warning(f"⚠️ No postgres.sql config found in {self.config_dir}")
             return
             
         self.execute_script(sql_script_path)

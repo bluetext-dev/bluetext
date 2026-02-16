@@ -29,20 +29,26 @@ from utils.logger import get_logger
 class CouchbaseController:
     """Controls Couchbase bucket, scope, and collection operations."""
 
-    def __init__(self, environment: str, config: Config = None, host: str = None, username: str = None, password: str = None, tls: bool = None):
+    def __init__(self, environment: str, config: Config, service_name: str, config_dir: str):
         self.environment = environment
         self.config = config
-        self.logger = get_logger(f'couchbase-controller')
+        self.service_name = service_name
+        self.config_dir = config_dir
+        self.logger = get_logger(f'couchbase-{service_name}')
 
-        # Load from environment variables if not provided
-        self.host = host or self._get_env_var('COUCHBASE_HOST', 'couchbase')
-        self.username = username or self._get_env_var('COUCHBASE_USERNAME', 'user')
-        self.password = password or self._get_env_var('COUCHBASE_PASSWORD', 'password')
-        self.tls = tls if tls is not None else self._get_env_var('COUCHBASE_TLS', 'false').lower() == 'true'
-        self.couchbase_type = self._get_env_var('COUCHBASE_TYPE', 'server')
+        # Construct env var prefix
+        self.prefix = service_name.upper().replace('-', '_')
+        
+        self.logger.info(f"🔧 Initializing Couchbase controller for {service_name} (Env Prefix: {self.prefix})")
+
+        # Load from environment variables
+        self.host = self._get_env_var(f'{self.prefix}_HOST')
+        self.username = self._get_env_var(f'{self.prefix}_USERNAME')
+        self.password = self._get_env_var(f'{self.prefix}_PASSWORD')
+        self.tls = self._get_env_var(f'{self.prefix}_TLS', 'false').lower() == 'true'
+        self.couchbase_type = self._get_env_var(f'{self.prefix}_TYPE', 'server')
         self.cluster = None
         
-        self.logger.info(f"🔧 Initializing Couchbase controller for environment: {environment}")
         self.logger.info(f"📡 Connection: {self.host} (TLS: {self.tls}, Type: {self.couchbase_type})")
 
     def _get_env_var(self, name: str, default: str = None) -> str:
@@ -53,7 +59,11 @@ class CouchbaseController:
             else:
                 return os.environ[name]
         except KeyError:
-            raise KeyError(f"Environment variable '{name}' is not set")
+            if default is None:
+                 # Log warning but raise error to be explicit
+                 self.logger.error(f"❌ Missing required environment variable: {name}")
+                 raise KeyError(f"Environment variable '{name}' is not set")
+            return default
 
     def get_connection_string(self) -> str:
         """Get the connection string for Couchbase."""
@@ -83,6 +93,13 @@ class CouchbaseController:
                     with urllib.request.urlopen(request, timeout=10) as response:
                         self.logger.debug(f"✅ Connection test successful (with auth): {response.code}")
                         return True
+                except urllib.error.HTTPError as auth_e:
+                    if auth_e.code == 401:
+                        self.logger.error(f"❌ Authentication failed for user '{self.username}'")
+                        self.logger.info(f"💡 Hint: If you want to reset the cluster and let config-manager set the password, run: pt volume rm {self.service_name}-data")
+                        raise AuthenticationException(f"Authentication failed for user '{self.username}'")
+                    self.logger.debug(f"❌ Connection test failed with auth: {auth_e}")
+                    return False
                 except Exception as auth_e:
                     self.logger.debug(f"❌ Connection test failed with auth: {auth_e}")
                     return False
@@ -424,7 +441,7 @@ class CouchbaseController:
         """Load Couchbase configuration from YAML file using the config object."""
         if self.config is None:
             raise ValueError("Config object is required but not provided")
-        return self.config.load_target_config('couchbase')
+        return self.config.load_service_config(self.config_dir, 'couchbase')
 
     def _merge_settings(self, global_defaults: Dict[str, Any], 
                        item_defaults: Dict[str, Any], 
@@ -472,8 +489,13 @@ class CouchbaseController:
         self.logger.info("🔍 Testing connection to Couchbase server...")
         max_connection_retries = 30
         for attempt in range(max_connection_retries):
-            if self._test_connection():
-                break
+            try:
+                if self._test_connection():
+                    break
+            except AuthenticationException as e:
+                self.logger.error(f"🛑 {e}")
+                raise e  # Stop retrying on auth failure
+            
             if attempt == max_connection_retries - 1:
                 raise Exception(f"Failed to connect to Couchbase server at {self.host} after {max_connection_retries} attempts")
             self.logger.debug(f"⏳ Connection test failed, retrying... (attempt {attempt + 1}/{max_connection_retries})")
@@ -489,8 +511,11 @@ class CouchbaseController:
 
         # Load configuration and ensure resources
         couchbase_config = self._load_couchbase_config()
-        self._ensure_resources(couchbase_config)
-        self.logger.info("🎉 Couchbase resources processed successfully")
+        if couchbase_config:
+            self._ensure_resources(couchbase_config)
+            self.logger.info("🎉 Couchbase resources processed successfully")
+        else:
+            self.logger.warning("⚠️ No Couchbase configuration found to process")
 
     def _ensure_resources(self, couchbase_config: Dict[str, Any]) -> None:
         """Ensure all Couchbase resources exist according to configuration."""

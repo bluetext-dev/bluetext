@@ -38,44 +38,60 @@ def main():
 
         config = Config(config_dir, environment)
 
-        # Get available targets by detecting config files
-        targets = config.get_targets()
-        target_ids = list(targets.keys())
+        # Load managed services from manifest
+        services = config.load_managed_services()
+        
+        if not services:
+            logger.warning("⚠️  No managed services found in manifest (config/service-config-manager/managed-services.yaml)")
 
-        if not target_ids:
-            logger.warning("⚠️  No target config files found (couchbase.yaml/yml, redpanda.yaml/yml)")
+        if services:
+            logger.info(f"🎯 Found {len(services)} managed service(s)")
 
-        if target_ids:
-            logger.info(f"🎯 Found {len(target_ids)} available target(s): {', '.join(target_ids)}")
-
-        # Process each available target
+        # Process each managed service
         processed_count = 0
+        failed_count = 0
 
-        if 'couchbase' in target_ids:
-            logger.info("🔄 Processing Couchbase configuration...")
-            couchbase_controller = CouchbaseController(environment, config)
-            couchbase_controller.run_ops()
-            processed_count += 1
-            logger.info("✅ Couchbase processing completed")
+        for service in services:
+            name = service.get('name')
+            service_type = service.get('type')
+            config_dir = service.get('config_dir')
+            
+            if not name or not service_type or not config_dir:
+                logger.error(f"❌ Invalid service definition: {service}")
+                failed_count += 1
+                continue
+                
+            logger.info(f"🔄 Processing {name} ({service_type})...")
+            
+            try:
+                if service_type == 'couchbase':
+                    controller = CouchbaseController(environment, config, name, config_dir)
+                    controller.run_ops()
+                elif service_type == 'redpanda':
+                    controller = RedpandaController(environment, config, name, config_dir)
+                    controller.run_ops()
+                elif service_type == 'postgres':
+                    controller = PostgresController(environment, config, name, config_dir)
+                    controller.run_ops()
+                else:
+                    logger.warning(f"⚠️ Unknown service type: {service_type}")
+                    failed_count += 1
+                    continue
+                    
+                processed_count += 1
+                logger.info(f"✅ {name} processing completed")
+                
+            except Exception as e:
+                logger.error(f"❌ Failed to process {name}: {e}")
+                logger.exception("Stack trace:")
+                failed_count += 1
 
-        if 'redpanda' in target_ids:
-            logger.info("🔄 Processing Redpanda configuration...")
-            redpanda_controller = RedpandaController(environment, config)
-            redpanda_controller.run_ops()
-            processed_count += 1
-            logger.info("✅ Redpanda processing completed")
-
-        if 'postgres' in target_ids:
-            logger.info("🔄 Processing Postgres configuration...")
-            postgres_controller = PostgresController(environment, config)
-            postgres_controller.run_ops()
-            processed_count += 1
-            logger.info("✅ Postgres processing completed")
-
-        if target_ids:
-            logger.info(f"🎉 Configuration processing completed! Completed {processed_count}/{len(target_ids)} targets")
+        if services:
+            logger.info(f"🎉 Configuration processing completed! Success: {processed_count}, Failed: {failed_count}")
+            if failed_count > 0:
+                sys.exit(1)
         else:
-            logger.info("ℹ️  No configurations to process.")
+            logger.info("ℹ️  No services to process.")
 
     except Exception as e:
         logger.error(f"💥 Fatal error in config-manager: {e}")

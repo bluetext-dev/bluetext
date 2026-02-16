@@ -1,9 +1,8 @@
 tools:
   {{ project-name }}:
     info: |
-      Service Config Manager - auto-discovers and manages registered database servers.
-      Servers are mounted at /couchbase-servers/<name>/ and /postgres-servers/<name>/.
-      The manager scans these directories at runtime to discover which servers to manage.
+      Service Config Manager - manages registered database servers based on configuration.
+      Reads managed services from /config/{{ project-name }}/managed-services.yaml.
     run:
       - tool: polytope/python
         args:
@@ -17,5 +16,5 @@ tools:
           env:
             - { name: ENVIRONMENT, value: "pt.value {{ project-name }}-environment" }
           mounts:
+            - { path: /config, source: { type: repo, path: /config } }
             - { path: /root/.cache/, source: { type: volume, scope: project, id: dependency-cache } }
-            # Dynamic server mounts are injected by the scaffolding step based on couchbase-servers and postgres-servers variables

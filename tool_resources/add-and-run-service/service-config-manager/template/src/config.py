@@ -1,6 +1,7 @@
 import yaml
+import os
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, List
 from utils.logger import get_logger
 
 class Config:
@@ -9,63 +10,59 @@ class Config:
     def __init__(self, config_dir: Path, environment: str):
         self.config_dir = config_dir
         self.environment = environment
-        self._targets = None
         self.logger = get_logger('config')
     
     def load_yaml(self, file_path: Path) -> Dict[str, Any]:
         """Load a YAML configuration file from the given path."""
         self.logger.debug(f"📄 Loading YAML file: {file_path}")
         
-        # Check if the exact path exists first
         if file_path.exists():
             self.logger.info(f"✅ Found config file: {file_path}")
             with open(file_path, 'r') as f:
                 config = yaml.safe_load(f)
                 return config
         return {}
-    
-    def get_targets(self) -> Dict[str, Path]:
-        """Get available target config file paths by detecting existing files in config directory."""
-        if self._targets is None:
-            self.logger.info(f"🔍 Scanning for config files in {self.config_dir}")
-            self._targets = {}
-            
-            # Check for couchbase config (recursive)
-            couchbase_files = list(self.config_dir.rglob('couchbase.y*ml'))
-            if couchbase_files:
-                self._targets['couchbase'] = couchbase_files[0]
-                self.logger.info(f"✅ Found Couchbase config: {couchbase_files[0]}")
-            
-            # Check for redpanda config (recursive)
-            redpanda_files = list(self.config_dir.rglob('redpanda.y*ml'))
-            if redpanda_files:
-                self._targets['redpanda'] = redpanda_files[0]
-                self.logger.info(f"✅ Found Redpanda config: {redpanda_files[0]}")
 
-            # Check for postgres config (recursive)
-            postgres_files = list(self.config_dir.rglob('postgres.sql'))
-            if postgres_files:
-                self._targets['postgres'] = postgres_files[0]
-                self.logger.info(f"✅ Found Postgres config: {postgres_files[0]}")
+    def load_managed_services(self) -> List[Dict[str, str]]:
+        """Load the list of managed services from the manifest file."""
+        manifest_path = self.config_dir / 'service-config-manager' / 'managed-services.yaml'
         
-        return self._targets
+        if not manifest_path.exists():
+            self.logger.warning(f"⚠️ Managed services manifest not found at {manifest_path}")
+            return []
+            
+        self.logger.info(f"📋 Loading managed services manifest: {manifest_path}")
+        with open(manifest_path, 'r') as f:
+            services = yaml.safe_load(f)
+            return services or []
     
-    def load_target_config(self, target_id: str) -> Any:
-        """Load configuration for a specific service."""
-        targets = self.get_targets()
+    def load_service_config(self, service_config_dir: str, service_type: str) -> Any:
+        """Load configuration for a specific service from its directory."""
+        config_path = self.config_dir / service_config_dir
         
-        if target_id not in targets:
-            self.logger.error(f"❌ No configured path found for target '{target_id}'")
+        if not config_path.exists():
+            self.logger.error(f"❌ Config directory not found: {config_path}")
             return None
-        
-        config_file_path = targets[target_id]
-        
-        if config_file_path.suffix == '.sql':
-             self.logger.info(f"📄 Found SQL script for {target_id}: {config_file_path}")
-             return str(config_file_path)
 
-        self.logger.info(f"🎯 Loading target configuration: {target_id}")
-        return self.load_yaml(config_file_path)
+        file_path = None
+        if service_type == 'couchbase':
+            file_path = config_path / 'couchbase.yaml'
+        elif service_type == 'redpanda':
+            file_path = config_path / 'redpanda.yaml'
+        elif service_type == 'postgres':
+            # Check for SQL file
+            file_path = config_path / 'postgres.sql'
+            if file_path.exists():
+                self.logger.info(f"📄 Found SQL script for {service_type}: {file_path}")
+                return str(file_path)
+            # Fallback or check for other types if needed
+        
+        if file_path and file_path.exists():
+            self.logger.info(f"🎯 Loading service configuration: {file_path}")
+            return self.load_yaml(file_path)
+            
+        self.logger.warning(f"⚠️ No configuration file found for {service_type} in {config_path}")
+        return None
 
     def merge_settings(self, global_defaults: Dict[str, Any], 
                       item_defaults: Dict[str, Any], 

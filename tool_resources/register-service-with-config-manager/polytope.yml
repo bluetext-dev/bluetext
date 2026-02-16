@@ -2,126 +2,147 @@ tools:
   register-service-with-config-manager:
     info: |
       Registers a database server with the service-config-manager.
-      Adds a mount for the server's config directory into the config manager's container.
-      Use this to add servers to an existing config-manager without re-scaffolding.
-
-      Example: register-service-with-config-manager(service: "cache-db", type: "couchbase")
+      Adds the service to managed-services.yaml and injects credentials into the config manager's environment.
     inputs:
       service:
-        info: Service name to register (e.g., "main-db", "cache-db")
+        info: Service name to register (e.g., "auth-db")
         type: str
       type:
         info: Server type (couchbase or postgres)
         type: [enum, couchbase, postgres]
+      host:
+        info: Hostname of the service (defaults to service name)
+        type: [default, str, ""]
+      username:
+        info: Username for the service
+        type: [default, str, ""]
+      password:
+        info: Password for the service
+        type: [default, str, ""]
+      database:
+        info: Database name (for postgres)
+        type: [default, str, ""]
     run:
       - id: register-service
-        tool: pt/run-script
-        args:
-          repo: {type: host, path: .}
-          language: python
-          dependencies: [pyyaml]
-          script:
-            type: string
-            data: |
-              import yaml
-              from pathlib import Path
-              import sys
-              import re
+        code: |-
+          pt.js
+          var serviceName = pt.param("service").toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+          var serverType = pt.param("type");
+          var host = pt.param("host") || serviceName;
+          var username = pt.param("username");
+          var password = pt.param("password");
+          var database = pt.param("database");
 
-              service_name = "{pt.input service}".lower()
-              service_name = re.sub(r"[^a-z0-9_-]", "-", service_name)
-              server_type = "{pt.input type}"
+          if (!username) username = serverType === "couchbase" ? "Administrator" : "postgres";
+          if (!password) password = "password";
+          if (!database && serverType === "postgres") database = "postgres";
 
-              # Find the service-config-manager in the project
-              project_polytope = Path("/repo/polytope.yml")
-              if not project_polytope.exists():
-                  print("ERROR: polytope.yml not found in project root")
-                  sys.exit(1)
+          var script = [
+            "import yaml",
+            "from pathlib import Path",
+            "import sys",
+            "import os",
+            "",
+            "service_name = '" + serviceName + "'",
+            "server_type = '" + serverType + "'",
+            "host = '" + host + "'",
+            "username = '" + username + "'",
+            "password = '" + password + "'",
+            "database = '" + database + "'",
+            "",
+            "config_manager_service = 'service-config-manager'",
+            "config_manager_polytope = Path('/repo/services/' + config_manager_service + '/polytope.yml')",
+            "",
+            "if not config_manager_polytope.exists():",
+            "    print('ERROR: service-config-manager not found. Add one first with add-and-run-service.')",
+            "    sys.exit(1)",
+            "",
+            "print('Found config manager: ' + config_manager_service)",
+            "",
+            "# 1. Update managed-services.yaml",
+            "managed_services_path = Path('/repo/config/' + config_manager_service + '/managed-services.yaml')",
+            "if not managed_services_path.exists():",
+            "    print('WARNING: ' + str(managed_services_path) + ' not found. Creating it.')",
+            "    managed_services_path.parent.mkdir(parents=True, exist_ok=True)",
+            "    managed_services = []",
+            "else:",
+            "    with open(managed_services_path) as f:",
+            "        managed_services = yaml.safe_load(f) or []",
+            "",
+            "existing_service = next((s for s in managed_services if s['name'] == service_name), None)",
+            "if existing_service:",
+            "    print('Service ' + service_name + ' already registered in managed-services.yaml')",
+            "else:",
+            "    new_service = {'name': service_name, 'type': server_type, 'config_dir': service_name}",
+            "    managed_services.append(new_service)",
+            "    with open(managed_services_path, 'w') as f:",
+            "        yaml.dump(managed_services, f, default_flow_style=False, sort_keys=False)",
+            "    print('Added ' + service_name + ' to managed-services.yaml')",
+            "",
+            "# 2. Update polytope.yml (Env Vars)",
+            "with open(config_manager_polytope) as f:",
+            "    cm_config = yaml.safe_load(f) or {}",
+            "",
+            "cm_tools = cm_config.get('tools', {})",
+            "cm_tool = cm_tools.get(config_manager_service, {})",
+            "run_steps = cm_tool.get('run', [])",
+            "",
+            "env_vars_added = False",
+            "for step in run_steps:",
+            "    args = step.get('args', {}) if isinstance(step, dict) else {}",
+            "    if 'env' not in args:",
+            "        continue",
+            "    env = args['env']",
+            "    prefix = service_name.upper().replace('-', '_')",
+            "    new_vars = [",
+            "        {'name': prefix + '_HOST', 'value': 'pt.value ' + service_name + '-host'},",
+            "        {'name': prefix + '_USERNAME', 'value': 'pt.value ' + service_name + '-username'},",
+            "        {'name': prefix + '_PASSWORD', 'value': 'pt.secret ' + service_name + '-password'},",
+            "    ]",
+            "    if server_type == 'postgres':",
+            "        new_vars.append({'name': prefix + '_DB', 'value': 'pt.value ' + service_name + '-database'})",
+            "    for var in new_vars:",
+            "        if not any(e['name'] == var['name'] for e in env):",
+            "            env.append(var)",
+            "            env_vars_added = True",
+            "            print('Added env var: ' + var['name'])",
+            "    args['env'] = env",
+            "",
+            "if env_vars_added:",
+            "    with open(config_manager_polytope, 'w') as f:",
+            "        yaml.dump(cm_config, f, default_flow_style=False, sort_keys=False)",
+            "    print('Updated ' + config_manager_service + '/polytope.yml with new env vars')",
+            "else:",
+            "    print('Env vars already exist')",
+            "",
+            "# 3. Create default config file",
+            "config_dir = Path('/repo/config/' + service_name)",
+            "config_dir.mkdir(parents=True, exist_ok=True)",
+            "",
+            "if server_type == 'couchbase':",
+            "    config_file = config_dir / 'couchbase.yaml'",
+            "    if not config_file.exists():",
+            "        with open(config_file, 'w') as f:",
+            "            f.write('# Couchbase Configuration\\nbuckets:\\n  default:\\n    ram_quota_mb: 100\\n')",
+            "        print('Created default config: ' + str(config_file))",
+            "elif server_type == 'postgres':",
+            "    config_file = config_dir / 'postgres.sql'",
+            "    if not config_file.exists():",
+            "        with open(config_file, 'w') as f:",
+            "            f.write('-- Postgres Configuration\\nSELECT 1;\\n')",
+            "        print('Created default config: ' + str(config_file))",
+          ].join("\n");
 
-              with open(project_polytope) as f:
-                  project_config = yaml.safe_load(f) or {}
-
-              tools = project_config.get('tools', {})
-
-              # Find service-config-manager by looking for services that have config-manager in the name
-              config_manager_service = None
-              for tool_name in tools.keys():
-                  if 'config-manager' in tool_name.lower() or 'configmanager' in tool_name.lower():
-                      service_dir = Path(f"/repo/services/{tool_name}/polytope.yml")
-                      if service_dir.exists():
-                          config_manager_service = tool_name
-                          break
-
-              if not config_manager_service:
-                  print("ERROR: service-config-manager not found in project. Add it first with:")
-                  print("  add-and-run-service(template-and-variables: {service-config-manager: {couchbase-servers: [...]}}, name: \"config-mgr\")")
-                  sys.exit(1)
-
-              print(f"Found config manager: {config_manager_service}")
-
-              # Check if service config directory exists
-              service_config_dir = Path(f"/repo/config/{service_name}")
-              if not service_config_dir.exists():
-                  print(f"WARNING: config/{service_name}/ directory not found. Make sure the service was added first.")
-
-              # Update the service-config-manager's polytope.yml
-              config_manager_polytope = Path(f"/repo/services/{config_manager_service}/polytope.yml")
-              with open(config_manager_polytope) as f:
-                  cm_config = yaml.safe_load(f) or {}
-
-              cm_tools = cm_config.get('tools', {})
-              if config_manager_service not in cm_tools:
-                  print(f"ERROR: Tool {config_manager_service} not found in its polytope.yml")
-                  sys.exit(1)
-
-              cm_tool = cm_tools[config_manager_service]
-              run_steps = cm_tool.get('run', [])
-
-              for step in run_steps:
-                  if isinstance(step, dict) and 'args' in step:
-                      args = step['args']
-                      mounts = args.get('mounts', [])
-
-                      # Add mount for server config directory
-                      mount_path = f"/{server_type}-servers/{service_name}/"
-                      mount_exists = any(
-                          isinstance(m, dict) and m.get('path') == mount_path
-                          for m in mounts
-                      )
-
-                      if not mount_exists:
-                          mounts.append({
-                              'path': mount_path,
-                              'source': {'type': 'repo', 'path': f'/config/{service_name}'}
-                          })
-                          args['mounts'] = mounts
-                          print(f"Added mount: {mount_path} -> /config/{service_name}")
-                      else:
-                          print(f"Mount for {mount_path} already exists")
-
-              with open(config_manager_polytope, 'w') as f:
-                  yaml.dump(cm_config, f, default_flow_style=False, sort_keys=False)
-
-              print(f"Successfully registered {service_name} as {server_type} server with {config_manager_service}")
+          pt.callModule("pt/run-script", {
+            repo: { type: "host", path: "." },
+            language: "python",
+            dependencies: ["pyyaml"],
+            script: { type: "string", data: script }
+          });
 
       - id: reapply-config-manager
         after: {step: register-service}
         code: |-
           pt.js
-          const serviceName = inputs.service.toLowerCase().replace(/[^a-z0-9_-]/g, "-");
-
-          // Find config manager name from project polytope.yml
-          const projectConfig = pt.readYaml(pt.readRepoFile("polytope.yml"));
-          const tools = projectConfig.tools || {};
-
-          const configManagerName = Object.keys(tools).find(name =>
-            name.toLowerCase().includes("config-manager") ||
-            name.toLowerCase().includes("configmanager")
-          );
-
-          if (configManagerName) {
-            pt.log(`Reapplying ${configManagerName} to pick up new mount for ${serviceName}...`);
-            pt.callModule(configManagerName, {});
-          } else {
-            pt.log("Could not find config manager to reapply");
-          }
+          pt.log("Reapplying service-config-manager to pick up new configuration...");
+          pt.callModule("service-config-manager", {});
