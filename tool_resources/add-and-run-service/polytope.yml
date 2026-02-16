@@ -38,9 +38,7 @@ tools:
               postgres-password: [default, str, "pt.secret postgres-server-password"]
           - temporal-ui: {}
           - resonate: {}
-          - service-config-manager:
-              couchbase-servers: [default, [str], ["couchbase-server"]]
-              postgres-servers: [default, [str], ["postgres-server"]]
+          - service-config-manager: {}
       custom-name:
         info: Custom service name. Defaults to the template name.
         type: [maybe, str]
@@ -463,9 +461,7 @@ tools:
               postgres-password: [default, str, "pt.secret postgres-server-password"]
           - temporal-ui: {}
           - resonate: {}
-          - service-config-manager:
-              couchbase-servers: [default, [str], ["couchbase-server"]]
-              postgres-servers: [default, [str], ["postgres-server"]]
+          - service-config-manager: {}
       custom-name:
         info: Custom service name. Defaults to the template name.
         type: [maybe, str]

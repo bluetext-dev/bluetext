@@ -5,16 +5,13 @@ tools:
       restart-policy:
         info: Restart policy for the container.
         type: [default, [enum, always, on-failure], always]
-      create:
-        info: Whether to create the container.
-        type: [default, [enum, never, always, when-missing], when-missing]
     run:
       - tool: polytope/node
         args:
           await: false
           id: {{ project-name }}
           image: oven/bun:alpine
-          create: pt.input create
+          create: when-missing
           code: { type: repo, path: . }
           cmd: ./bin/run
           restart:

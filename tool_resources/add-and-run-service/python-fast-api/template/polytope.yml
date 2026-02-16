@@ -5,14 +5,11 @@ tools:
       restart-policy:
         info: Restart policy for the container.
         type: [default, [enum, always, never, on-failure], always]
-      create:
-        info: Whether to create the container.
-        type: [default, [enum, never, always, when-missing], when-missing]
     run:
       - tool: polytope/python
         args:
           id: {{ project-name }}
-          create: pt.input create
+          create: when-missing
           image: astral/uv:python3.13-bookworm-slim
           code: { type: repo, path: . }
           await: false
