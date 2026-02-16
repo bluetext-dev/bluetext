@@ -1,22 +1,6 @@
 tools:
   add-and-run-service:
-    info: |
-      Scaffolds a service, adds it to includes, adds it to a run graph, and optionally runs it.
-      This is a convenience tool that combines scaffold and add-to-run-graph.
-
-      Example: add-and-run-service(template-and-variables: {postgres-server: {}}, name: "my-db", run: true)
-      This scaffolds postgres-server template to "services/my-db", adds it to stack, and runs it.
-
-      Example without name (defaults to template name):
-      add-and-run-service(template-and-variables: {postgres-server: {}})
-      This scaffolds postgres-server template to "services/postgres-server".
-
-      Example with variable overrides (linking to an existing service):
-      add-and-run-service(
-        template-and-variables: {curity: {postgres-host: "pt.value my-db-host", postgres-username: "pt.value my-db-username"}},
-        name: "auth"
-      )
-      This scaffolds curity but configures it to use the "my-db" postgres service instead of defaults.
+    info: Scaffolds a service, adds it to includes, adds it to a run graph, and optionally runs it.
     inputs:
       template-and-variables:
         info: |
@@ -57,8 +41,8 @@ tools:
           - service-config-manager:
               couchbase-servers: [default, [str], ["couchbase-server"]]
               postgres-servers: [default, [str], ["postgres-server"]]
-      name:
-        info: Optional service name (e.g., "my-api"). Defaults to the template name if not provided.
+      custom-name:
+        info: Custom service name. Defaults to the template name.
         type: [maybe, str]
       add-to:
         info: Which graph/tool to add the service to
@@ -173,7 +157,7 @@ tools:
           const templateAndVars = pt.param("template-and-variables");
           const rawKey = Object.keys(templateAndVars)[0];
           const template = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
-          const nameParam = pt.param("name");
+          const nameParam = pt.param("custom-name");
           const name = (nameParam || template).toLowerCase().replace(/[^a-z0-9_-]/g, "-");
 
           // Check if service is already registered in polytope.yml
@@ -247,7 +231,7 @@ tools:
           const rawKey = Object.keys(templateAndVars)[0];
           const template = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
           const variables = templateAndVars[rawKey] || {};
-          const nameParam = pt.param("name");
+          const nameParam = pt.param("custom-name");
           const name = (nameParam || template).toLowerCase().replace(/[^a-z0-9_-]/g, "-");
           const onConflict = pt.param("on-conflict");
           const addTo = pt.param("add-to");
@@ -273,7 +257,7 @@ tools:
           const templateAndVars = pt.param("template-and-variables");
           const rawKey = Object.keys(templateAndVars)[0];
           const template = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
-          const nameParam = pt.param("name");
+          const nameParam = pt.param("custom-name");
           const name = (nameParam || template).toLowerCase().replace(/[^a-z0-9_-]/g, "-");
 
           // Read source values and secrets from module repo
@@ -387,7 +371,7 @@ tools:
           const templateAndVars = pt.param("template-and-variables");
           const rawKey = Object.keys(templateAndVars)[0];
           const template = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
-          const nameParam = pt.param("name");
+          const nameParam = pt.param("custom-name");
           const name = (nameParam || template).toLowerCase().replace(/[^a-z0-9_-]/g, "-");
 
           const script = `
@@ -435,7 +419,7 @@ tools:
             const templateAndVars = pt.param("template-and-variables");
             const rawKey = Object.keys(templateAndVars)[0];
             const template = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
-            const nameParam = pt.param("name");
+            const nameParam = pt.param("custom-name");
             const name = (nameParam || template).toLowerCase().replace(/[^a-z0-9_-]/g, "-");
             pt.log(`Running service: ${name}`);
             pt.callModule(name, {});
@@ -482,8 +466,8 @@ tools:
           - service-config-manager:
               couchbase-servers: [default, [str], ["couchbase-server"]]
               postgres-servers: [default, [str], ["postgres-server"]]
-      name:
-        info: Optional service name. Defaults to the template name if not provided.
+      custom-name:
+        info: Custom service name. Defaults to the template name.
         type: [maybe, str]
       on-conflict:
         type: [default, [enum, skip, overwrite], skip]
@@ -491,7 +475,7 @@ tools:
       - tool: add-and-run-service
         args:
           template-and-variables: "pt.clj (:template-and-variables inputs)"
-          name: pt.param name
+          custom-name: pt.param custom-name
           add-to: "stack"
           run: false
           on-conflict: pt.param on-conflict
