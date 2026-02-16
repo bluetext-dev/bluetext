@@ -48,9 +48,6 @@ tools:
       run:
         info: Whether to run the service after adding
         type: [default, bool, true]
-      on-conflict:
-        info: What to do if files already exist
-        type: [default, [enum, skip, overwrite], skip]
     run:
 
       # Inlined setup-project-structure logic
@@ -231,7 +228,6 @@ tools:
           const variables = templateAndVars[rawKey] || {};
           const nameParam = pt.param("custom-name");
           const name = (nameParam || template).toLowerCase().replace(/[^a-z0-9_-]/g, "-");
-          const onConflict = pt.param("on-conflict");
           const addTo = pt.param("add-to");
           const scaffoldParams = {};
           for (const [k, v] of Object.entries(variables)) {
@@ -242,7 +238,7 @@ tools:
             actions: [{
               template: { type: "repo", repo: pt.moduleRepoRef, path: `/tool_resources/add-and-run-service/${template}/template` },
               path: `services/${name}`,
-              "on-conflict": onConflict,
+              "on-conflict": "skip",
               inputs: scaffoldParams,
               "add-to-tools": [{ tool: addTo, call: name }]
             }]
@@ -465,8 +461,6 @@ tools:
       custom-name:
         info: Custom service name. Defaults to the template name.
         type: [maybe, str]
-      on-conflict:
-        type: [default, [enum, skip, overwrite], skip]
     run:
       - tool: add-and-run-service
         args:
@@ -474,7 +468,6 @@ tools:
           custom-name: pt.param custom-name
           add-to: "stack"
           run: false
-          on-conflict: pt.param on-conflict
 
   run-service:
     info: Runs a service
