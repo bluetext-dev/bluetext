@@ -629,51 +629,61 @@ tools:
 
       - id: scaffold-entity
         after: {step: scaffold-language}
-        tool: pt/run-script
-        args:
-          repo: {type: host, path: .}
-          language: python
-          script:
-            type: string
-            data: |
-              from pathlib import Path
+        code: |-
+          pt.js
+          const client = pt.param("client");
+          const lang = pt.param("language");
+          const entitySingular = pt.param("entity-singular");
+          const entityPlural = pt.param("entity-plural");
 
-              client = "{pt.input client}"
-              language = "{pt.input language}"
-              entity_singular = "{pt.input entity-singular}"
-              entity_plural = "{pt.input entity-plural}"
+          const script = `
+          from pathlib import Path
 
-              # Read the template file
-              template_path = Path(f"/template/entity.py")
+          client = "${client}"
+          language = "${lang}"
+          entity_singular = "${entitySingular}"
+          entity_plural = "${entityPlural}"
 
-              if not template_path.exists():
-                  print(f"❌ Template not found: {template_path}")
-                  exit(1)
+          # Read the template file
+          template_path = Path(f"/template/entity.py")
 
-              template_content = template_path.read_text()
+          if not template_path.exists():
+              print(f"Template not found: {template_path}")
+              exit(1)
 
-              # Replace template variables
-              content = template_content.replace("{{ entity_singular | capitalize }}", entity_singular.capitalize())
-              content = content.replace("{{ entity_singular }}", entity_singular)
-              content = content.replace("{{ entity_plural }}", entity_plural)
+          template_content = template_path.read_text()
 
-              # Determine output path - entities go in models/python/models/entities/
-              base_path = "models/python/models/entities"
-              output_path = Path(f"/repo/{base_path}/{entity_plural}.py")
+          # Replace template variables
+          content = template_content.replace("{{ entity_singular | capitalize }}", entity_singular.capitalize())
+          content = content.replace("{{ entity_singular }}", entity_singular)
+          content = content.replace("{{ entity_plural }}", entity_plural)
 
-              # Ensure directory exists
-              output_path.parent.mkdir(parents=True, exist_ok=True)
+          # Determine output path - entities go in models/python/models/entities/
+          base_path = "models/python/models/entities"
+          output_path = Path(f"/repo/{base_path}/{entity_plural}.py")
 
-              # Write the file
-              output_path.write_text(content)
+          # Ensure directory exists
+          output_path.parent.mkdir(parents=True, exist_ok=True)
 
-              print(f"✅ Created entity file: {base_path}/{entity_plural}.py")
-          mounts:
-            - path: /template
-              source:
-                type: repo
-                repo: "pt.clj pt/module-repo-ref"
-                path: "pt.clj (str \"add-entity/\" (:client inputs) \"/\" (:language inputs))"
+          # Write the file
+          output_path.write_text(content)
+
+          print(f"Created entity file: {base_path}/{entity_plural}.py")
+          `;
+
+          pt.callModule("pt/run-script", {
+            repo: { type: "host", path: "." },
+            language: "python",
+            script: { type: "string", data: script },
+            mounts: [{
+              path: "/template",
+              source: {
+                type: "repo",
+                repo: pt.moduleRepoRef,
+                path: `/tool_resources/add-entity/${client}/${lang}`
+              }
+            }]
+          });
 
   # Internal tools for dependency handling (called by read-dependencies)
   _scaffold-deps:
