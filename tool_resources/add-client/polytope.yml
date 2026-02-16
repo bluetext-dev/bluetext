@@ -7,13 +7,13 @@ tools:
       Example: add-client(template: {couchbase: {}})
       This scaffolds a couchbase client to "clients/python/couchbase".
 
-      Example: add-client(template: {api: {upstream-service: "my-api"}})
+      Example: add-client(template: {python-fast-api: {upstream-service: "my-api"}})
       This scaffolds an API client to "clients/typescript/my-api-client".
     inputs:
       template:
         info: |
           Client template to scaffold. The key is the template name.
-          For the "api" template, provide upstream-service (the API service this client connects to).
+          For the "python-fast-api" template, provide upstream-service (the API service this client connects to).
         type:
           - either
           - couchbase: {}
@@ -22,7 +22,7 @@ tools:
           - jwt-validator: {}
           - twilio: {}
           - phantom-token-handler: {}
-          - api:
+          - python-fast-api:
               upstream-service: str
     run:
 
@@ -49,7 +49,7 @@ tools:
           const langMap = {
             couchbase: "python", postgres: "python", temporal: "python",
             "jwt-validator": "python", twilio: "python",
-            api: "typescript", "phantom-token-handler": "typescript"
+            "python-fast-api": "typescript", "phantom-token-handler": "typescript"
           };
           const lang = langMap[tmpl];
           pt.callModule("polytope/scaffold", {
@@ -119,10 +119,10 @@ tools:
           const langMap = {
             couchbase: "python", postgres: "python", temporal: "python",
             "jwt-validator": "python", twilio: "python",
-            api: "typescript", "phantom-token-handler": "typescript"
+            "python-fast-api": "typescript", "phantom-token-handler": "typescript"
           };
           const lang = langMap[tmpl];
-          const resolvedName = (tmpl === "api" && variables.upstreamService)
+          const resolvedName = (tmpl === "python-fast-api" && variables.upstreamService)
             ? `${variables.upstreamService}-client`
             : tmpl;
           pt.callModule("polytope/scaffold", {
@@ -143,7 +143,7 @@ tools:
           const langMap = {
             couchbase: "python", postgres: "python", temporal: "python",
             "jwt-validator": "python", twilio: "python",
-            api: "typescript", "phantom-token-handler": "typescript"
+            "python-fast-api": "typescript", "phantom-token-handler": "typescript"
           };
           const lang = langMap[tmpl];
 
@@ -201,14 +201,14 @@ tools:
           const langMap = {
             couchbase: "python", postgres: "python", temporal: "python",
             "jwt-validator": "python", twilio: "python",
-            api: "typescript", "phantom-token-handler": "typescript"
+            "python-fast-api": "typescript", "phantom-token-handler": "typescript"
           };
           const lang = langMap[tmpl];
 
           if (lang !== "typescript") {
             pt.log("Skipping tsconfig update for non-typescript client");
           } else {
-            const resolvedName = (tmpl === "api" && variables.upstreamService)
+            const resolvedName = (tmpl === "python-fast-api" && variables.upstreamService)
               ? `${variables.upstreamService}-client`
               : tmpl;
             const script = `

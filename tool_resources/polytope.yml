@@ -595,53 +595,37 @@ tools:
     run:
       # Inlined setup-project-structure logic (chained tool resolution broken in Polytope)
       - id: scaffold-base-structure
-        tool: polytope/scaffold
-        args:
-          container-id: scaffold-base-structure
-          actions:
-            - template:
-                type: repo
-                repo: pt.js pt.moduleRepoRef
-                path: setup-project-structure/base/clients
-              path: clients
-              on-conflict: skip
-            - template:
-                type: repo
-                repo: pt.js pt.moduleRepoRef
-                path: setup-project-structure/base/models
-              path: models
-              on-conflict: skip
-            - template:
-                type: repo
-                repo: pt.js pt.moduleRepoRef
-                path: setup-project-structure/base/services
-              path: services
-              on-conflict: skip
-            - template:
-                type: repo
-                repo: pt.js pt.moduleRepoRef
-                path: setup-project-structure/base/config
-              path: config
-              on-conflict: skip
+        code: |-
+          pt.js
+          pt.callModule("polytope/scaffold", {
+            "container-id": "scaffold-base-structure",
+            actions: ["clients", "models", "services", "config"].map(dir => ({
+              template: { type: "repo", repo: pt.moduleRepoRef, path: `/tool_resources/setup-project-structure/base/${dir}` },
+              path: dir,
+              "on-conflict": "skip"
+            }))
+          });
 
       - id: scaffold-language
         after: {step: scaffold-base-structure}
-        tool: polytope/scaffold
-        args:
-          container-id: scaffold-language
-          actions:
-            - template:
-                type: repo
-                repo: pt.js pt.moduleRepoRef
-                path: pt.js `setup-project-structure/languages/clients/${inputs.language}`
-              path: pt.js `clients/${inputs.language}`
-              on-conflict: skip
-            - template:
-                type: repo
-                repo: pt.js pt.moduleRepoRef
-                path: pt.js `setup-project-structure/languages/models/${inputs.language}`
-              path: pt.js `models/${inputs.language}`
-              on-conflict: skip
+        code: |-
+          pt.js
+          const lang = pt.param("language");
+          pt.callModule("polytope/scaffold", {
+            "container-id": "scaffold-language",
+            actions: [
+              {
+                template: { type: "repo", repo: pt.moduleRepoRef, path: `/tool_resources/setup-project-structure/languages/clients/${lang}` },
+                path: `clients/${lang}`,
+                "on-conflict": "skip"
+              },
+              {
+                template: { type: "repo", repo: pt.moduleRepoRef, path: `/tool_resources/setup-project-structure/languages/models/${lang}` },
+                path: `models/${lang}`,
+                "on-conflict": "skip"
+              }
+            ]
+          });
 
       - id: scaffold-entity
         after: {step: scaffold-language}

@@ -9,7 +9,7 @@ To connect a frontend service (e.g., `my-web`) to a backend API (e.g., `my-api`)
 ### 1. Add the client
 
 ```
-add-client(template: "api", language: "typescript", target: "my-api")
+add-client(template: {python-fast-api: {upstream-service: "my-api"}})
 ```
 
 This scaffolds a typed API client at `clients/typescript/my-api-client/` with:
