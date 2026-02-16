@@ -2,7 +2,7 @@
 
 ## Overview
 
-This test plan verifies the refactored `add-and-run-service` tool with the new `template-and-variables` parameter system and the `register-service-with-config-manager` tool.
+This test plan verifies the refactored `add-and-run-service` tool with the new `template-and-variables` parameter system and the `add-to-managed-services` tool.
 
 ## Key Changes to Test
 
@@ -11,7 +11,7 @@ This test plan verifies the refactored `add-and-run-service` tool with the new `
 3. **New templates** - `pgweb` and `psql` as separate services with postgres connection variables
 4. **Scaffold params for overrides** - Variable overrides are passed as scaffold template params, interpolated directly into the service's polytope.yml (NOT written to config/values.yml)
 5. **service-config-manager** - Uses server lists (`couchbase-servers`, `postgres-servers`) that inject mounts
-6. **register-service-with-config-manager** - Registers servers with existing config manager
+6. **add-to-managed-services** - Registers servers with existing config manager
 
 ---
 
@@ -139,7 +139,7 @@ add-and-run-service(
 
 ---
 
-## Test 6: register-service-with-config-manager
+## Test 6: add-to-managed-services
 
 **Goal**: Verify registering a new server with an existing config manager.
 
@@ -156,7 +156,7 @@ add-and-run-service(
 add-and-run-service(template-and-variables: {postgres-server: {}}, name: "new-db", run: false)
 
 # Register it with the config manager
-register-service-with-config-manager(service: "new-db", type: "postgres")
+add-to-managed-services(service: "new-db", type: "postgres")
 ```
 
 **Expected**:
@@ -329,5 +329,5 @@ Read tool: config/secrets.yml
 - `tool_resources/add-and-run-service/temporal/template/polytope.yml` - Uses `{{ postgres-host }}` scaffold params
 - `tool_resources/set-values-and-secrets/add-and-run-service/curity/` - Removed postgres entries from values/secrets
 - `tool_resources/set-values-and-secrets/add-and-run-service/temporal/` - Removed postgres entries from values/secrets
-- `tool_resources/register-service-with-config-manager/polytope.yml` - New tool
+- `tool_resources/add-to-managed-services/polytope.yml` - New tool
 - `tool_resources/polytope.yml` - Added register tool to includes

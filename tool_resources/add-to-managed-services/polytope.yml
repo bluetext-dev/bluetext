@@ -1,41 +1,21 @@
 tools:
-  register-service-with-config-manager:
+  add-to-managed-services:
     info: |
       Registers a database server with the service-config-manager.
       Adds the service to managed-services.yaml and injects credentials into the config manager's environment.
     inputs:
-      service:
+      service-to-manage:
         info: Service name to register (e.g., "auth-db")
         type: str
       type:
         info: Server type (couchbase or postgres)
         type: [enum, couchbase, postgres]
-      host:
-        info: Hostname of the service (defaults to service name)
-        type: [default, str, ""]
-      username:
-        info: Username for the service
-        type: [default, str, ""]
-      password:
-        info: Password for the service
-        type: [default, str, ""]
-      database:
-        info: Database name (for postgres)
-        type: [default, str, ""]
     run:
       - id: register-service
         code: |-
           pt.js
-          var serviceName = pt.param("service").toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+          var serviceName = pt.param("service-to-manage").toLowerCase().replace(/[^a-z0-9_-]/g, "-");
           var serverType = pt.param("type");
-          var host = pt.param("host") || serviceName;
-          var username = pt.param("username");
-          var password = pt.param("password");
-          var database = pt.param("database");
-
-          if (!username) username = serverType === "couchbase" ? "Administrator" : "postgres";
-          if (!password) password = "password";
-          if (!database && serverType === "postgres") database = "postgres";
 
           var script = [
             "import yaml",
@@ -45,10 +25,6 @@ tools:
             "",
             "service_name = '" + serviceName + "'",
             "server_type = '" + serverType + "'",
-            "host = '" + host + "'",
-            "username = '" + username + "'",
-            "password = '" + password + "'",
-            "database = '" + database + "'",
             "",
             "config_manager_service = 'service-config-manager'",
             "config_manager_polytope = Path('/repo/services/' + config_manager_service + '/polytope.yml')",

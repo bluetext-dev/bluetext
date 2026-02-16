@@ -10,7 +10,7 @@ include:
   - setup-environment-variables/polytope.yml
   - add-and-run-service/polytope.yml
   - add-client/polytope.yml
-  - register-service-with-config-manager/polytope.yml
+  - add-to-managed-services/polytope.yml
 
 tools:
 
