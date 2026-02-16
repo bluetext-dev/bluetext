@@ -13,14 +13,14 @@ tools:
       - id: add-python-client
         tool: add-client
         args:
-          name: jwt_validator
-          language: python
+          template:
+            jwt-validator: {}
 
       - id: add-typescript-client
         tool: add-client
         args:
-          name: phantom-token-handler
-          language: typescript
+          template:
+            phantom-token-handler: {}
 
       - id: set-secrets
         after: {step: add-typescript-client}

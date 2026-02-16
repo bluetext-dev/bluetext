@@ -4,18 +4,28 @@ tools:
       Adds a client to the project's clients directory.
       Scaffolds the client code and updates pyproject.toml with dependencies.
 
-      Example: add-client(template: "couchbase", language: "python")
+      Example: add-client(template: {couchbase: {}})
+      This scaffolds a couchbase client to "clients/python/couchbase".
+
+      Example: add-client(template: {api: {upstream-service: "my-api"}})
+      This scaffolds an API client to "clients/typescript/my-api-client".
     inputs:
       template:
-        info: Client template to scaffold (e.g., "couchbase", "temporal", "jwt_validator", "phantom-token-handler", "api")
-        type: [enum, couchbase, temporal, jwt_validator, phantom-token-handler, api]
-      language:
-        info: Language for the client
-        type: [default, [enum, python, typescript], python]
-      target:
-        info: "Target service name. Required for api client — identifies which API service to connect to (e.g., 'my-api')."
-        type: [default, str, ""]
+        info: |
+          Client template to scaffold. The key is the template name.
+          For the "api" template, provide upstream-service (the API service this client connects to).
+        type:
+          - either
+          - couchbase: {}
+          - postgres: {}
+          - temporal: {}
+          - jwt-validator: {}
+          - twilio: {}
+          - phantom-token-handler: {}
+          - api:
+              upstream-service: str
     run:
+
       # Inlined setup-project-structure logic
       - id: scaffold-base-structure
         code: |-
@@ -33,7 +43,15 @@ tools:
         after: {step: scaffold-base-structure}
         code: |-
           pt.js
-          const lang = pt.param("language");
+          const templateObj = pt.param("template");
+          const rawKey = Object.keys(templateObj)[0];
+          const tmpl = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
+          const langMap = {
+            couchbase: "python", postgres: "python", temporal: "python",
+            "jwt-validator": "python", twilio: "python",
+            api: "typescript", "phantom-token-handler": "typescript"
+          };
+          const lang = langMap[tmpl];
           pt.callModule("polytope/scaffold", {
             "container-id": "scaffold-language",
             actions: [
@@ -94,10 +112,19 @@ tools:
         after: {step: scaffold-language}
         code: |-
           pt.js
-          const tmpl = pt.param("template");
-          const lang = pt.param("language");
-          const target = pt.param("target");
-          const resolvedName = target ? `${target}-client` : tmpl;
+          const templateObj = pt.param("template");
+          const rawKey = Object.keys(templateObj)[0];
+          const tmpl = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
+          const variables = templateObj[rawKey] || {};
+          const langMap = {
+            couchbase: "python", postgres: "python", temporal: "python",
+            "jwt-validator": "python", twilio: "python",
+            api: "typescript", "phantom-token-handler": "typescript"
+          };
+          const lang = langMap[tmpl];
+          const resolvedName = (tmpl === "api" && variables.upstreamService)
+            ? `${variables.upstreamService}-client`
+            : tmpl;
           pt.callModule("polytope/scaffold", {
             actions: [{
               template: { type: "repo", repo: pt.moduleRepoRef, path: `/tool_resources/add-client/${lang}/${tmpl}/template` },
@@ -110,8 +137,15 @@ tools:
         after: {step: scaffold-client}
         code: |-
           pt.js
-          const tmpl = pt.param("template");
-          const lang = pt.param("language");
+          const templateObj = pt.param("template");
+          const rawKey = Object.keys(templateObj)[0];
+          const tmpl = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
+          const langMap = {
+            couchbase: "python", postgres: "python", temporal: "python",
+            "jwt-validator": "python", twilio: "python",
+            api: "typescript", "phantom-token-handler": "typescript"
+          };
+          const lang = langMap[tmpl];
 
           if (lang !== "python") {
             pt.log("Skipping pyproject update for non-python client");
@@ -119,7 +153,7 @@ tools:
             const depsMap = {
               couchbase: "couchbase>=4.4.0",
               temporal: "temporalio>=1.6.0",
-              jwt_validator: "PyJWT>=2.8.0",
+              "jwt-validator": "PyJWT>=2.8.0",
             };
             const dep = depsMap[tmpl];
             if (!dep) {
@@ -160,14 +194,23 @@ tools:
         after: {step: update-pyproject}
         code: |-
           pt.js
-          const tmpl = pt.param("template");
-          const lang = pt.param("language");
-          const target = pt.param("target");
+          const templateObj = pt.param("template");
+          const rawKey = Object.keys(templateObj)[0];
+          const tmpl = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
+          const variables = templateObj[rawKey] || {};
+          const langMap = {
+            couchbase: "python", postgres: "python", temporal: "python",
+            "jwt-validator": "python", twilio: "python",
+            api: "typescript", "phantom-token-handler": "typescript"
+          };
+          const lang = langMap[tmpl];
 
           if (lang !== "typescript") {
             pt.log("Skipping tsconfig update for non-typescript client");
           } else {
-            const resolvedName = target ? `${target}-client` : tmpl;
+            const resolvedName = (tmpl === "api" && variables.upstreamService)
+              ? `${variables.upstreamService}-client`
+              : tmpl;
             const script = `
           import json
           from pathlib import Path
@@ -203,7 +246,9 @@ tools:
         after: {step: update-tsconfig}
         code: |-
           pt.js
-          const tmpl = pt.param("template");
+          const templateObj = pt.param("template");
+          const rawKey = Object.keys(templateObj)[0];
+          const tmpl = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
 
           // Read source values/secrets from module repo
           let sourceValues = "";
