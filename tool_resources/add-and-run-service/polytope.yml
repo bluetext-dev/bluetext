@@ -60,15 +60,12 @@ tools:
       name:
         info: Optional service name (e.g., "my-api"). Defaults to the template name if not provided.
         type: [maybe, str]
-      target:
-        info: Which graph/tool to add to
+      add-to:
+        info: Which graph/tool to add the service to
         type: [default, str, stack]
       run:
         info: Whether to run the service after adding
         type: [default, bool, true]
-      version:
-        info: Optional version tag for the service image (e.g. "3.4"). If provided, it overrides the default image tag.
-        type: [maybe, str]
       on-conflict:
         info: What to do if files already exist
         type: [default, [enum, skip, overwrite], skip]
@@ -253,7 +250,7 @@ tools:
           const nameParam = pt.param("name");
           const name = (nameParam || template).toLowerCase().replace(/[^a-z0-9_-]/g, "-");
           const onConflict = pt.param("on-conflict");
-          const target = pt.param("target");
+          const addTo = pt.param("add-to");
           const scaffoldParams = {};
           for (const [k, v] of Object.entries(variables)) {
             scaffoldParams[k] = String(v);
@@ -265,80 +262,12 @@ tools:
               path: `services/${name}`,
               "on-conflict": onConflict,
               inputs: scaffoldParams,
-              "add-to-tools": [{ tool: target, call: name }]
+              "add-to-tools": [{ tool: addTo, call: name }]
             }]
           });
 
-      - id: apply-service-version
-        after: {step: scaffold-services}
-        code: |-
-          pt.js
-          const templateAndVars = pt.param("template-and-variables");
-          const rawKey = Object.keys(templateAndVars)[0];
-          const template = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
-          const nameParam = pt.param("name");
-          const name = (nameParam || template).toLowerCase().replace(/[^a-z0-9_-]/g, "-");
-          const version = pt.param("version");
-
-          if (!version) {
-            pt.log("No version specified, skipping");
-          } else {
-            const script = `
-          import yaml
-          from pathlib import Path
-          import sys
-
-          version = "${version}"
-          name = "${name}"
-
-          service_polytope_file = Path(f"/repo/services/{name}/polytope.yml")
-
-          if not service_polytope_file.exists():
-              sys.exit(0)
-
-          with open(service_polytope_file, 'r') as f:
-              try:
-                  config = yaml.safe_load(f) or {}
-              except yaml.YAMLError as exc:
-                  sys.exit(1)
-
-          updated = False
-          tools = config.get('tools', {})
-          for tool_name, tool_def in tools.items():
-              run_steps = tool_def.get('run', [])
-              if isinstance(run_steps, dict):
-                   run_steps = [run_steps]
-
-              for step in run_steps:
-                  if isinstance(step, dict):
-                      args = step.get('args', {})
-                      image = args.get('image')
-                      if image and isinstance(image, str):
-                          if ':' in image:
-                              base_image = image.rsplit(':', 1)[0]
-                              new_image = f"{base_image}:{version}"
-                          else:
-                              new_image = f"{image}:{version}"
-
-                          if new_image != image:
-                              args['image'] = new_image
-                              updated = True
-
-          if updated:
-              with open(service_polytope_file, 'w') as f:
-                  yaml.dump(config, f, default_flow_style=False, sort_keys=False)
-            `;
-
-            pt.callModule("pt/run-script", {
-              repo: { type: "host", path: "." },
-              language: "python",
-              dependencies: ["pyyaml"],
-              script: { type: "string", data: script }
-            });
-          }
-
       - id: write-service-values-to-config
-        after: {step: apply-service-version}
+        after: {step: scaffold-services}
         code: |-
           pt.js
           const templateAndVars = pt.param("template-and-variables");
@@ -563,7 +492,7 @@ tools:
         args:
           template-and-variables: "pt.clj (:template-and-variables inputs)"
           name: pt.param name
-          target: "stack"
+          add-to: "stack"
           run: false
           on-conflict: pt.param on-conflict
 
