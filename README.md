@@ -1,54 +1,60 @@
 # Bluetext
 
-A comprehensive development framework built on Polytope, designed to accelerate enterprise-grade application development with intelligent coding assistance.
+A development framework built on Polytope for accelerating enterprise-grade application development with intelligent coding assistance.
 
 ## Prerequisites
 
-### Update Existing Installation
-
-To install the newest version of Polytope or update it, run:
+### Install Polytope
 
 ```bash
-curl -s https://polytope.com/install.sh | sh -s -- --edge
+curl https://polytope.com/install.sh | sh
 ```
 
-### Making PT Tool Available (Pre-release Users)
+### Make `pt` Available
 
-If you're on a Polytope pre-release and want to make the `pt` tool available from your command line:
+If the `pt` command is not on your PATH after installation:
 
-**To enable for current session only:**
+**Current session only:**
 ```bash
 export PATH="~/.local/bin/polytope:$PATH" && source ~/.zshrc
 ```
 
-**To enable permanently:**
+**Permanently:**
 ```bash
 echo 'export PATH="~/.local/bin/polytope:$PATH"' >> ~/.zshrc && source ~/.zshrc
 ```
 
-## Setup Instructions
+## Setup
 
-### Step 1: Start Polytope MCP Server
+### Step 1: Start the Polytope MCP Server
 
-Execute the following command while in the `bluetext directory` to run the Polytope MCP server:
+From the `bluetext` directory:
 
 ```bash
 pt run --mcp
 ```
 
-### Step 2: Port Forwarding (Required)
+### Step 2: Configure Your MCP Client
 
-Due to a known issue in Cline, you must run this command in a separate terminal to properly forward traffic:
+#### Claude Code
+
+Add the MCP server to Claude Code:
+
+```bash
+claude mcp add polytope --transport sse http://localhost:81883/mcp
+```
+
+#### Cline
+
+Due to a known issue in Cline, you must run a port-forwarding command in a separate terminal:
 
 ```bash
 sudo socat TCP-LISTEN:80,fork TCP:localhost:81883
 ```
 
-**Note:** Keep this terminal session running while using Bluetext with Cline.
+Keep this terminal session running while using Bluetext with Cline.
 
-### Step 3: Configure Cline Integration
-
-To integrate with Cline, add the following configuration to your Cline MCP config file:
+Then add the following to your Cline MCP config:
 
 ```json
 {
@@ -56,16 +62,16 @@ To integrate with Cline, add the following configuration to your Cline MCP confi
     "polytope": {
       "type": "streamableHttp",
       "url": "http://localhost/mcp",
-      "alwaysAllow": ["tool3"],
       "disabled": false
     }
   }
 }
 ```
 
-## Start using bluetext
+## Usage
 
-Once the setup is complete, you can begin using Bluetext through Cline or other MCP-compatible tools.
+Once setup is complete, you can use Bluetext through any MCP-compatible client.
 
-To test if setup has been completed correctly, try running a sample promot. For example, run:
-'Use polytope to build a website with a contact form and save its contents'
+To verify your setup, try a sample prompt:
+
+> Use polytope to build a website with a contact form and save its contents
