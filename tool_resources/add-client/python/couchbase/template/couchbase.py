@@ -12,41 +12,105 @@ from couchbase.result import MutationResult
 from typing import Tuple, Optional, TypeVar, Generic, List, ClassVar
 from pydantic import BaseModel, Field
 
-# Environment variables
-USERNAME = os.environ['COUCHBASE_USERNAME']
-PASSWORD = os.environ['COUCHBASE_PASSWORD']
-DEFAULT_BUCKET_NAME = os.environ['COUCHBASE_BUCKET']
-HOST = os.environ['COUCHBASE_HOST']
-PROTOCOL = os.environ['COUCHBASE_PROTOCOL']
+
+@dataclass
+class CouchbaseConf:
+    """Couchbase connection configuration"""
+    host: str
+    username: str
+    password: str
+    bucket: str
+    protocol: str
+
+
+class CouchbaseClient:
+    """
+    Couchbase client that holds a connection to a specific cluster.
+    Provides lazy, cached cluster access and keyspace creation.
+    """
+
+    def __init__(self, conf: CouchbaseConf):
+        self._conf = conf
+        self._cluster: Optional[Cluster] = None
+
+    def get_cluster(self) -> Cluster:
+        """Returns a cached Couchbase cluster connection."""
+        if self._cluster is None:
+            auth = PasswordAuthenticator(self._conf.username, self._conf.password)
+            url = self._conf.protocol + "://" + self._conf.host
+            self._cluster = Cluster(url, ClusterOptions(auth))
+            self._cluster.wait_until_ready(timedelta(seconds=500))
+        return self._cluster
+
+    def get_keyspace(self, collection_name: str, scope_name: str = "_default", bucket_name: Optional[str] = None) -> 'Keyspace':
+        """Create a Keyspace instance bound to this client."""
+        if bucket_name is None:
+            bucket_name = self._conf.bucket
+        return Keyspace(bucket_name, scope_name, collection_name, client=self)
+
+    def get_default_bucket(self):
+        """Returns the default bucket using the cached cluster connection."""
+        cluster = self.get_cluster()
+        return cluster.bucket(self._conf.bucket)
+
+
+# Client registry keyed by service instance name
+_clients: dict[str, CouchbaseClient] = {}
+
+
+def register_client(name: str, conf: CouchbaseConf):
+    """Register a CouchbaseClient for the given service instance name."""
+    _clients[name] = CouchbaseClient(conf)
+
+
+def get_client(name: str) -> CouchbaseClient:
+    """
+    Get a CouchbaseClient by service instance name.
+    Auto-registers from environment variables on first access.
+    Env var prefix is derived from the name: e.g. "couchbase-server" -> COUCHBASE_SERVER_*.
+    """
+    if name not in _clients:
+        prefix = name.upper().replace("-", "_")
+        conf = CouchbaseConf(
+            host=os.environ[f'{prefix}_HOST'],
+            username=os.environ[f'{prefix}_USERNAME'],
+            password=os.environ[f'{prefix}_PASSWORD'],
+            bucket=os.environ[f'{prefix}_BUCKET'],
+            protocol=os.environ[f'{prefix}_PROTOCOL'],
+        )
+        register_client(name, conf)
+    return _clients[name]
+
 
 @dataclass
 class Keyspace:
     bucket_name: str
     scope_name: str
     collection_name: str
+    client: CouchbaseClient
 
     @classmethod
-    def from_string(cls, keyspace: str) -> 'Keyspace':
+    def from_string(cls, keyspace: str, client: CouchbaseClient) -> 'Keyspace':
         parts = keyspace.split('.')
         if len(parts) != 3:
             raise ValueError(
                 "Invalid keyspace format. Expected 'bucket_name.scope_name.collection_name', "
                 f"got '{keyspace}'"
             )
-        return cls(*parts)
+        return cls(*parts, client=client)
 
     def __str__(self) -> str:
         return f"{self.bucket_name}.{self.scope_name}.{self.collection_name}"
 
     def query(self, query: str, **kwargs) -> list:
-        cluster = get_cluster()
+        cluster = self.client.get_cluster()
         query = query.replace("${keyspace}", str(self))
         options = QueryOptions(**kwargs)
         result = cluster.query(query, options)
         return [row for row in result]
 
     def get_scope(self):
-        cluster = get_cluster()
+        cluster = self.client.get_cluster()
         bucket = cluster.bucket(self.bucket_name)
         return bucket.scope(self.scope_name)
 
@@ -70,67 +134,6 @@ class Keyspace:
         query = f"SELECT META().id, * FROM {self}{limit_clause}"
         return self.query(query)
 
-# Authentication setup
-auth = PasswordAuthenticator(
-    USERNAME,
-    PASSWORD
-)
-
-# Module-level cluster cache
-_cluster = None
-
-def get_keyspace(collection_name: str, scope_name: Optional[str] = "_default", bucket_name: Optional[str] = DEFAULT_BUCKET_NAME) -> Keyspace:
-    """
-    Create a Keyspace instance with optional scope and bucket parameters.
-    
-    Args:
-        collection_name: Name of the collection
-        scope_name: Name of the scope (defaults to "_default")
-        bucket_name: Name of the bucket (defaults to DEFAULT_BUCKET_NAME)
-        
-    Returns:
-        Keyspace instance
-    """
-    return Keyspace(bucket_name, scope_name, collection_name)
-
-def get_cluster():
-    """
-    Returns a cached Couchbase cluster connection.
-    Creates a new connection if one doesn't exist.
-    """
-    global _cluster
-    if _cluster is None:
-        url = PROTOCOL + "://" + HOST
-        _cluster = Cluster(url, ClusterOptions(auth))
-        _cluster.wait_until_ready(timedelta(seconds=500))
-    return _cluster
-
-def get_default_bucket():
-    """
-    Returns the default bucket using the cached cluster connection.
-    """
-    cluster = get_cluster()
-    return cluster.bucket(DEFAULT_BUCKET_NAME)
-
-def get_collection(keyspace: Keyspace):
-    """
-    Get a collection based on a Keyspace instance.
-    
-    Args:
-        keyspace: Keyspace instance containing bucket, scope, and collection names
-        
-    Returns:
-        Couchbase Collection object
-        
-    Raises:
-        couchbase.exceptions.BucketNotFoundException: If bucket doesn't exist
-        couchbase.exceptions.ScopeNotFoundException: If scope doesn't exist
-        couchbase.exceptions.CollectionNotFoundException: If collection doesn't exist
-    """
-    cluster = get_cluster()
-    bucket = cluster.bucket(keyspace.bucket_name)
-    scope = bucket.scope(keyspace.scope_name)
-    return scope.collection(keyspace.collection_name)
 
 DataT = TypeVar("DataT", bound=BaseModel)
 T = TypeVar("T", bound="BaseModelCouchbase")
@@ -140,12 +143,14 @@ class BaseModelCouchbase(BaseModel, Generic[DataT]):
     data: DataT
 
     _collection_name: ClassVar[str] = ""
+    _service_instance: ClassVar[str] = "couchbase-server"
 
     @classmethod
     def get_keyspace(cls) -> Keyspace:
         if not cls._collection_name:
             raise ValueError(f"_collection_name not set for {cls.__name__}")
-        return get_keyspace(cls._collection_name)
+        client = get_client(cls._service_instance)
+        return client.get_keyspace(cls._collection_name)
 
     @classmethod
     def get(cls: type[T], id: str) -> Optional[T]:
@@ -184,10 +189,10 @@ class BaseModelCouchbase(BaseModel, Generic[DataT]):
             # Extract data using collection name
             data_dict = row.get(cls._collection_name)
             if data_dict is None:
-                # Fallback: try to find the data in other keys if needed? 
+                # Fallback: try to find the data in other keys if needed?
                 # For now assuming standard behavior
                 pass
-            
+
             if data_dict:
                 items.append(cls(id=row['id'], data=data_dict))
         return items
@@ -195,7 +200,7 @@ class BaseModelCouchbase(BaseModel, Generic[DataT]):
     @classmethod
     def get_many(cls: type[T], ids: List[str]) -> List[T]:
         # TODO: Batch implementation when available. Loop for now.
-        # This is strictly "get", failing if not found? 
+        # This is strictly "get", failing if not found?
         # Or should it return None for missing?
         # N1QL approach: SELECT META().id, * FROM keyspace USE KEYS [...]
         keyspace = cls.get_keyspace()
@@ -203,7 +208,7 @@ class BaseModelCouchbase(BaseModel, Generic[DataT]):
         keys_str = ", ".join([f'"{k}"' for k in ids])
         query = f"SELECT META().id, * FROM {keyspace} USE KEYS [{keys_str}]"
         rows = keyspace.query(query)
-        
+
         items = []
         for row in rows:
             data_dict = row.get(cls._collection_name)

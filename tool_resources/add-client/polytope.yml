@@ -128,7 +128,7 @@ tools:
           pt.callModule("polytope/scaffold", {
             actions: [{
               template: { type: "repo", repo: pt.moduleRepoRef, path: `/tool_resources/add-client/${lang}/${tmpl}/template` },
-              path: `clients/${lang}/${resolvedName}`,
+              path: `clients/${lang}/clients/${resolvedName}`,
               "on-conflict": "skip"
             }]
           });

@@ -1,16 +1,16 @@
 env_vars:
-  - name: COUCHBASE_HOST
-    key: couchbase-host
+  - name: "{TARGET}_HOST"
+    key: "{upstream}-host"
     secret: false
-  - name: COUCHBASE_USERNAME
-    key: couchbase-username
+  - name: "{TARGET}_USERNAME"
+    key: "{upstream}-username"
     secret: true
-  - name: COUCHBASE_PASSWORD
-    key: couchbase-password
+  - name: "{TARGET}_PASSWORD"
+    key: "{upstream}-password"
     secret: true
-  - name: COUCHBASE_BUCKET
-    key: couchbase-bucket
+  - name: "{TARGET}_BUCKET"
+    key: "{upstream}-main-bucket-name"
     secret: false
-  - name: COUCHBASE_PROTOCOL
-    key: couchbase-protocol
+  - name: "{TARGET}_PROTOCOL"
+    key: "{upstream}-protocol"
     secret: false

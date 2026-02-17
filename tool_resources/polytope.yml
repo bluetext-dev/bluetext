@@ -592,6 +592,9 @@ tools:
       entity-plural:
         info: Entity name in plural form (e.g., "projects")
         type: str
+      service-instance:
+        info: Which service instance this entity connects to (e.g., "couchbase-server", "analytics-db"). Determines env var prefix.
+        type: [default, str, "couchbase-server"]
     run:
       # Inlined setup-project-structure logic (chained tool resolution broken in Polytope)
       - id: scaffold-base-structure
@@ -635,6 +638,7 @@ tools:
           const lang = pt.param("language");
           const entitySingular = pt.param("entity-singular");
           const entityPlural = pt.param("entity-plural");
+          const serviceInstance = pt.param("service-instance");
 
           const script = `
           from pathlib import Path
@@ -643,6 +647,7 @@ tools:
           language = "${lang}"
           entity_singular = "${entitySingular}"
           entity_plural = "${entityPlural}"
+          service_instance = "${serviceInstance}"
 
           # Read the template file
           template_path = Path(f"/template/entity.py")
@@ -657,6 +662,7 @@ tools:
           content = template_content.replace("{{ entity_singular | capitalize }}", entity_singular.capitalize())
           content = content.replace("{{ entity_singular }}", entity_singular)
           content = content.replace("{{ entity_plural }}", entity_plural)
+          content = content.replace("{{ service_instance }}", service_instance)
 
           # Determine output path - entities go in models/python/models/entities/
           base_path = "models/python/models/entities"
