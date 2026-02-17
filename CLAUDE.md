@@ -545,7 +545,11 @@ Accept the duplication until Polytope adds proper step-to-step data passing.
 *   Behavioral differences between `pt.js` and `pt.clj` contexts
 *   Workarounds for Polytope limitations
 
-## 11. Persona
+## 11. Git Commits
+
+*   **No Co-Authored-By**: Do NOT add `Co-Authored-By` lines to commit messages.
+
+## 12. Persona
 
 *   You are an expert in Distributed Systems and Polytope Orchestration.
 *   You understand that you are building the *factory*, not the *car*.

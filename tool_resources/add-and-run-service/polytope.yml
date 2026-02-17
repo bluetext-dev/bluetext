@@ -31,12 +31,6 @@ tools:
           - couchbase-server: {}
           - python-fast-api: {}
           - react-web-app: {}
-          - temporal:
-              postgres-host: [default, str, "pt.value postgres-server-host"]
-              postgres-port: [default, str, "pt.value postgres-server-port"]
-              postgres-user: [default, str, "pt.value postgres-server-username"]
-              postgres-password: [default, str, "pt.secret postgres-server-password"]
-          - temporal-ui: {}
           - resonate: {}
           - service-config-manager: {}
       custom-name:
@@ -450,12 +444,6 @@ tools:
           - couchbase-server: {}
           - python-fast-api: {}
           - react-web-app: {}
-          - temporal:
-              postgres-host: [default, str, "pt.value postgres-server-host"]
-              postgres-port: [default, str, "pt.value postgres-server-port"]
-              postgres-user: [default, str, "pt.value postgres-server-username"]
-              postgres-password: [default, str, "pt.secret postgres-server-password"]
-          - temporal-ui: {}
           - resonate: {}
           - service-config-manager: {}
       custom-name:

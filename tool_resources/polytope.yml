@@ -455,7 +455,7 @@ tools:
     inputs:
       client-type:
         info: Client type
-        type: [enum, python-fast-api, couchbase, postgres, temporal, twilio]
+        type: [enum, python-fast-api, couchbase, postgres, twilio]
       consumer:
         info: Service to configure (where env vars go)
         type: str

@@ -18,7 +18,6 @@ tools:
           - either
           - couchbase: {}
           - postgres: {}
-          - temporal: {}
           - jwt-validator: {}
           - twilio: {}
           - phantom-token-handler: {}
@@ -47,7 +46,7 @@ tools:
           const rawKey = Object.keys(templateObj)[0];
           const tmpl = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
           const langMap = {
-            couchbase: "python", postgres: "python", temporal: "python",
+            couchbase: "python", postgres: "python",
             "jwt-validator": "python", twilio: "python",
             "python-fast-api": "typescript", "phantom-token-handler": "typescript"
           };
@@ -117,7 +116,7 @@ tools:
           const tmpl = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
           const variables = templateObj[rawKey] || {};
           const langMap = {
-            couchbase: "python", postgres: "python", temporal: "python",
+            couchbase: "python", postgres: "python",
             "jwt-validator": "python", twilio: "python",
             "python-fast-api": "typescript", "phantom-token-handler": "typescript"
           };
@@ -141,7 +140,7 @@ tools:
           const rawKey = Object.keys(templateObj)[0];
           const tmpl = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
           const langMap = {
-            couchbase: "python", postgres: "python", temporal: "python",
+            couchbase: "python", postgres: "python",
             "jwt-validator": "python", twilio: "python",
             "python-fast-api": "typescript", "phantom-token-handler": "typescript"
           };
@@ -152,7 +151,6 @@ tools:
           } else {
             const depsMap = {
               couchbase: "couchbase>=4.4.0",
-              temporal: "temporalio>=1.6.0",
               "jwt-validator": "PyJWT>=2.8.0",
             };
             const dep = depsMap[tmpl];
@@ -199,7 +197,7 @@ tools:
           const tmpl = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
           const variables = templateObj[rawKey] || {};
           const langMap = {
-            couchbase: "python", postgres: "python", temporal: "python",
+            couchbase: "python", postgres: "python",
             "jwt-validator": "python", twilio: "python",
             "python-fast-api": "typescript", "phantom-token-handler": "typescript"
           };
