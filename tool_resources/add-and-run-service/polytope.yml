@@ -27,6 +27,7 @@ tools:
               postgres-port: [default, str, "pt.value postgres-server-port"]
               postgres-username: [default, str, "pt.value postgres-server-username"]
               postgres-password: [default, str, "pt.secret postgres-server-password"]
+              postgres-service: str
           - kong: {}
           - couchbase-server: {}
           - python-fast-api: {}
@@ -397,9 +398,85 @@ tools:
             script: { type: "string", data: script }
           });
 
+      - id: copy-dependency-config-files
+        after: {step: copy-config-files}
+        code: |-
+          pt.js
+          const templateAndVars = pt.param("template-and-variables");
+          const rawKey = Object.keys(templateAndVars)[0];
+          const template = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
+          const variables = templateAndVars[rawKey] || {};
+
+          const postgresService = variables.postgresService || variables["postgres-service"];
+          if (!postgresService) {
+            pt.log("No postgres-service variable set, skipping dependency config copy");
+          } else {
+            const script = `
+          import shutil
+          from pathlib import Path
+
+          template = "${template}"
+          postgres_service = "${postgresService}"
+
+          target_dir = Path(f'/repo/config/{postgres_service}')
+          target_dir.mkdir(parents=True, exist_ok=True)
+
+          dep_config_dir = Path(f'/tool-resources/{template}/dependency-config')
+          if dep_config_dir.exists() and dep_config_dir.is_dir():
+              for item in dep_config_dir.iterdir():
+                  if item.is_file():
+                      target_path = target_dir / item.name
+                      shutil.copy2(item, target_path)
+                      print(f"Copied {item.name} to config/{postgres_service}/")
+          else:
+              print(f"No dependency-config directory found for {template}")
+          `;
+
+            pt.callModule("pt/run-script", {
+              repo: { type: "host", path: "." },
+              language: "python",
+              mounts: [{
+                path: "/tool-resources",
+                source: { type: "repo", repo: pt.moduleRepoRef, path: "/tool_resources/add-and-run-service" }
+              }],
+              script: { type: "string", data: script }
+            });
+          }
+
+      - id: register-postgres-with-scm
+        after: {step: copy-dependency-config-files}
+        code: |-
+          pt.js
+          const templateAndVars = pt.param("template-and-variables");
+          const rawKey = Object.keys(templateAndVars)[0];
+          const variables = templateAndVars[rawKey] || {};
+
+          const postgresService = variables.postgresService || variables["postgres-service"];
+          if (!postgresService) {
+            pt.log("No postgres-service variable set, skipping SCM registration");
+          } else {
+            // Check if service-config-manager exists before trying to register
+            let scmExists = false;
+            try {
+              pt.readRepoFile("services/service-config-manager/polytope.yml");
+              scmExists = true;
+            } catch (e) {
+              // SCM not scaffolded yet
+            }
+            if (scmExists) {
+              pt.log(`Registering ${postgresService} with service-config-manager`);
+              pt.callModule("add-to-managed-services", {
+                "service-to-manage": postgresService,
+                type: "postgres"
+              });
+            } else {
+              pt.log("service-config-manager not found, skipping SCM registration (add it later with add-and-run-service)");
+            }
+          }
+
       - id: run-service
         after:
-          - step: copy-config-files
+          - step: register-postgres-with-scm
         code: |-
           pt.js
           const run = pt.param("run");
@@ -440,6 +517,7 @@ tools:
               postgres-port: [default, str, "pt.value postgres-server-port"]
               postgres-username: [default, str, "pt.value postgres-server-username"]
               postgres-password: [default, str, "pt.secret postgres-server-password"]
+              postgres-service: str
           - kong: {}
           - couchbase-server: {}
           - python-fast-api: {}
@@ -450,7 +528,8 @@ tools:
         info: Custom service name. Defaults to the template name.
         type: [maybe, str]
     run:
-      - tool: add-and-run-service
+      - id: add-service-no-run
+        tool: add-and-run-service
         args:
           template-and-variables: "pt.clj (:template-and-variables inputs)"
           custom-name: pt.param custom-name
@@ -463,4 +542,5 @@ tools:
       name:
         type: str
     run:
-      - tool: stack
+      - id: run-stack
+        tool: stack

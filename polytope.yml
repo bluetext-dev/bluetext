@@ -1,10 +1,23 @@
 include:
   - path: tool_resources
-    # only:
-    #   - add-and-run-service
-    #   - add-client
-    #   - add-entity
-    #   - initialize_session
-    #   - setup-project-structure
-    #   - setup-service-for-client
-    #   - stack
+
+mcp:
+  only:
+    - initialize_session
+    - get_dev_context
+    - setup-project-structure
+    - add-project-language
+    - add-and-run-service
+    - add-service
+    - run-service
+    - add-client
+    - add-entity
+    - add-to-managed-services
+    - set-values-and-secrets
+    - setup-service-for-client
+    - implement-curity-phantom-token
+    - scaffold-phantom-token-protected-view
+    - sync-api-client
+    - stack
+    - stack-apply-services
+    - load-config

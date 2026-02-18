@@ -3,14 +3,73 @@ tools:
     info: |
       Implements the Curity Phantom Token Pattern.
       Adds JWT Validator to Python clients and Phantom Token Handler to TypeScript clients.
-      Appends Kong configuration to config/kong/kong.yml.
-      Requires Kong service to already be added to the project.
+      Appends Kong configuration to config/<kong-service>/kong.yml.
+      Ensures Kong and Curity services exist (adds them if missing).
     inputs:
       kong-service:
         info: Name of your Kong service (the directory name under services/)
         type: str
+      postgres-service:
+        info: Name of the postgres service that Curity uses
+        type: str
     run:
+      - id: ensure-kong-exists
+        code: |-
+          pt.js
+          const kongService = pt.param("kong-service");
+          let exists = false;
+          try {
+            pt.readRepoFile(`services/${kongService}/polytope.yml`);
+            exists = true;
+          } catch (e) {
+            // does not exist
+          }
+          if (exists) {
+            pt.log(`Kong service '${kongService}' already exists, skipping`);
+          } else {
+            pt.log(`Kong service '${kongService}' not found, adding it`);
+            pt.callModule("add-and-run-service", {
+              "template-and-variables": { kong: {} },
+              "custom-name": kongService,
+              "add-to": "stack",
+              run: false
+            });
+          }
+
+      - id: ensure-curity-exists
+        code: |-
+          pt.js
+          const postgresService = pt.param("postgres-service");
+          let exists = false;
+          try {
+            pt.readRepoFile("services/curity/polytope.yml");
+            exists = true;
+          } catch (e) {
+            // does not exist
+          }
+          if (exists) {
+            pt.log("Curity service already exists, skipping");
+          } else {
+            pt.log("Curity service not found, adding it");
+            pt.callModule("add-and-run-service", {
+              "template-and-variables": {
+                curity: {
+                  "postgres-host": `pt.value ${postgresService}-host`,
+                  "postgres-port": `pt.value ${postgresService}-port`,
+                  "postgres-username": `pt.value ${postgresService}-username`,
+                  "postgres-password": `pt.secret ${postgresService}-password`,
+                  "postgres-service": postgresService
+                }
+              },
+              "add-to": "stack",
+              run: false
+            });
+          }
+
       - id: add-python-client
+        after:
+          - step: ensure-kong-exists
+          - step: ensure-curity-exists
         tool: add-client
         args:
           template:
@@ -23,10 +82,77 @@ tools:
             phantom-token-handler: {}
 
       - id: set-secrets
-        after: {step: add-typescript-client}
-        tool: set-values-and-secrets
-        args:
-          source: implement/curity-phantom-token
+        after:
+          - step: add-typescript-client
+          - step: ensure-kong-exists
+          - step: ensure-curity-exists
+        code: |-
+          pt.js
+          // Inline set-values-and-secrets for implement/curity-phantom-token
+          // (avoids Polytope template resolution bug in nested tool calls)
+          const sourceValues = pt.readRepoFile(
+            "tool_resources/set-values-and-secrets/implement/curity-phantom-token/values.yml",
+            { repo: pt.moduleRepoRef }
+          );
+          const sourceSecrets = pt.readRepoFile(
+            "tool_resources/set-values-and-secrets/implement/curity-phantom-token/secrets.yml",
+            { repo: pt.moduleRepoRef }
+          );
+
+          const escValues = sourceValues.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+          const escSecrets = sourceSecrets.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+
+          const script = `
+          import yaml
+          from pathlib import Path
+
+          new_values = yaml.safe_load('''${escValues}''') or {}
+          new_secrets = yaml.safe_load('''${escSecrets}''') or {}
+
+          config_dir = Path('/repo/config')
+          config_dir.mkdir(parents=True, exist_ok=True)
+          values_file = config_dir / 'values.yml'
+          secrets_file = config_dir / 'secrets.yml'
+
+          existing_values = yaml.safe_load(open(values_file).read()) if values_file.exists() else {}
+          existing_values = existing_values or {}
+          existing_secrets = yaml.safe_load(open(secrets_file).read()) if secrets_file.exists() else {}
+          existing_secrets = existing_secrets or {}
+
+          existing_values.update(new_values)
+          existing_secrets.update(new_secrets)
+
+          with open(values_file, 'w') as f:
+              f.write('# Configuration values\\n# Generated and managed by Bluetext tools\\n\\n')
+              if existing_values:
+                  yaml.dump(existing_values, f, default_flow_style=False, sort_keys=True)
+
+          with open(secrets_file, 'w') as f:
+              f.write('# Configuration secrets\\n# Add this file to .gitignore\\n# Generated and managed by Bluetext tools\\n\\n')
+              if existing_secrets:
+                  yaml.dump(existing_secrets, f, default_flow_style=False, sort_keys=True)
+
+          print(f"Written {len(new_values)} values and {len(new_secrets)} secrets")
+          `;
+
+          pt.callModule("pt/run-script", {
+            repo: { type: "host", path: "." },
+            language: "python",
+            dependencies: ["pyyaml"],
+            script: { type: "string", data: script }
+          });
+
+          // Set values/secrets in Polytope runtime
+          const values = pt.readYaml(pt.readRepoFile("config/values.yml")) || {};
+          const secrets = pt.readYaml(pt.readRepoFile("config/secrets.yml")) || {};
+          for (const [k, v] of Object.entries(values)) {
+            const key = k.replace(/([a-z0-9])([A-Z])/g, "$1-$2").replace(/[_ ]+/g, "-").toLowerCase();
+            pt.setProjectValue(key, String(v));
+          }
+          for (const [k, v] of Object.entries(secrets)) {
+            const key = k.replace(/([a-z0-9])([A-Z])/g, "$1-$2").replace(/[_ ]+/g, "-").toLowerCase();
+            pt.setSecret(key, String(v));
+          }
 
       - id: generate-missing-secrets
         after: {step: set-secrets}
@@ -115,76 +241,137 @@ tools:
 
       - id: update-kong-config
         after: {step: set-secrets}
-        tool: pt/run-script
-        args:
-          repo: {type: host, path: .}
-          language: python
-          dependencies: [pyyaml]
-          mounts:
-            - path: /kong-config
-              source:
-                type: repo
-                repo: "pt.clj pt/module-repo-ref"
-                path: /tool_resources/implement/curity-phantom-token/kong-config
-          script:
-            type: string
-            data: |
-              import yaml
-              from pathlib import Path
-              import os
+        code: |-
+          pt.js
+          const kongService = pt.param("kong-service");
 
-              # Define target path
-              target_path = Path("/repo/config/kong/kong.yml")
+          const script = `
+          import yaml
+          from pathlib import Path
 
-              if not target_path.exists():
-                  print(f"❌ {target_path} does not exist. Please ensure Kong service is added and config/kong/kong.yml exists.")
-                  exit(1)
+          kong_service = "${kongService}"
+          target_path = Path(f"/repo/config/{kong_service}/kong.yml")
 
-              # Read existing config
-              with open(target_path) as f:
-                  existing_data = yaml.safe_load(f) or {}
-              
-              if "services" not in existing_data:
-                  existing_data["services"] = []
-              
-              existing_services = existing_data["services"]
-              # Map of existing service names
-              existing_names = {s.get("name") for s in existing_services if "name" in s}
-              
-              added_count = 0
-              config_dir = Path("/kong-config")
-              
-              # Iterate over all yaml files in the mounted directory
-              for config_file in config_dir.glob("*.yml"):
-                  print(f"Processing config file: {config_file.name}")
-                  with open(config_file) as f:
-                      snippet_data = yaml.safe_load(f) or {}
-                  
-                  snippet_services = snippet_data.get("services", [])
-                  if not snippet_services:
-                      continue
+          if not target_path.exists():
+              print(f"target {target_path} does not exist. Please ensure Kong service is added and config/{kong_service}/kong.yml exists.")
+              exit(1)
 
-                  for service in snippet_services:
-                      name = service.get("name")
-                      if name and name in existing_names:
-                          print(f"ℹ️ Service '{name}' already exists in kong.yml - skipping.")
-                      else:
-                          print(f"✅ Adding service '{name}' to kong.yml")
-                          existing_services.append(service)
-                          existing_names.add(name) # Check duplicates within same execution
-                          added_count += 1
-              
-              if added_count > 0:
-                  with open(target_path, 'w') as f:
-                      yaml.dump(existing_data, f, default_flow_style=False, sort_keys=False)
-                  print(f"✅ Successfully added {added_count} services to {target_path}")
-              else:
-                  print("No new services added to kong.yml")
+          with open(target_path) as f:
+              existing_data = yaml.safe_load(f) or {}
+
+          if "services" not in existing_data:
+              existing_data["services"] = []
+
+          existing_services = existing_data["services"]
+          existing_names = {s.get("name") for s in existing_services if "name" in s}
+
+          added_count = 0
+          config_dir = Path("/kong-config")
+
+          for config_file in config_dir.glob("*.yml"):
+              print(f"Processing config file: {config_file.name}")
+              with open(config_file) as f:
+                  snippet_data = yaml.safe_load(f) or {}
+
+              snippet_services = snippet_data.get("services", [])
+              if not snippet_services:
+                  continue
+
+              for service in snippet_services:
+                  name = service.get("name")
+                  if name and name in existing_names:
+                      print(f"Service '{name}' already exists in kong.yml - skipping.")
+                  else:
+                      print(f"Adding service '{name}' to kong.yml")
+                      existing_services.append(service)
+                      existing_names.add(name)
+                      added_count += 1
+
+          if added_count > 0:
+              with open(target_path, 'w') as f:
+                  yaml.dump(existing_data, f, default_flow_style=False, sort_keys=False)
+              print(f"Successfully added {added_count} services to {target_path}")
+          else:
+              print("No new services added to kong.yml")
+          `;
+
+          pt.callModule("pt/run-script", {
+            repo: { type: "host", path: "." },
+            language: "python",
+            dependencies: ["pyyaml"],
+            mounts: [{
+              path: "/kong-config",
+              source: { type: "repo", repo: pt.moduleRepoRef, path: "/tool_resources/implement/curity-phantom-token/kong-config" }
+            }],
+            script: { type: "string", data: script }
+          });
 
       - id: setup-kong-env-vars
         after: {step: update-kong-config}
-        tool: setup-environment-variables
-        args:
-          caller: implement
-          source: curity-phantom-token
-          target: "{pt.input kong-service}"
+        code: |-
+          pt.js
+          const kongService = pt.param("kong-service");
+          const envVarsYaml = pt.readRepoFile(
+            "tool_resources/setup-environment-variables/implement/curity-phantom-token/required-env-vars.yml",
+            { repo: pt.moduleRepoRef }
+          );
+          const escEnvVars = envVarsYaml.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+          const script = `
+          import yaml, re
+          from pathlib import Path
+
+          target = "${kongService}"
+          env_vars_raw = yaml.safe_load('''${escEnvVars}''') or {}
+          raw_env_vars = env_vars_raw.get('env_vars', [])
+          env_vars = [item for item in raw_env_vars if isinstance(item, dict)]
+
+          service_polytope_path = Path(f"/repo/services/{target}/polytope.yml")
+          if not service_polytope_path.exists():
+              print(f"Target service polytope.yml not found: {service_polytope_path}")
+              exit(1)
+
+          with open(service_polytope_path) as f:
+              content = f.read()
+
+          vars_to_add = [v for v in env_vars if v['name'] not in content]
+          if not vars_to_add:
+              print(f"All env vars already exist in services/{target}/polytope.yml")
+              exit(0)
+
+          env_entries = []
+          for var in vars_to_add:
+              name = var['name']
+              if 'value' in var:
+                  env_entries.append(f'            - {{ name: {name}, value: "{var["value"]}" }}')
+              else:
+                  key = var['key']
+                  is_secret = var.get('secret', False)
+                  if is_secret:
+                      env_entries.append(f'            - {{ name: {name}, value: "pt.clj (pt/secret \\\\"{key}\\\\")" }}')
+                  else:
+                      env_entries.append(f'            - {{ name: {name}, value: "pt.clj (pt/value \\\\"{key}\\\\")" }}')
+
+          env_block = '\\n'.join(env_entries)
+          env_pattern = r'(env:\\s*\\n(?:\\s+-[^\\n]*\\n)*)'
+          match = re.search(env_pattern, content)
+          if match:
+              env_section = match.group(1)
+              new_env_section = env_section.rstrip('\\n') + '\\n' + env_block + '\\n'
+              new_content = content[:match.start()] + new_env_section + content[match.end():]
+          else:
+              print(f"No 'env:' section found in {service_polytope_path}.")
+              print(env_block)
+              exit(0)
+
+          with open(service_polytope_path, 'w') as f:
+              f.write(new_content)
+          print(f"Added {len(vars_to_add)} env vars to services/{target}/polytope.yml")
+          for var in vars_to_add:
+              print(f"   - {var['name']}")
+          `;
+          pt.callModule("pt/run-script", {
+            repo: { type: "host", path: "." },
+            language: "python",
+            dependencies: ["pyyaml"],
+            script: { type: "string", data: script }
+          });

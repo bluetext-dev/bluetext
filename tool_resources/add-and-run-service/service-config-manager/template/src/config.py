@@ -50,12 +50,12 @@ class Config:
         elif service_type == 'redpanda':
             file_path = config_path / 'redpanda.yaml'
         elif service_type == 'postgres':
-            # Check for SQL file
-            file_path = config_path / 'postgres.sql'
-            if file_path.exists():
-                self.logger.info(f"📄 Found SQL script for {service_type}: {file_path}")
-                return str(file_path)
-            # Fallback or check for other types if needed
+            # Find all .sql files in the config directory
+            sql_files = sorted(config_path.glob('*.sql'))
+            if sql_files:
+                self.logger.info(f"📄 Found {len(sql_files)} SQL script(s) for {service_type}: {[f.name for f in sql_files]}")
+                return [str(f) for f in sql_files]
+            # No SQL files found
         
         if file_path and file_path.exists():
             self.logger.info(f"🎯 Loading service configuration: {file_path}")

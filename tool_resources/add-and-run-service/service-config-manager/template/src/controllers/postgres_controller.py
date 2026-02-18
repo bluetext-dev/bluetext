@@ -54,13 +54,14 @@ class PostgresController:
             self.logger.error("❌ Failed to connect to Postgres")
             return
 
-        # Load SQL script
-        sql_script_path = self.config.load_service_config(self.config_dir, 'postgres')
-        if not sql_script_path:
-            self.logger.warning(f"⚠️ No postgres.sql config found in {self.config_dir}")
+        # Load SQL scripts
+        sql_script_paths = self.config.load_service_config(self.config_dir, 'postgres')
+        if not sql_script_paths:
+            self.logger.warning(f"⚠️ No .sql files found in {self.config_dir}")
             return
-            
-        self.execute_script(sql_script_path)
+
+        for sql_script_path in sql_script_paths:
+            self.execute_script(sql_script_path)
 
     def execute_script(self, script_path):
         """Execute a SQL script file."""
