@@ -22,3 +22,4 @@ mcp:
     - stack
     - stack-apply-services
     - load-config
+    - add-dependency

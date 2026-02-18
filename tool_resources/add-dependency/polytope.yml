@@ -1,0 +1,30 @@
+tools:
+  add-dependency:
+    info: |
+      Adds packages to a running service's dependencies.
+      Executes the install command inside the service's container.
+      Supports API services (uv add) and frontend services (bun add).
+    inputs:
+      service:
+        info: The service container to add dependencies to (e.g., python-fast-api, react-web-app)
+        type: str
+      packages:
+        info: Packages to add (space separated, e.g., "requests pydantic")
+        type: str
+    run:
+      - id: add-deps
+        code: |-
+          pt.js
+          const service = pt.param("service");
+          const packages = pt.param("packages");
+          const cmd = `./bin/add-dependencies ${packages}`;
+
+          pt.log(`Installing packages in ${service}: ${packages}`);
+          const execId = pt.containerExec(service, cmd);
+          const exitCode = pt.awaitExecExit(execId);
+
+          if (exitCode === 0) {
+            pt.log(`Successfully added packages to ${service}`);
+          } else {
+            pt.fail(`Failed to add packages to ${service} (exit code: ${exitCode})`);
+          }
