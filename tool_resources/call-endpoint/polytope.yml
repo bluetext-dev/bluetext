@@ -1,0 +1,96 @@
+tools:
+  call-endpoint:
+    info: |
+      Makes HTTP requests to services running in the sandbox network.
+      Use this instead of curl to reach services — it runs at the orchestrator level and can access the sandbox network directly.
+
+      Provide either `service` (resolves host/port from values context) or `url` (raw URL). Not both.
+
+      Examples:
+        call-endpoint(service: "python-fast-api", path: "/health")
+        call-endpoint(service: "kong", path: "/api/users")
+        call-endpoint(url: "http://python-fast-api:3030/docs")
+        call-endpoint(service: "python-fast-api", path: "/users", method: "POST", body: '{"name": "Alice"}')
+    inputs:
+      service:
+        info: "Service name (e.g., python-fast-api, kong). Resolves host/port from values context."
+        type: [default, str, ""]
+      url:
+        info: "Raw URL to call (e.g., http://python-fast-api:3030/health). Use when you don't want service name resolution."
+        type: [default, str, ""]
+      path:
+        info: "Path to append when using service mode (e.g., /health, /api/users)."
+        type: [default, str, "/"]
+      method:
+        info: "HTTP method."
+        type: [default, [enum, GET, POST, PUT, PATCH, DELETE], GET]
+      body:
+        info: "Request body as a JSON string."
+        type: [default, str, ""]
+      headers:
+        info: "Additional headers as a JSON object string (e.g., '{\"Authorization\": \"Bearer token\"}')."
+        type: [default, str, ""]
+    run:
+      - id: make-request
+        code: |-
+          pt.clj
+          (let [service (let [s (:service inputs)] (when (and s (not= s "")) s))
+                raw-url (let [u (:url inputs)] (when (and u (not= u "")) u))
+                path    (or (:path inputs) "/")
+                method  (clojure.string/lower-case (or (:method inputs) "get"))
+                body    (let [b (:body inputs)] (when (and b (not= b "")) b))
+                hdrs    (let [h (:headers inputs)] (when (and h (not= h "")) h))
+
+                ;; Validate: must provide service or url, not both
+                _ (when (and (nil? service) (nil? raw-url))
+                    (pt/fail "Must provide either 'service' or 'url'."))
+                _ (when (and service raw-url)
+                    (pt/fail "Provide either 'service' or 'url', not both."))
+
+                ;; Helper: try to read a value, return nil if missing
+                try-value (fn [k] (try (pt/value k) (catch Exception _ nil)))
+
+                ;; Resolve URL
+                ;; pt/http-request runs at the orchestrator level (outside containers),
+                ;; so we use localhost with the exposed port to reach services.
+                url (if service
+                      (let [host (or (try-value (str service "-host")) "localhost")
+                            port (or (try-value (str service "-http-port"))
+                                     (try-value (str service "-proxy-port"))
+                                     (try-value (str service "-port")))]
+                        (when (nil? port)
+                          (pt/fail (str "Could not resolve port for service '" service "'.")))
+                        (str "http://" host ":" port path))
+                      raw-url)
+
+                ;; Parse headers
+                parsed-headers (if hdrs (pt/read-json hdrs) {})
+                final-headers (if body
+                                (merge {"Content-Type" "application/json"} parsed-headers)
+                                parsed-headers)
+
+                ;; Build request
+                request (cond-> {:method method :url url}
+                          (seq final-headers) (assoc :headers final-headers)
+                          body (assoc :body body))
+
+                _ (pt/log (str method " " url))
+
+                ;; Make the request
+                response (pt/http-request request)
+                status   (:status response)
+                res-hdrs (:headers response)
+                raw-body (:body response)
+                ;; Serialize body: if it's a map/collection, convert to JSON string
+                res-body (if (or (map? raw-body) (sequential? raw-body))
+                           (try (pt/write-json raw-body) (catch Exception _ (pr-str raw-body)))
+                           (str (or raw-body "")))]
+
+            (when (:error response)
+              (pt/log (str "Error: " (:error response))))
+            (pt/log (str "Status: " status))
+            (pt/log (str "Headers: " (try (pt/write-json res-hdrs) (catch Exception _ (pr-str res-hdrs)))))
+            (pt/log (str "Body: " (if (> (count res-body) 2000)
+                                    (str (subs res-body 0 2000) "\n... (truncated)")
+                                    res-body)))
+            {:status status :headers res-hdrs :body res-body})

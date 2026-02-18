@@ -12,6 +12,7 @@ include:
   - add-and-run-stack/polytope.yml
   - add-client/polytope.yml
   - add-to-managed-services/polytope.yml
+  - call-endpoint/polytope.yml
 
 tools:
 
