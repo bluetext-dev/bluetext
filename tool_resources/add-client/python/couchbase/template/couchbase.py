@@ -7,7 +7,6 @@ from couchbase.auth import PasswordAuthenticator
 from couchbase.cluster import Cluster
 from couchbase.options import (ClusterOptions, ClusterTimeoutOptions, QueryOptions, MutateInOptions)
 from couchbase.exceptions import ScopeAlreadyExistsException, CollectionAlreadyExistsException, DocumentNotFoundException
-from couchbase.management.collections import CreateCollectionSettings
 from couchbase.result import MutationResult
 from typing import Tuple, Optional, TypeVar, Generic, List, ClassVar
 from pydantic import BaseModel, Field
@@ -42,10 +41,24 @@ class CouchbaseClient:
             self._cluster.wait_until_ready(timedelta(seconds=500))
         return self._cluster
 
+    def ensure_collection_exists(self, collection_name: str, scope_name: str = "_default", bucket_name: Optional[str] = None):
+        """Ensure a collection exists in the bucket, creating it if necessary."""
+        if bucket_name is None:
+            bucket_name = self._conf.bucket
+        cluster = self.get_cluster()
+        bucket = cluster.bucket(bucket_name)
+        collection_manager = bucket.collections()
+        try:
+            collection_manager.create_collection(scope_name, collection_name)
+            print(f"Created collection {collection_name} in scope {scope_name} of bucket {bucket_name}")
+        except CollectionAlreadyExistsException:
+            pass
+
     def get_keyspace(self, collection_name: str, scope_name: str = "_default", bucket_name: Optional[str] = None) -> 'Keyspace':
         """Create a Keyspace instance bound to this client."""
         if bucket_name is None:
             bucket_name = self._conf.bucket
+        self.ensure_collection_exists(collection_name, scope_name, bucket_name)
         return Keyspace(bucket_name, scope_name, collection_name, client=self)
 
     def get_default_bucket(self):
@@ -144,6 +157,27 @@ class BaseModelCouchbase(BaseModel, Generic[DataT]):
 
     _collection_name: ClassVar[str] = ""
     _service_instance: ClassVar[str] = "couchbase-server"
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        # Retrieve _collection_name from the class itself or from Pydantic v2's
+        # __private_attributes__ (where ClassVar-like fields may end up).
+        collection_name = getattr(cls, "_collection_name", None)
+        if not collection_name:
+            private_attrs = getattr(cls, "__private_attributes__", {})
+            if "_collection_name" in private_attrs:
+                collection_name = private_attrs["_collection_name"].default
+        if collection_name:
+            service_instance = getattr(cls, "_service_instance", "couchbase-server")
+            if not service_instance:
+                private_attrs = getattr(cls, "__private_attributes__", {})
+                if "_service_instance" in private_attrs:
+                    service_instance = private_attrs["_service_instance"].default
+            try:
+                client = get_client(service_instance)
+                client.ensure_collection_exists(collection_name)
+            except Exception as e:
+                print(f"Warning: Could not auto-create collection '{collection_name}': {e}")
 
     @classmethod
     def get_keyspace(cls) -> Keyspace:

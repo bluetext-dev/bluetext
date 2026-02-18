@@ -13,6 +13,7 @@ include:
   - add-client/polytope.yml
   - add-to-managed-services/polytope.yml
   - call-endpoint/polytope.yml
+  - add-dependency/polytope.yml
 
 tools:
 
@@ -169,32 +170,6 @@ tools:
                 frontend) cat /frontend.md ;;
                 *) cat /general.md ;;
               esac
-
-  # add-dependencies:
-  #   info: |
-  #     Adds packages to a service's dependency file.
-  #     Automatically detects the package manager for the target service.
-  #   inputs:
-  #     - id: target
-  #       info: The service to add dependencies to (e.g., api, frontend)
-  #       type: str
-  #     - id: packages
-  #       info: Packages to add (comma or space separated)
-  #       type: str
-  #   run:
-  #     - id: run-add-deps
-  #       code: |
-  #         pt.clj
-  #         (let [target (:target inputs)
-  #               packages (clojure.string/replace (:packages inputs) #"[\s,]+" " ")
-  #               [cmd restart-policy] (case target
-  #                                      "api" [(str "./bin/add-dependencies " packages) "never"]
-  #                                      "frontend" [(str "bun add " packages) "on-failure"]
-  #                                      (throw (Exception. (str "Unknown target: " target))))]
-  #           (pt/call-module target {:id (str target "-add-deps")
-  #                                  :cmd cmd
-  #                                  :restart-policy restart-policy
-  #                                  :create "always"}))
 
   setup-project-structure:
     info: |
