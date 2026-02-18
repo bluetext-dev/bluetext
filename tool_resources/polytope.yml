@@ -9,6 +9,7 @@ include:
   - implement/polytope.yml
   - setup-environment-variables/polytope.yml
   - add-and-run-service/polytope.yml
+  - add-and-run-stack/polytope.yml
   - add-client/polytope.yml
   - add-to-managed-services/polytope.yml
 
@@ -462,6 +463,9 @@ tools:
       upstream:
         info: Service the client connects to (derives config keys)
         type: str
+      run:
+        info: Whether to run the stack after injecting env vars
+        type: [default, bool, true]
     run:
       - id: inject-env-vars
         code: |-
@@ -572,8 +576,13 @@ tools:
         after: {step: inject-env-vars}
         code: |-
           pt.js
-          pt.log("Reapplying stack to pick up updated env vars...");
-          pt.callModule("stack", {});
+          const run = pt.param("run");
+          if (run) {
+            pt.log("Reapplying stack to pick up updated env vars...");
+            pt.callModule("stack", {});
+          } else {
+            pt.log("Skipping stack restart (run=false).");
+          }
 
   add-entity:
     info: |

@@ -18,6 +18,7 @@ mcp:
     - implement-curity-phantom-token
     - scaffold-phantom-token-protected-view
     - sync-api-client
+    - add-and-run-stack
     - stack
     - stack-apply-services
     - load-config

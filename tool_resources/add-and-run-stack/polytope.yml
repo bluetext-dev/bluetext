@@ -1,0 +1,123 @@
+tools:
+  add-and-run-stack:
+    info: |
+      Scaffolds an entire full-stack project in one call.
+      Currently supports the "full-stack" template: couchbase-server + python-fast-api + react-web-app + service-config-manager.
+      Adds all services, wires clients, and starts the stack.
+    inputs:
+      template:
+        info: Stack template to scaffold
+        type: [enum, full-stack]
+    run:
+
+      # Step 1: Add all 4 services (without running)
+      - id: add-couchbase
+        code: |-
+          pt.js
+          pt.log("Adding couchbase-server...");
+          pt.callModule("add-and-run-service", {
+            "template-and-variables": { "couchbase-server": {} },
+            run: false
+          });
+
+      - id: add-api
+        code: |-
+          pt.js
+          pt.log("Adding python-fast-api...");
+          pt.callModule("add-and-run-service", {
+            "template-and-variables": { "python-fast-api": {} },
+            run: false
+          });
+
+      - id: add-webapp
+        code: |-
+          pt.js
+          pt.log("Adding react-web-app...");
+          pt.callModule("add-and-run-service", {
+            "template-and-variables": { "react-web-app": {} },
+            run: false
+          });
+
+      - id: add-scm
+        code: |-
+          pt.js
+          pt.log("Adding service-config-manager...");
+          pt.callModule("add-and-run-service", {
+            "template-and-variables": { "service-config-manager": {} },
+            run: false
+          });
+
+      # Step 2: Register couchbase with service-config-manager
+      - id: register-couchbase-with-scm
+        after:
+          - step: add-couchbase
+          - step: add-scm
+        code: |-
+          pt.js
+          pt.log("Registering couchbase-server with service-config-manager...");
+          pt.callModule("add-to-managed-services", {
+            "service-to-manage": "couchbase-server",
+            type: "couchbase"
+          });
+
+      # Step 3: Add clients
+      - id: add-couchbase-client
+        after:
+          - step: add-couchbase
+          - step: add-api
+        code: |-
+          pt.js
+          pt.log("Adding couchbase client...");
+          pt.callModule("add-client", {
+            template: { couchbase: {} }
+          });
+
+      - id: add-api-client
+        after:
+          - step: add-api
+          - step: add-webapp
+        code: |-
+          pt.js
+          pt.log("Adding python-fast-api client...");
+          pt.callModule("add-client", {
+            template: { "python-fast-api": { "upstream-service": "python-fast-api" } }
+          });
+
+      # Step 4: Wire couchbase client to API service (skip stack restart)
+      - id: setup-couchbase-for-api
+        after:
+          - step: add-couchbase-client
+        code: |-
+          pt.js
+          pt.log("Wiring couchbase client to python-fast-api...");
+          pt.callModule("setup-service-for-client", {
+            "client-type": "couchbase",
+            consumer: "python-fast-api",
+            upstream: "couchbase-server",
+            run: false
+          });
+
+      # Step 5: Wire API client to webapp (skip stack restart)
+      - id: setup-api-client-for-webapp
+        after:
+          - step: add-api-client
+        code: |-
+          pt.js
+          pt.log("Wiring API client to react-web-app...");
+          pt.callModule("setup-service-for-client", {
+            "client-type": "python-fast-api",
+            consumer: "react-web-app",
+            upstream: "python-fast-api",
+            run: false
+          });
+
+      # Step 7: Run the stack (final step, after all scaffolding and wiring)
+      - id: run-stack
+        after:
+          - step: setup-couchbase-for-api
+          - step: setup-api-client-for-webapp
+          - step: register-couchbase-with-scm
+        code: |-
+          pt.js
+          pt.log("Starting the stack...");
+          pt.callModule("stack", {});
