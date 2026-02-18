@@ -1,0 +1,5 @@
+#!/bin/sh
+
+. "$(dirname "$0")/init"
+
+exec bun add "$@"
