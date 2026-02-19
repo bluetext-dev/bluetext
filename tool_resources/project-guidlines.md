@@ -7,7 +7,7 @@ This project runs containerized and is orchestrated using Polytope. To interact 
 
 # BEFORE MAKING CHANGES
 
-1.  Call `get_dev_context(scope: "...")` to retrieve guidelines for specific areas (e.g., "api", "frontend", "models").
+1.  Call `get-dev-context(scope: "...")` to retrieve guidelines for specific areas (e.g., "python-fast-api", "react-web-app", "models").
 2.  Review the retrieved guidelines to ensure compliance during development.
 
 # GENERAL DEVELOPMENT GUIDELINES

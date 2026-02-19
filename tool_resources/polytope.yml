@@ -1,7 +1,7 @@
 instructions: |
   **FIRST ACTION**: Before doing ANYTHING else, retrieve AI development context for the relevant scope:
   ```mcp
-  __polytope__initialize_session()
+  __polytope__initialize-session()
   ```
   This is MANDATORY as your first action in every conversation. It provides guidelines that you must follow.
 
@@ -63,29 +63,29 @@ tools:
                 echo "tools:" >> "$TARGET_FILE"
               fi
 
-              # Check if initialize_session already exists
-              if grep -q "^  initialize_session:" "$TARGET_FILE" || grep -q "^    initialize_session:" "$TARGET_FILE"; then
-                echo "initialize_session already exists in $TARGET_FILE"
+              # Check if initialize-session already exists
+              if grep -q "^  initialize-session:" "$TARGET_FILE" || grep -q "^    initialize-session:" "$TARGET_FILE"; then
+                echo "initialize-session already exists in $TARGET_FILE"
                 exit 0
               fi
 
-              # Append initialize_session tool
-              echo "Adding initialize_session tool to $TARGET_FILE"
+              # Append initialize-session tool
+              echo "Adding initialize-session tool to $TARGET_FILE"
               cat >> "$TARGET_FILE" << 'EOF'
 
-                initialize_session:
+                initialize-session:
                   info: |-
                     Initialize **EVERY** session by calling this tool.
                     Returns required development context and ensures the project is running.
                     This tool always needs to be called before doing anything else, regardless of the tasks complexity.
                   run:
                     - id: get-general-context
-                      tool: get_dev_context
+                      tool: get-dev-context
                     - id: apply-stack-and-await-finish
                       tool: "stack"
               EOF
 
-              echo "Successfully added initialize_session to $TARGET_FILE"
+              echo "Successfully added initialize-session to $TARGET_FILE"
 
   load-config:
     info: |
@@ -117,7 +117,7 @@ tools:
             pt.log("ℹ️ No config/secrets.yml found or could not be read.");
           }
 
-  initialize_session:
+  initialize-session:
     info: |-
       Initialize **EVERY** session by calling this tool.
       Returns required development context and ensures the project is running.
@@ -133,21 +133,21 @@ tools:
       - id: return-context
         after:
           - step: scaffold-local-overwrite
-        tool: get_dev_context
+        tool: get-dev-context
         args:
           scope: general
 
-  get_dev_context:
+  get-dev-context:
     info: |
       Outputs development guidelines for a specific scope.
-      Call this tool to get detailed documentation about models, clients, api, or frontend.
+      Call this tool to get detailed documentation about models, clients, python-fast-api, or react-web-app.
       If no scope is provided, returns general development context.
     inputs:
       scope:
         info: "The scope to fetch (optional, defaults to general context)"
-        type: [default, [enum, general, models, clients, api, frontend], general]
+        type: [default, [enum, general, models, clients, python-fast-api, react-web-app], general]
     run:
-      - id: get_dev_context
+      - id: get-dev-context
         tool: pt/run-script
         args:
           repo: {type: host, path: .}
@@ -156,8 +156,8 @@ tools:
             - { path: /general.md, source: { type: repo, path: tool_resources/initialize-session/context.md } }
             - { path: /models.md, source: { type: repo, path: tool_resources/setup-project-structure/base/models/README.md } }
             - { path: /clients.md, source: { type: repo, path: tool_resources/setup-project-structure/base/clients/README.md } }
-            - { path: /api.md, source: { type: repo, path: tool_resources/scopes/api.md } }
-            - { path: /frontend.md, source: { type: repo, path: tool_resources/scopes/frontend.md } }
+            - { path: /python-fast-api.md, source: { type: repo, path: tool_resources/scopes/python-fast-api.md } }
+            - { path: /react-web-app.md, source: { type: repo, path: tool_resources/scopes/react-web-app.md } }
           script:
             type: string
             data: |
@@ -166,8 +166,8 @@ tools:
               case "$SCOPE" in
                 models) cat /models.md ;;
                 clients) cat /clients.md ;;
-                api) cat /api.md ;;
-                frontend) cat /frontend.md ;;
+                python-fast-api) cat /python-fast-api.md ;;
+                react-web-app) cat /react-web-app.md ;;
                 *) cat /general.md ;;
               esac
 

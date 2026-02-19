@@ -131,7 +131,7 @@ env:
 *   `setup-service-for-client(service, client)` - Configure env vars
 
 ### Get Context
-*   `get_dev_context(scope: "models")` - Models architecture
-*   `get_dev_context(scope: "clients")` - Clients architecture
-*   `get_dev_context(scope: "api")` - API development guidelines
-*   `get_dev_context(scope: "frontend")` - Frontend development guidelines
+*   `get-dev-context(scope: "models")` - Models architecture
+*   `get-dev-context(scope: "clients")` - Clients architecture
+*   `get-dev-context(scope: "python-fast-api")` - API development guidelines
+*   `get-dev-context(scope: "react-web-app")` - Frontend development guidelines
