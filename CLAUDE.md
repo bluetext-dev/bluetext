@@ -537,6 +537,14 @@ run:
 
 Accept the duplication until Polytope adds proper step-to-step data passing.
 
+### 7. `pt/http-request` Cannot Be Used From `pt.js` Blocks
+
+`pt/http-request` returns a Clojure HttpResponse object that cannot cross the GraalVM polyglot boundary into JavaScript. Assigning the result to a JS variable triggers: `"Don't know how to map that to a proxy object."` Passing it directly to `pt.writeJson` triggers a separate GraalVM reflection error (`java.lang.constant.Constable.getDeclaredMethods()`). `pt.writeEdn` works intermittently but is not reliable.
+
+**Workaround**: Use `pt.clj` blocks for any code that calls `pt/http-request`. Input validation can be done in a preceding `pt.js` step if desired, but the HTTP call itself must stay in Clojure.
+
+**Polytope bug**: `pt/write-json` (Clojure) also fails on HttpResponse objects with the same reflection error. Use `pr-str` as a fallback for serializing response bodies/headers (outputs EDN format instead of JSON).
+
 ## 10. Maintaining This Document
 
 **When you discover new information about how Polytope, its bindings, or the framework behaves — especially things learned through debugging or trial-and-error — always update this CLAUDE.md file to reflect those learnings.** This ensures future sessions don't repeat the same mistakes. Examples of things to capture:

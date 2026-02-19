@@ -5,18 +5,19 @@ tools:
       Use this instead of curl to reach services — it runs at the orchestrator level and can access the sandbox network directly.
 
       Provide either `service` (resolves host/port from values context) or `url` (raw URL). Not both.
+      Note: Since requests run at the orchestrator level, `url` must use `localhost` with the exposed port (container hostnames like `python-fast-api` are not resolvable).
 
       Examples:
         call-endpoint(service: "python-fast-api", path: "/health")
         call-endpoint(service: "kong", path: "/api/users")
-        call-endpoint(url: "http://python-fast-api:3030/docs")
+        call-endpoint(url: "http://localhost:3030/docs")
         call-endpoint(service: "python-fast-api", path: "/users", method: "POST", body: '{"name": "Alice"}')
     inputs:
       service:
         info: "Service name (e.g., python-fast-api, kong). Resolves host/port from values context."
         type: [default, str, ""]
       url:
-        info: "Raw URL to call (e.g., http://python-fast-api:3030/health). Use when you don't want service name resolution."
+        info: "Raw URL to call (must use localhost with the exposed port, e.g., http://localhost:3030/health). Container hostnames are not resolvable from the orchestrator."
         type: [default, str, ""]
       path:
         info: "Path to append when using service mode (e.g., /health, /api/users)."
@@ -59,12 +60,20 @@ tools:
                                      (try-value (str service "-proxy-port"))
                                      (try-value (str service "-port")))]
                         (when (nil? port)
-                          (pt/fail (str "Could not resolve port for service '" service "'.")))
+                          (pt/fail (str "Could not resolve port for service '" service "'. Make sure the service is running and has registered its port in the values context.")))
                         (str "http://" host ":" port path))
                       raw-url)
 
-                ;; Parse headers
-                parsed-headers (if hdrs (pt/read-json hdrs) {})
+                ;; Parse and validate headers
+                parsed-headers (if hdrs
+                                 (try
+                                   (let [parsed (pt/read-json hdrs)]
+                                     (if (map? parsed)
+                                       parsed
+                                       (pt/fail (str "Invalid 'headers' parameter: expected a JSON object, got " (type parsed) ". Example: '{\"Authorization\": \"Bearer token\"}'."))))
+                                   (catch Exception _
+                                     (pt/fail (str "Invalid 'headers' parameter: could not parse as JSON. Expected a JSON object string like '{\"Authorization\": \"Bearer token\"}', got: " hdrs))))
+                                 {})
                 final-headers (if body
                                 (merge {"Content-Type" "application/json"} parsed-headers)
                                 parsed-headers)
@@ -76,20 +85,31 @@ tools:
 
                 _ (pt/log (str method " " url))
 
-                ;; Make the request
-                response (pt/http-request request)
+                ;; Make the request with error handling for connection failures
+                response (try
+                           (pt/http-request request)
+                           (catch Exception e
+                             (pt/fail (str "Connection failed for " url "."
+                                          (when raw-url " When using 'url', make sure to use localhost with the exposed port — container hostnames are not resolvable from the orchestrator.")
+                                          " Error: " (.getMessage e)))))
+
+                ;; Fail on connection errors (pt/http-request returns :error instead of throwing)
+                _ (when (:error response)
+                    (pt/fail (str "Connection failed for " url "."
+                                  (when raw-url " When using 'url', make sure to use localhost with the exposed port — container hostnames are not resolvable from the orchestrator.")
+                                  " Error: " (:error response))))
+
                 status   (:status response)
                 res-hdrs (:headers response)
                 raw-body (:body response)
-                ;; Serialize body: if it's a map/collection, convert to JSON string
+                ;; Serialize body and headers to EDN strings (write-json has a GraalVM reflection bug)
                 res-body (if (or (map? raw-body) (sequential? raw-body))
-                           (try (pt/write-json raw-body) (catch Exception _ (pr-str raw-body)))
-                           (str (or raw-body "")))]
+                           (pr-str raw-body)
+                           (str (or raw-body "")))
+                res-hdrs-str (pr-str res-hdrs)]
 
-            (when (:error response)
-              (pt/log (str "Error: " (:error response))))
             (pt/log (str "Status: " status))
-            (pt/log (str "Headers: " (try (pt/write-json res-hdrs) (catch Exception _ (pr-str res-hdrs)))))
+            (pt/log (str "Headers: " res-hdrs-str))
             (pt/log (str "Body: " (if (> (count res-body) 2000)
                                     (str (subs res-body 0 2000) "\n... (truncated)")
                                     res-body)))
