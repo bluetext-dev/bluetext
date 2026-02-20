@@ -190,7 +190,7 @@ class BaseModelCouchbase(BaseModel, Generic[DataT]):
     def get(cls: type[T], id: str) -> Optional[T]:
         try:
             result = cls.get_keyspace().get_collection().get(id)
-            data = result.content_as(dict)
+            data = result.content_as[dict]
             return cls(id=id, data=data)
         except DocumentNotFoundException:
             return None
