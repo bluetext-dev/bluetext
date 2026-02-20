@@ -12,6 +12,7 @@ mcp:
     - run-service
     - add-client
     - add-entity
+    - add-endpoint
     - add-to-managed-services
     - set-values-and-secrets
     - setup-service-for-client

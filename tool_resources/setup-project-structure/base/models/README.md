@@ -80,9 +80,26 @@ from models.types.auth import SignupRequest
 from models.operations.users import signup
 ```
 
-## Adding Models
+## Resources
 
-Use the `add-entity` tool to scaffold new entities:
+A **Resource** is the combination of an Entity + Types + Operations. It represents a complete data-backed concept with full CRUD business logic. Use `add-endpoint` with `layers: ["entity", "resource"]` to scaffold a resource without API routes:
 
 ```
-add-entity(client: "couchbase", language: "python", entity-singular: "user", entity-plural: "users")
+add-endpoint(client: "couchbase", language: "python", entity-singular: "task", entity-plural: "tasks", fields: [{name: "title", type: "str"}, {name: "done", type: "bool"}], layers: ["entity", "resource"])
+```
+
+This generates:
+- `models/python/models/entities/tasks.py` — Entity with fields and CRUD
+- `models/python/models/types/tasks.py` — Create/Update request types
+- `models/python/models/operations/tasks.py` — CRUD operations
+
+## Adding Models
+
+Use `add-endpoint` to scaffold a full endpoint (entity + types + operations + routes):
+```
+add-endpoint(client: "couchbase", language: "python", entity-singular: "task", entity-plural: "tasks", fields: [{name: "title", type: "str"}], service: "python-fast-api")
+```
+
+Or use `add-entity` to scaffold just the entity:
+```
+add-entity(client: "couchbase", language: "python", entity-singular: "user", entity-plural: "users", fields: [{name: "name", type: "str"}, {name: "email", type: "str"}])

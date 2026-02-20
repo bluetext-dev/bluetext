@@ -580,9 +580,45 @@ tools:
       service-instance:
         info: Which service instance this entity connects to (e.g., "couchbase-server", "analytics-db"). Determines env var prefix.
         type: [default, str, "couchbase-server"]
+      fields:
+        info: |
+          Optional list of field definitions. Each field has a name and type.
+          Example: [{name: "title", type: "str"}, {name: "content", type: "str"}]
+          If omitted, generates a stub Data class with `pass`.
+        type: [default, any, []]
     run:
+      - id: validate-prerequisites
+        code: |-
+          pt.js
+          const client = pt.param("client");
+          const lang = pt.param("language");
+          const serviceInstance = pt.param("service-instance");
+
+          const errors = [];
+
+          // Check client directory exists
+          try {
+            pt.readRepoFile(`clients/${lang}/clients/${client}/__init__.py`);
+          } catch (e) {
+            errors.push(`Client "${client}" not found. Expected clients/${lang}/clients/${client}/ to exist. Run add-client first.`);
+          }
+
+          // Check service-instance directory exists
+          try {
+            pt.readRepoFile(`services/${serviceInstance}/polytope.yml`);
+          } catch (e) {
+            errors.push(`Service instance "${serviceInstance}" not found. Expected services/${serviceInstance}/ to exist. Run add-and-run-service first.`);
+          }
+
+          if (errors.length > 0) {
+            throw new Error("Prerequisites not met:\n- " + errors.join("\n- "));
+          }
+
+          pt.log("Prerequisites validated: client and service-instance exist.");
+
       # Inlined setup-project-structure logic (chained tool resolution broken in Polytope)
       - id: scaffold-base-structure
+        after: {step: validate-prerequisites}
         code: |-
           pt.js
           pt.callModule("polytope/scaffold", {
@@ -625,7 +661,11 @@ tools:
           const entityPlural = pt.param("entity-plural");
           const serviceInstance = pt.param("service-instance");
 
+          const fields = inputs.fields || [];
+          const fieldsJson = JSON.stringify(fields);
+
           const script = `
+          import json
           from pathlib import Path
 
           client = "${client}"
@@ -633,6 +673,13 @@ tools:
           entity_singular = "${entitySingular}"
           entity_plural = "${entityPlural}"
           service_instance = "${serviceInstance}"
+          fields = json.loads('${fieldsJson}')
+
+          # Build fields block
+          if fields:
+              fields_block = "\\n".join(f"    {f['name']}: {f['type']}" for f in fields)
+          else:
+              fields_block = "    pass"
 
           # Read the template file
           template_path = Path(f"/template/entity.py")
@@ -648,6 +695,7 @@ tools:
           content = content.replace("{{ entity_singular }}", entity_singular)
           content = content.replace("{{ entity_plural }}", entity_plural)
           content = content.replace("{{ service_instance }}", service_instance)
+          content = content.replace("{{ fields }}", fields_block)
 
           # Determine output path - entities go in models/python/models/entities/
           base_path = "models/python/models/entities"
@@ -675,6 +723,295 @@ tools:
               }
             }]
           });
+
+  add-endpoint:
+    info: |
+      Scaffolds a datastore-backed API endpoint with configurable layers.
+      Layers control what gets generated:
+      - "entity": Entity data class with fields and CRUD (via add-entity)
+      - "resource": Request types (Create/Update) + CRUD operations
+      - "endpoint": API routes + registration in main.py
+      Default: all layers (full vertical from entity to API route).
+    inputs:
+      client:
+        info: Data store client type
+        type: [enum, couchbase]
+      language:
+        info: Language for the generated code
+        type: [enum, python]
+      entity-singular:
+        info: Entity name in singular form (e.g., "task")
+        type: str
+      entity-plural:
+        info: Entity name in plural form (e.g., "tasks")
+        type: str
+      service-instance:
+        info: Which service instance this entity connects to
+        type: [default, str, "couchbase-server"]
+      fields:
+        info: |
+          Field definitions. Example: [{name: "title", type: "str"}, {name: "done", type: "bool"}]
+        type: [default, any, []]
+      service:
+        info: API service to add routes to (only used with endpoint layer)
+        type: [default, str, "python-fast-api"]
+      layers:
+        info: |
+          Which layers to generate. Default: all layers.
+          - ["entity"] - only the entity
+          - ["entity", "resource"] - entity + types + operations
+          - ["entity", "resource", "endpoint"] - everything
+        type: [default, any, ["entity", "resource", "endpoint"]]
+    run:
+      - id: validate-prerequisites
+        code: |-
+          pt.js
+          const client = pt.param("client");
+          const lang = pt.param("language");
+          const serviceInstance = pt.param("service-instance");
+          const layers = inputs.layers || ["entity", "resource", "endpoint"];
+          const service = pt.param("service");
+
+          const errors = [];
+
+          // Check client directory exists
+          try {
+            pt.readRepoFile(`clients/${lang}/clients/${client}/__init__.py`);
+          } catch (e) {
+            errors.push(`Client "${client}" not found. Expected clients/${lang}/clients/${client}/ to exist. Run add-client first.`);
+          }
+
+          // Check service-instance directory exists
+          try {
+            pt.readRepoFile(`services/${serviceInstance}/polytope.yml`);
+          } catch (e) {
+            errors.push(`Service instance "${serviceInstance}" not found. Expected services/${serviceInstance}/ to exist. Run add-and-run-service first.`);
+          }
+
+          // Check API service exists if endpoint layer is included
+          if (layers.includes("endpoint")) {
+            try {
+              pt.readRepoFile(`services/${service}/polytope.yml`);
+            } catch (e) {
+              errors.push(`API service "${service}" not found. Expected services/${service}/ to exist. Run add-and-run-service first.`);
+            }
+          }
+
+          if (errors.length > 0) {
+            throw new Error("Prerequisites not met:\n- " + errors.join("\n- "));
+          }
+
+          pt.log("Prerequisites validated.");
+
+      - id: scaffold-entity
+        after: {step: validate-prerequisites}
+        code: |-
+          pt.js
+          const layers = inputs.layers || ["entity", "resource", "endpoint"];
+          if (!layers.includes("entity")) {
+            pt.log("Skipping entity layer");
+          } else {
+            pt.log("Scaffolding entity layer...");
+            pt.callModule("add-entity", {
+              client: pt.param("client"),
+              language: pt.param("language"),
+              "entity-singular": pt.param("entity-singular"),
+              "entity-plural": pt.param("entity-plural"),
+              "service-instance": pt.param("service-instance"),
+              fields: inputs.fields || []
+            });
+          }
+
+      - id: scaffold-resource
+        after: {step: scaffold-entity}
+        code: |-
+          pt.js
+          const layers = inputs.layers || ["entity", "resource", "endpoint"];
+          if (!layers.includes("resource")) {
+            pt.log("Skipping resource layer");
+          } else {
+            pt.log("Scaffolding resource layer (types + operations)...");
+
+            const client = pt.param("client");
+            const lang = pt.param("language");
+            const entitySingular = pt.param("entity-singular");
+            const entityPlural = pt.param("entity-plural");
+            const fields = inputs.fields || [];
+            const fieldsJson = JSON.stringify(fields);
+
+            const script = `
+          import json
+          from pathlib import Path
+
+          entity_singular = "${entitySingular}"
+          entity_plural = "${entityPlural}"
+          fields = json.loads('${fieldsJson}')
+
+          cap = entity_singular.capitalize()
+
+          # Build fields for types
+          if fields:
+              create_fields = "\\n".join(f"    {f['name']}: {f['type']}" for f in fields)
+              update_fields = "\\n".join(f"    {f['name']}: Optional[{f['type']}] = None" for f in fields)
+          else:
+              create_fields = "    pass"
+              update_fields = "    pass"
+
+          # Build update logic for operations
+          if fields:
+              update_lines = []
+              for f in fields:
+                  update_lines.append(f"    if request.{f['name']} is not None:")
+                  update_lines.append(f"        existing.data.{f['name']} = request.{f['name']}")
+              update_logic = "\\n".join(update_lines)
+          else:
+              update_logic = "    pass"
+
+          # --- Types ---
+          types_template = Path("/template/types.py").read_text()
+          types_content = types_template.replace("{{ entity_singular | capitalize }}", cap)
+          types_content = types_content.replace("{{ entity_singular }}", entity_singular)
+          types_content = types_content.replace("{{ entity_plural }}", entity_plural)
+          types_content = types_content.replace("{{ create_fields }}", create_fields)
+          types_content = types_content.replace("{{ update_fields }}", update_fields)
+
+          types_path = Path(f"/repo/models/python/models/types/{entity_plural}.py")
+          types_path.parent.mkdir(parents=True, exist_ok=True)
+          types_path.write_text(types_content)
+          print(f"Created types file: models/python/models/types/{entity_plural}.py")
+
+          # --- Operations ---
+          ops_template = Path("/template/operations.py").read_text()
+          ops_content = ops_template.replace("{{ entity_singular | capitalize }}", cap)
+          ops_content = ops_content.replace("{{ entity_singular }}", entity_singular)
+          ops_content = ops_content.replace("{{ entity_plural }}", entity_plural)
+          ops_content = ops_content.replace("{{ update_logic }}", update_logic)
+
+          ops_path = Path(f"/repo/models/python/models/operations/{entity_plural}.py")
+          ops_path.parent.mkdir(parents=True, exist_ok=True)
+          ops_path.write_text(ops_content)
+          print(f"Created operations file: models/python/models/operations/{entity_plural}.py")
+          `;
+
+            pt.callModule("pt/run-script", {
+              repo: { type: "host", path: "." },
+              language: "python",
+              script: { type: "string", data: script },
+              mounts: [{
+                path: "/template",
+                source: {
+                  type: "repo",
+                  repo: pt.moduleRepoRef,
+                  path: `/tool_resources/add-endpoint/${client}/${lang}`
+                }
+              }]
+            });
+          }
+
+      - id: scaffold-endpoint
+        after: {step: scaffold-resource}
+        code: |-
+          pt.js
+          const layers = inputs.layers || ["entity", "resource", "endpoint"];
+          if (!layers.includes("endpoint")) {
+            pt.log("Skipping endpoint layer");
+          } else {
+            pt.log("Scaffolding endpoint layer (routes + main.py registration)...");
+
+            const client = pt.param("client");
+            const lang = pt.param("language");
+            const entitySingular = pt.param("entity-singular");
+            const entityPlural = pt.param("entity-plural");
+            const service = pt.param("service");
+
+            const script = `
+          from pathlib import Path
+          import re
+
+          entity_singular = "${entitySingular}"
+          entity_plural = "${entityPlural}"
+          service = "${service}"
+          cap = entity_singular.capitalize()
+
+          # --- Routes ---
+          routes_template = Path("/template/routes.py").read_text()
+          routes_content = routes_template.replace("{{ entity_singular | capitalize }}", cap)
+          routes_content = routes_content.replace("{{ entity_singular }}", entity_singular)
+          routes_content = routes_content.replace("{{ entity_plural }}", entity_plural)
+
+          routes_path = Path(f"/repo/services/{service}/src/routes/{entity_plural}.py")
+          routes_path.parent.mkdir(parents=True, exist_ok=True)
+          routes_path.write_text(routes_content)
+          print(f"Created routes file: services/{service}/src/routes/{entity_plural}.py")
+
+          # --- Register router in main.py ---
+          main_path = Path(f"/repo/services/{service}/src/main.py")
+          if not main_path.exists():
+              print(f"Warning: main.py not found at services/{service}/src/main.py, skipping registration")
+          else:
+              content = main_path.read_text()
+
+              import_line = f"from routes.{entity_plural} import {entity_plural}_router"
+              include_line = f"app.include_router({entity_plural}_router)"
+
+              if import_line in content:
+                  print(f"Router already registered in main.py")
+              else:
+                  # Add import after the last 'from routes.' import, or after other imports
+                  lines = content.split("\\n")
+                  last_route_import_idx = -1
+                  last_import_idx = -1
+
+                  for i, line in enumerate(lines):
+                      if line.startswith("from routes."):
+                          last_route_import_idx = i
+                      if line.startswith("from ") or line.startswith("import "):
+                          last_import_idx = i
+
+                  insert_import_idx = last_route_import_idx if last_route_import_idx >= 0 else last_import_idx
+                  if insert_import_idx >= 0:
+                      lines.insert(insert_import_idx + 1, import_line)
+                  else:
+                      lines.insert(0, import_line)
+
+                  # Add include_router after last app.include_router() call, or before if __name__
+                  content_after_import = "\\n".join(lines)
+                  lines = content_after_import.split("\\n")
+
+                  last_include_idx = -1
+                  main_guard_idx = -1
+                  for i, line in enumerate(lines):
+                      if "app.include_router(" in line:
+                          last_include_idx = i
+                      if 'if __name__' in line:
+                          main_guard_idx = i
+
+                  if last_include_idx >= 0:
+                      lines.insert(last_include_idx + 1, include_line)
+                  elif main_guard_idx >= 0:
+                      lines.insert(main_guard_idx, include_line)
+                      lines.insert(main_guard_idx + 1, "")
+                  else:
+                      lines.append(include_line)
+
+                  main_path.write_text("\\n".join(lines))
+                  print(f"Registered {entity_plural}_router in services/{service}/src/main.py")
+          `;
+
+            pt.callModule("pt/run-script", {
+              repo: { type: "host", path: "." },
+              language: "python",
+              script: { type: "string", data: script },
+              mounts: [{
+                path: "/template",
+                source: {
+                  type: "repo",
+                  repo: pt.moduleRepoRef,
+                  path: `/tool_resources/add-endpoint/${client}/${lang}`
+                }
+              }]
+            });
+          }
 
   # Internal tools for dependency handling (called by read-dependencies)
   _scaffold-deps:

@@ -48,6 +48,8 @@ Services → Operations → Entities → Clients → Datastore
 *   **Operations**: Public business logic that services call.
 *   **Entities**: Data structures with CRUD, extending client base classes.
 *   **Types**: Ephemeral data structures (requests, responses, etc.).
+*   **Resources**: The combination of an Entity + its Types + Operations. A resource is a complete data-backed concept with full CRUD business logic.
+*   **Endpoints**: A Resource + API routes registered in a service. A full vertical slice from data model to HTTP API.
 *   **Clients**: Connections to external services, like datastore servers.
 *   **Config**: Holds all data required for configurations. E.g. values and secrets for environment variables.
 
@@ -94,16 +96,20 @@ Sets environment variables for a service to use a client. No restart is required
 setup-service-for-client(service: "api", client: "couchbase-client")
 ```
 
-### 4. Add Entity
+### 4. Add Endpoint (Recommended)
+Scaffold a full vertical slice: entity + types + operations + API routes.
 ```
-add-entity(client: "couchbase", language: "python", entity-singular: "user", entity-plural: "users")
+add-endpoint(client: "couchbase", language: "python", entity-singular: "task", entity-plural: "tasks", fields: [{name: "title", type: "str"}, {name: "done", type: "bool"}], service: "python-fast-api")
 ```
 
-### 5. Write Operations
-Write operations that use the entity's CRUD and expose business logic to services.
+Or scaffold only specific layers:
+```
+add-endpoint(layers: ["entity", "resource"], ...)  # Entity + types + operations, no routes
+add-entity(...)                                      # Entity only (no types/operations/routes)
+```
 
-### 6. Integrate
-Integrate the operations into your service (e.g., import into API routes).
+### 5. Customize
+Customize the generated operations, types, or routes as needed for your business logic.
 
 ## Secrets & Environment Variables
 
@@ -127,7 +133,8 @@ env:
 ### Adding Components
 *   `add-and-run-service(template, name)` - Add a service
 *   `add-client(name, language)` - Add a client
-*   `add-entity(client, language, entity-singular, entity-plural)` - Add an entity
+*   `add-endpoint(client, language, entity-singular, entity-plural, fields, service)` - Add a full endpoint (entity + types + operations + routes)
+*   `add-entity(client, language, entity-singular, entity-plural, fields)` - Add an entity only
 *   `setup-service-for-client(service, client)` - Configure env vars
 
 ### Get Context
