@@ -537,13 +537,25 @@ run:
 
 Accept the duplication until Polytope adds proper step-to-step data passing.
 
-### 7. `pt/http-request` Cannot Be Used From `pt.js` Blocks
+### 7. `pt/http-request` Limitations
 
-`pt/http-request` returns a Clojure HttpResponse object that cannot cross the GraalVM polyglot boundary into JavaScript. Assigning the result to a JS variable triggers: `"Don't know how to map that to a proxy object."` Passing it directly to `pt.writeJson` triggers a separate GraalVM reflection error (`java.lang.constant.Constable.getDeclaredMethods()`). `pt.writeEdn` works intermittently but is not reliable.
+**Cannot be used from `pt.js` blocks**: `pt/http-request` returns a Clojure HttpResponse object that cannot cross the GraalVM polyglot boundary into JavaScript. Assigning the result to a JS variable triggers: `"Don't know how to map that to a proxy object."` Passing it directly to `pt.writeJson` triggers a separate GraalVM reflection error (`java.lang.constant.Constable.getDeclaredMethods()`). `pt.writeEdn` works intermittently but is not reliable.
 
-**Workaround**: Use `pt.clj` blocks for any code that calls `pt/http-request`. Input validation can be done in a preceding `pt.js` step if desired, but the HTTP call itself must stay in Clojure.
+**Cannot send request bodies**: `pt/http-request` silently drops the `:body` key from the request map. Neither string nor map bodies are transmitted. This affects POST, PUT, and PATCH requests. The `:data` key is also not supported (causes a GraalVM error).
+
+**`.getMessage` not accessible**: Exception objects thrown by `pt/http-request` (type `polytope.RunnerException`) do not expose `.getMessage` in the GraalVM sandbox. Calling it triggers: `"Method getMessage on class polytope.RunnerException not allowed!"` Use `(str e)` instead.
+
+**`pt/await-container-exited` does not exist**: Despite being listed in documentation, `pt/await-container-exited` is not a resolved symbol. For waiting on containers, use the spawn + `pt/await-started` + `pt/container-exec` + `pt/await-exec-exit` pattern, or use `pt/call-module "pt/run-script"` which handles the full container lifecycle.
+
+**Workaround for HTTP requests with bodies**: Use `pt/call-module "pt/run-script"` to spawn a Python container inside the sandbox network, make the request with `urllib.request`, and write the result to a file. Read the file back with `pt/read-repo-file`. This is the approach used by the `call-endpoint` tool. The Python container can reach services by hostname (e.g., `http://python-fast-api:3030/`) since it runs inside the sandbox network.
 
 **Polytope bug**: `pt/write-json` (Clojure) also fails on HttpResponse objects with the same reflection error. Use `pr-str` as a fallback for serializing response bodies/headers (outputs EDN format instead of JSON).
+
+### 8. `inputs` Object in `pt.js` Blocks Camel-Cases Kebab-Case Keys
+
+When accessing tool inputs in `pt.js` blocks, kebab-case input names (e.g., `entity-singular`, `service-instance`) are camel-cased in the `inputs` object (e.g., `inputs.entitySingular`, `inputs.serviceInstance`). However, `inputs["entity-singular"]` returns `undefined`.
+
+**Workaround**: Use `pt.param("entity-singular")` which correctly resolves kebab-case input names. Always prefer `pt.param()` over `inputs[]` for kebab-case keys.
 
 ## 10. Maintaining This Document
 
