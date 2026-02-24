@@ -34,6 +34,8 @@ tools:
           - react-web-app: {}
           - resonate: {}
           - service-config-manager: {}
+          - flutter-dev-container: {}
+          - sync-gateway: {}
       custom-name:
         info: Custom service name. Defaults to the template name.
         type: [maybe, str]
@@ -524,6 +526,8 @@ tools:
           - react-web-app: {}
           - resonate: {}
           - service-config-manager: {}
+          - flutter-dev-container: {}
+          - sync-gateway: {}
       custom-name:
         info: Custom service name. Defaults to the template name.
         type: [maybe, str]
