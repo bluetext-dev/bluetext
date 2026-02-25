@@ -1,0 +1,83 @@
+#!/bin/sh
+set -e
+
+echo "Starting Flutter dev container..."
+
+# Install initial dependencies
+echo "Installing dependencies..."
+sudo apt-get update
+sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev chromium adb libimobiledevice6 libimobiledevice-utils usbmuxd ideviceinstaller socat
+
+# Add amd64 architecture (for ARM64 hosts running Android SDK)
+echo "Adding amd64 architecture..."
+sudo dpkg --add-architecture amd64
+
+# Fix sources.list for multi-arch (ARM64 host, AMD64 libs)
+echo "Configuring apt sources for multi-arch..."
+sudo mv /etc/apt/sources.list.d/ubuntu.sources /etc/apt/sources.list.d/ubuntu.sources.bak || true
+
+# Create new sources.list
+echo 'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble main restricted universe multiverse' | sudo tee /etc/apt/sources.list
+echo 'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-updates main restricted universe multiverse' | sudo tee -a /etc/apt/sources.list
+echo 'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-backports main restricted universe multiverse' | sudo tee -a /etc/apt/sources.list
+echo 'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-security main restricted universe multiverse' | sudo tee -a /etc/apt/sources.list
+
+echo 'deb [arch=amd64] http://archive.ubuntu.com/ubuntu/ noble main restricted universe multiverse' | sudo tee -a /etc/apt/sources.list
+echo 'deb [arch=amd64] http://archive.ubuntu.com/ubuntu/ noble-updates main restricted universe multiverse' | sudo tee -a /etc/apt/sources.list
+echo 'deb [arch=amd64] http://archive.ubuntu.com/ubuntu/ noble-security main restricted universe multiverse' | sudo tee -a /etc/apt/sources.list
+
+# Update and install amd64 libraries
+echo "Installing amd64 libraries..."
+sudo apt-get update
+sudo apt-get install -y libc6:amd64 libstdc++6:amd64 zlib1g:amd64
+
+# Configure Flutter
+echo "Configuring Flutter..."
+flutter config --enable-web
+flutter config --enable-android
+yes | flutter doctor --android-licenses
+
+# Start socat for iOS (if needed)
+echo "Starting socat for iOS..."
+sudo socat UNIX-LISTEN:/var/run/usbmuxd,fork,reuseaddr,unlink-early TCP:host.docker.internal:2345 &
+
+# Connect to Android Emulator
+echo "Connecting to Android Emulator..."
+adb connect host.docker.internal:5555 || echo "Failed to connect to emulator, please check if it is running."
+
+# Wait for device authorization
+echo "Waiting for device authorization..."
+echo "Please check the Android Emulator and accept the debugging authorization dialog."
+while true; do
+    status=$(adb devices | grep "host.docker.internal:5555" | awk '{print $2}')
+    if [ "$status" = "device" ]; then
+        echo "Device authorized and connected!"
+        break
+    fi
+    echo "Current status: $status. Waiting..."
+    sleep 2
+done
+
+# Run flutter doctor
+echo "Running flutter doctor..."
+flutter doctor
+
+# Get dependencies
+echo "Fetching Flutter dependencies..."
+flutter pub get
+
+echo "Setup complete. Container is ready."
+
+# Print iOS instructions
+echo "----------------------------------------------------------------"
+echo "Android build starting on emulator..."
+echo ""
+echo "To run on iOS simultaneously:"
+echo "   1. Open a new terminal on your Mac host."
+echo "   2. Navigate to this project directory."
+echo "   3. Run: flutter run -d <your_iphone_device_id>"
+echo "----------------------------------------------------------------"
+
+# Launch Flutter app
+echo "Launching Flutter app..."
+flutter run -d host.docker.internal:5555

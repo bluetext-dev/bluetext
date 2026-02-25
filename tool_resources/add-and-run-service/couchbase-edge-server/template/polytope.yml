@@ -1,0 +1,26 @@
+tools:
+  {{ project-name }}:
+    info: Couchbase Edge Server for offline-first web/desktop apps
+    inputs:
+      restart-policy:
+        info: Restart policy for the container
+        type: [default, [enum, always, on-failure, never], always]
+    run:
+      - tool: polytope/container
+        args:
+          id: {{ project-name }}
+          image: couchbase/edge-server:latest
+          create: when-missing
+          entrypoint: /bin/sh
+          cmd: /etc/edge-server/entrypoint.sh
+          restart:
+            policy: pt.input restart-policy
+          services:
+            - id: {{ project-name }}
+              ports:
+                - { protocol: tcp, port: pt.value {{ project-name }}-port, expose-as: pt.value {{ project-name }}-port }
+          mounts:
+            - { path: /etc/edge-server/config.json, source: { type: repo, path: config.json } }
+            - { path: /etc/edge-server/entrypoint.sh, source: { type: repo, path: entrypoint.sh } }
+          env:
+            - { name: SYNC_GATEWAY_URL, value: pt.value {{ project-name }}-sync-gateway-url }

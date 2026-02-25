@@ -1,0 +1,35 @@
+PODS:
+  - couchbase_lite_p2p (0.0.2):
+    - CouchbaseLite-Swift-Enterprise (~> 3.3)
+    - Flutter
+  - CouchbaseLite-Swift-Enterprise (3.3.1)
+  - Flutter (1.0.0)
+  - permission_handler_apple (9.3.0):
+    - Flutter
+
+DEPENDENCIES:
+  - couchbase_lite_p2p (from `.symlinks/plugins/couchbase_lite_p2p/ios`)
+  - Flutter (from `Flutter`)
+  - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
+
+SPEC REPOS:
+  trunk:
+    - CouchbaseLite-Swift-Enterprise
+
+EXTERNAL SOURCES:
+  couchbase_lite_p2p:
+    :path: ".symlinks/plugins/couchbase_lite_p2p/ios"
+  Flutter:
+    :path: Flutter
+  permission_handler_apple:
+    :path: ".symlinks/plugins/permission_handler_apple/ios"
+
+SPEC CHECKSUMS:
+  couchbase_lite_p2p: 98ea8bd0004774234a923e95da951af7cb5a9726
+  CouchbaseLite-Swift-Enterprise: fe3d706b2ab364efbc5eb674660adcb83ccca9bc
+  Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
+
+PODFILE CHECKSUM: 4b015915ec662986b54bf30ab778da63f7dda016
+
+COCOAPODS: 1.16.2
