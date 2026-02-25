@@ -1,8 +1,8 @@
 {
   "bootstrap": {
-    "server": "couchbase://couchbase",
-    "username": "asdf",
-    "password": "asdfasdf",
+    "server": "couchbase://${COUCHBASE_SERVER}",
+    "username": "${COUCHBASE_USERNAME}",
+    "password": "${COUCHBASE_PASSWORD}",
     "use_tls_server": false
   },
   "api": {
