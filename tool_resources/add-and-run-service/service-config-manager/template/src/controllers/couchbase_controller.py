@@ -123,7 +123,7 @@ class CouchbaseController:
                 'hostname': '127.0.0.1',
                 'memoryQuota': '256',
                 'sendStats': 'false',
-                'clusterName': 'cillers',
+                'clusterName': 'couchbase',
                 'setDefaultMemQuotas': 'true',
                 'indexerStorageMode': 'plasma',
                 'port': 'SAME'
