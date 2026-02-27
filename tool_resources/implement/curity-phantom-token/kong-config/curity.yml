@@ -43,7 +43,6 @@ services:
       config:
         origins:
         - "${WEB_APP_URL}"
-        - "${CURITY_BASE_URL}"
         methods:
         - GET
         - POST

@@ -14,9 +14,6 @@ env_vars:
   - name: GATEWAY_BASE_URL
     key: gateway-base-url
     secret: false
-  - name: CURITY_HOST
-    key: curity-host
-    secret: false
   - name: API_SERVICE_HOST
     key: api-service-host
     secret: false
@@ -36,6 +33,8 @@ env_vars:
     key: curity-port
     secret: false
   - name: WEB_APP_URL
-    value: 'pt.clj (str (pt/value "web-app-host") ":" (pt/value "web-app-port"))'
+    key: web-app-url
+    secret: false
   - name: CURITY_BASE_URL
-    value: 'pt.clj (str (pt/value "curity-host") ":" (pt/value "curity-port"))'
+    key: curity-base-url
+    secret: false

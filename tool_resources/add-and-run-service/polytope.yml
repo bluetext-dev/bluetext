@@ -23,11 +23,7 @@ tools:
               postgres-username: [default, str, "pt.value postgres-server-username"]
               postgres-password: [default, str, "pt.secret postgres-server-password"]
           - curity:
-              postgres-host: [default, str, "pt.value postgres-server-host"]
-              postgres-port: [default, str, "pt.value postgres-server-port"]
-              postgres-username: [default, str, "pt.value postgres-server-username"]
-              postgres-password: [default, str, "pt.secret postgres-server-password"]
-              postgres-service: str
+              postgres-service: [default, str, postgres-server]
           - kong: {}
           - couchbase-server: {}
           - python-fast-api: {}
@@ -340,8 +336,18 @@ tools:
           }
 
           // Read from config files and set runtime values/secrets
-          const values = pt.readYaml(pt.readRepoFile("config/values.yml")) || {};
-          const secrets = pt.readYaml(pt.readRepoFile("config/secrets.yml")) || {};
+          let values = {};
+          let secrets = {};
+          try {
+            values = pt.readYaml(pt.readRepoFile("config/values.yml")) || {};
+          } catch (e) {
+            pt.log("No config/values.yml found, skipping value loading");
+          }
+          try {
+            secrets = pt.readYaml(pt.readRepoFile("config/secrets.yml")) || {};
+          } catch (e) {
+            pt.log("No config/secrets.yml found, skipping secret loading");
+          }
 
           pt.log(`Setting ${Object.keys(values).length} values and ${Object.keys(secrets).length} secrets`);
 
@@ -513,11 +519,7 @@ tools:
               postgres-username: [default, str, "pt.value postgres-server-username"]
               postgres-password: [default, str, "pt.secret postgres-server-password"]
           - curity:
-              postgres-host: [default, str, "pt.value postgres-server-host"]
-              postgres-port: [default, str, "pt.value postgres-server-port"]
-              postgres-username: [default, str, "pt.value postgres-server-username"]
-              postgres-password: [default, str, "pt.secret postgres-server-password"]
-              postgres-service: str
+              postgres-service: [default, str, postgres-server]
           - kong: {}
           - couchbase-server: {}
           - python-fast-api: {}

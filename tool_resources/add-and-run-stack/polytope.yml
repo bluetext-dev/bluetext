@@ -10,7 +10,7 @@ tools:
         type: [enum, full-stack]
     run:
 
-      # Step 1: Add all 4 services (without running)
+      # Step 1: Add all 4 services sequentially (they share config/values.yml)
       - id: add-couchbase
         code: |-
           pt.js
@@ -21,6 +21,7 @@ tools:
           });
 
       - id: add-api
+        after: {step: add-couchbase}
         code: |-
           pt.js
           pt.log("Adding python-fast-api...");
@@ -30,6 +31,7 @@ tools:
           });
 
       - id: add-webapp
+        after: {step: add-api}
         code: |-
           pt.js
           pt.log("Adding react-web-app...");
@@ -39,6 +41,7 @@ tools:
           });
 
       - id: add-scm
+        after: {step: add-webapp}
         code: |-
           pt.js
           pt.log("Adding service-config-manager...");
