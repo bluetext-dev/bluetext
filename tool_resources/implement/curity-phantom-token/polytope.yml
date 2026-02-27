@@ -598,169 +598,173 @@ tools:
         after:
           - step: setup-kong-env-vars
           - step: add-typescript-client
-        tool: pt/run-script
-        args:
-          repo: {type: host, path: .}
-          language: python
-          script:
-            type: string
-            data: |
-              from pathlib import Path
-              import re
+        code: |-
+          pt.js
+          const webAppService = pt.param("web-app-service");
+          const defaultView = pt.param("web-app-default-view");
 
-              web_app_service = "{pt.param web-app-service}"
-              default_view = "{pt.param web-app-default-view}"
+          const script = `
+          from pathlib import Path
+          import re
 
-              routes_dir = Path(f"/repo/services/{web_app_service}/app/routes")
-              routes_dir.mkdir(parents=True, exist_ok=True)
+          web_app_service = "${webAppService}"
+          default_view = "${defaultView}"
 
-              # --- 1. Create callback.tsx ---
-              callback_path = routes_dir / "callback.tsx"
-              if callback_path.exists():
-                  print(f"callback.tsx already exists, skipping")
+          routes_dir = Path(f"/repo/services/{web_app_service}/app/routes")
+          routes_dir.mkdir(parents=True, exist_ok=True)
+
+          # --- 1. Create callback.tsx ---
+          callback_path = routes_dir / "callback.tsx"
+          if callback_path.exists():
+              print(f"callback.tsx already exists, skipping")
+          else:
+              callback_template = Path("/auth-templates/callback.tsx")
+              if callback_template.exists():
+                  callback_path.write_text(callback_template.read_text())
+                  print(f"Created: services/{web_app_service}/app/routes/callback.tsx")
               else:
-                  callback_template = Path("/auth-templates/callback.tsx")
-                  if callback_template.exists():
-                      callback_path.write_text(callback_template.read_text())
-                      print(f"Created: services/{web_app_service}/app/routes/callback.tsx")
+                  print(f"callback.tsx template not found at {callback_template}")
+
+          # --- 2. Modify root.tsx to add AuthProvider ---
+          root_path = Path(f"/repo/services/{web_app_service}/app/root.tsx")
+          if not root_path.exists():
+              print(f"root.tsx not found at {root_path}, skipping AuthProvider setup")
+          else:
+              root_content = root_path.read_text()
+
+              auth_import = "import { AuthProvider } from '@clients/clients/phantom-token-handler/AuthContext';"
+              needs_write = False
+
+              # Add AuthProvider import if missing
+              if 'AuthProvider' not in root_content:
+                  # Find the last import line and add after it
+                  import_lines = list(re.finditer(r'^import\\s.*$$', root_content, re.MULTILINE))
+                  if import_lines:
+                      last_import = import_lines[-1]
+                      insert_pos = last_import.end()
+                      root_content = root_content[:insert_pos] + '\\n' + auth_import + root_content[insert_pos:]
+                      needs_write = True
+                      print("Added AuthProvider import to root.tsx")
                   else:
-                      print(f"callback.tsx template not found at {callback_template}")
+                      root_content = auth_import + '\\n' + root_content
+                      needs_write = True
+                      print("Added AuthProvider import at top of root.tsx")
 
-              # --- 2. Modify root.tsx to add AuthProvider ---
-              root_path = Path(f"/repo/services/{web_app_service}/app/root.tsx")
-              if not root_path.exists():
-                  print(f"root.tsx not found at {root_path}, skipping AuthProvider setup")
+              # Wrap <Outlet /> with <AuthProvider>
+              if 'AuthProvider' in root_content and '<AuthProvider>' not in root_content:
+                  # Find <Outlet /> and wrap it
+                  outlet_pattern = r'(<Outlet\\s*/?>)'
+                  if re.search(outlet_pattern, root_content):
+                      root_content = re.sub(
+                          outlet_pattern,
+                          r'<AuthProvider>\\n              \\1\\n            </AuthProvider>',
+                          root_content,
+                          count=1
+                      )
+                      needs_write = True
+                      print("Wrapped <Outlet /> with <AuthProvider> in root.tsx")
+                  else:
+                      print("Could not find <Outlet /> in root.tsx")
+
+              if needs_write:
+                  root_path.write_text(root_content)
+
+          # --- 3. Update routes.ts with callback route ---
+          routes_path = Path(f"/repo/services/{web_app_service}/app/routes.ts")
+          if not routes_path.exists():
+              print(f"routes.ts not found at {routes_path}, skipping route registration")
+          else:
+              routes_content = routes_path.read_text()
+              needs_write = False
+
+              # Ensure 'route' is imported
+              import_match = re.search(
+                  r"import\\s*\\{([^}]*)\\}\\s*from\\s*[\\\"']@react-router/dev/routes[\\\"']",
+                  routes_content
+              )
+              if import_match:
+                  imports = import_match.group(1)
+                  if 'route' not in imports:
+                      new_imports = imports.rstrip() + ', route'
+                      routes_content = routes_content[:import_match.start(1)] + new_imports + routes_content[import_match.end(1):]
+                      needs_write = True
+                      print("Added 'route' to @react-router/dev/routes import")
+
+              # Register /callback route
+              callback_route = 'route("callback", "routes/callback.tsx")'
+              if callback_route not in routes_content:
+                  array_match = re.search(r'(return\\s*\\[)(.*?)(\\])', routes_content, re.DOTALL)
+                  if not array_match:
+                      array_match = re.search(r'(\\[)(.*?)(\\]\\s*;?\\s*\\})', routes_content, re.DOTALL)
+                  if array_match:
+                      array_content = array_match.group(2)
+                      new_entry = f',\\n    {callback_route}' if array_content.strip() else f'\\n    {callback_route}'
+                      insert_pos = array_match.end(2)
+                      routes_content = routes_content[:insert_pos] + new_entry + routes_content[insert_pos:]
+                      needs_write = True
+                      print("Registered /callback route in routes.ts")
+
+              if needs_write:
+                  routes_path.write_text(routes_content)
+
+          # --- 4. Update home.tsx with link to protected view ---
+          home_path = routes_dir / "home.tsx"
+          if not home_path.exists():
+              print(f"home.tsx not found, skipping link addition")
+          else:
+              home_content = home_path.read_text()
+              link_text = f'/{default_view}'
+
+              if link_text in home_content:
+                  print(f"Link to {default_view} already exists in home.tsx")
               else:
-                  root_content = root_path.read_text()
-
-                  auth_import = "import { AuthProvider } from '@clients/clients/phantom-token-handler/AuthContext';"
                   needs_write = False
 
-                  # Add AuthProvider import if missing
-                  if 'AuthProvider' not in root_content:
-                      # Find the last import line and add after it
-                      import_lines = list(re.finditer(r'^import\s.*$', root_content, re.MULTILINE))
+                  # Add Link import if missing
+                  if 'Link' not in home_content:
+                      link_import = "import { Link } from 'react-router';"
+                      import_lines = list(re.finditer(r'^import\\s.*$$', home_content, re.MULTILINE))
                       if import_lines:
                           last_import = import_lines[-1]
-                          insert_pos = last_import.end()
-                          root_content = root_content[:insert_pos] + '\n' + auth_import + root_content[insert_pos:]
-                          needs_write = True
-                          print("Added AuthProvider import to root.tsx")
+                          home_content = home_content[:last_import.end()] + '\\n' + link_import + home_content[last_import.end():]
                       else:
-                          root_content = auth_import + '\n' + root_content
-                          needs_write = True
-                          print("Added AuthProvider import at top of root.tsx")
+                          home_content = link_import + '\\n' + home_content
+                      needs_write = True
 
-                  # Wrap <Outlet /> with <AuthProvider>
-                  if 'AuthProvider' in root_content and '<AuthProvider>' not in root_content:
-                      # Find <Outlet /> and wrap it
-                      outlet_pattern = r'(<Outlet\s*/?>)'
-                      if re.search(outlet_pattern, root_content):
-                          root_content = re.sub(
-                              outlet_pattern,
-                              r'<AuthProvider>\n              \1\n            </AuthProvider>',
-                              root_content,
-                              count=1
-                          )
-                          needs_write = True
-                          print("Wrapped <Outlet /> with <AuthProvider> in root.tsx")
-                      else:
-                          print("Could not find <Outlet /> in root.tsx")
+                  # Find a good place to insert the link
+                  view_capitalized = default_view.capitalize()
+                  link_jsx = f"""
+              <div className="mt-8 text-center">
+                  <Link to="/{default_view}" className="text-blue-600 hover:underline font-medium">
+                      Go to {view_capitalized} &rarr;
+                  </Link>
+              </div>"""
 
-                  if needs_write:
-                      root_path.write_text(root_content)
-
-              # --- 3. Update routes.ts with callback route ---
-              routes_path = Path(f"/repo/services/{web_app_service}/app/routes.ts")
-              if not routes_path.exists():
-                  print(f"routes.ts not found at {routes_path}, skipping route registration")
-              else:
-                  routes_content = routes_path.read_text()
-                  needs_write = False
-
-                  # Ensure 'route' is imported
-                  import_match = re.search(
-                      r'import\s*\{([^}]*)\}\s*from\s*["\']@react-router/dev/routes["\']',
-                      routes_content
-                  )
-                  if import_match:
-                      imports = import_match.group(1)
-                      if 'route' not in imports:
-                          new_imports = imports.rstrip() + ', route'
-                          routes_content = routes_content[:import_match.start(1)] + new_imports + routes_content[import_match.end(1):]
-                          needs_write = True
-                          print("Added 'route' to @react-router/dev/routes import")
-
-                  # Register /callback route
-                  callback_route = 'route("callback", "routes/callback.tsx")'
-                  if callback_route not in routes_content:
-                      array_match = re.search(r'(return\s*\[)(.*?)(\])', routes_content, re.DOTALL)
-                      if not array_match:
-                          array_match = re.search(r'(\[)(.*?)(\]\s*;?\s*\})', routes_content, re.DOTALL)
-                      if array_match:
-                          array_content = array_match.group(2)
-                          new_entry = f',\n    {callback_route}' if array_content.strip() else f'\n    {callback_route}'
-                          insert_pos = array_match.end(2)
-                          routes_content = routes_content[:insert_pos] + new_entry + routes_content[insert_pos:]
-                          needs_write = True
-                          print("Registered /callback route in routes.ts")
-
-                  if needs_write:
-                      routes_path.write_text(routes_content)
-
-              # --- 4. Update home.tsx with link to protected view ---
-              home_path = routes_dir / "home.tsx"
-              if not home_path.exists():
-                  print(f"home.tsx not found, skipping link addition")
-              else:
-                  home_content = home_path.read_text()
-                  link_text = f'/{default_view}'
-
-                  if link_text in home_content:
-                      print(f"Link to {default_view} already exists in home.tsx")
+                  # Insert before the outermost closing tag
+                  closing_tags = list(re.finditer(r'^\\s*</\\w+>\\s*$$', home_content, re.MULTILINE))
+                  if len(closing_tags) >= 1:
+                      last_tag = closing_tags[-1]
+                      home_content = home_content[:last_tag.start()] + link_jsx + '\\n' + home_content[last_tag.start():]
+                      needs_write = True
+                      print(f"Added link to /{default_view} in home.tsx")
                   else:
-                      needs_write = False
+                      print(f"Could not find suitable insertion point in home.tsx")
 
-                      # Add Link import if missing
-                      if 'Link' not in home_content:
-                          link_import = "import { Link } from 'react-router';"
-                          import_lines = list(re.finditer(r'^import\s.*$', home_content, re.MULTILINE))
-                          if import_lines:
-                              last_import = import_lines[-1]
-                              home_content = home_content[:last_import.end()] + '\n' + link_import + home_content[last_import.end():]
-                          else:
-                              home_content = link_import + '\n' + home_content
-                          needs_write = True
+                  if needs_write:
+                      home_path.write_text(home_content)
 
-                      # Find a good place to insert the link
-                      view_capitalized = default_view.capitalize()
-                      link_jsx = f'''
-                  <div className="mt-8 text-center">
-                      <Link to="/{default_view}" className="text-blue-600 hover:underline font-medium">
-                          Go to {view_capitalized} &rarr;
-                      </Link>
-                  </div>'''
+          print("Auth infrastructure setup complete")
+          `;
 
-                      # Insert before the outermost closing tag
-                      closing_tags = list(re.finditer(r'^\s*</\w+>\s*$', home_content, re.MULTILINE))
-                      if len(closing_tags) >= 1:
-                          last_tag = closing_tags[-1]
-                          home_content = home_content[:last_tag.start()] + link_jsx + '\n' + home_content[last_tag.start():]
-                          needs_write = True
-                          print(f"Added link to /{default_view} in home.tsx")
-                      else:
-                          print(f"Could not find suitable insertion point in home.tsx")
-
-                      if needs_write:
-                          home_path.write_text(home_content)
-
-              print("Auth infrastructure setup complete")
-          mounts:
-            - path: /auth-templates
-              source:
-                type: repo
-                repo: "pt.clj pt/module-repo-ref"
-                path: /tool_resources/implement/curity-phantom-token/auth-templates
+          pt.callModule("pt/run-script", {
+            repo: { type: "host", path: "." },
+            language: "python",
+            mounts: [{
+              path: "/auth-templates",
+              source: { type: "repo", repo: pt.moduleRepoRef, path: "/tool_resources/implement/curity-phantom-token/auth-templates" }
+            }],
+            script: { type: "string", data: script }
+          });
 
       - id: configure-curity-datasource
         after:

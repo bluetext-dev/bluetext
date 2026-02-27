@@ -14,7 +14,7 @@ tools:
           cmd: ./bin/run
           create: when-missing
           env:
-            - { name: ENVIRONMENT, value: "pt.value {{ project-name }}-environment" }
+            - { name: ENVIRONMENT, value: pt.value {{ project-name }}-environment }
           mounts:
             - { path: /config, source: { type: repo, path: /config } }
             - { path: /root/.cache/, source: { type: volume, scope: project, id: dependency-cache } }

@@ -14,15 +14,15 @@ tools:
               ports:
                 - {label: grpc, protocol: tcp, port: 7233, expose-as: 7233}
           env:
-            - {name: DB, value: "pt.value {{ project-name }}-db"}
+            - {name: DB, value: pt.value {{ project-name }}-db}
             - {name: DB_PORT, value: "{{ postgres-port }}"}
-            - {name: DYNAMIC_CONFIG_FILE, value: "pt.value {{ project-name }}-dynamic-config-file"}
-            - {name: LOG_LEVEL, value: "pt.value {{ project-name }}-log-level"}
+            - {name: DYNAMIC_CONFIG_FILE, value: pt.value {{ project-name }}-dynamic-config-file}
+            - {name: LOG_LEVEL, value: pt.value {{ project-name }}-log-level}
             - {name: POSTGRES_PWD, value: "{{ postgres-password }}"}
             - {name: POSTGRES_SEEDS, value: "{{ postgres-host }}"}
             - {name: POSTGRES_USER, value: "{{ postgres-user }}"}
-            - {name: TEMPORAL_ADDRESS, value: "pt.value {{ project-name }}-address"}
-            - {name: TEMPORAL_CLI_ADDRESS, value: "pt.value {{ project-name }}-cli-address"}
+            - {name: TEMPORAL_ADDRESS, value: pt.value {{ project-name }}-address}
+            - {name: TEMPORAL_CLI_ADDRESS, value: pt.value {{ project-name }}-cli-address}
           mounts:
             - path: /etc/temporal/config
               source: {type: volume, scope: project, id: {{ project-name }}-config}

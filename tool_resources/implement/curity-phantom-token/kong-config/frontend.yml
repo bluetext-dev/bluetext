@@ -1,6 +1,6 @@
 services:
 - name: web-app
-  url: "http://web-app:${WEB_APP_PORT}"
+  url: "${WEB_APP_HOST}:${WEB_APP_PORT}"
   routes:
   - name: web-app-route
     strip_path: false

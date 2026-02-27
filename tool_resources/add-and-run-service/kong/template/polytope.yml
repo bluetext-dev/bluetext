@@ -19,6 +19,6 @@ tools:
             - { name: phantom-token, package: kong-phantom-token, version: 2.0.0 }
 
           services:
-            - { id: {{ project-name }}, ports: [{ port: "{pt.value {{ project-name }}-proxy-port}", protocol: http, expose-as: "{pt.value {{ project-name }}-proxy-port}" }] }
-            - { id: {{ project-name }}-admin, ports: [{ port: "{pt.value {{ project-name }}-admin-port}", protocol: http, expose-as: "{pt.value {{ project-name }}-admin-port}" }] }
+            - { id: {{ project-name }}, ports: [{ port: pt.value {{ project-name }}-proxy-port, protocol: http, expose-as: pt.value {{ project-name }}-proxy-port }] }
+            - { id: {{ project-name }}-admin, ports: [{ port: pt.value {{ project-name }}-admin-port, protocol: http, expose-as: pt.value {{ project-name }}-admin-port }] }
 

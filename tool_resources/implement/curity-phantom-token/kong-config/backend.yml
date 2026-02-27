@@ -1,6 +1,6 @@
 services:
 - name: api
-  url: "http://backend:${API_SERVICE_PORT}"
+  url: "${API_SERVICE_HOST}:${API_SERVICE_PORT}"
   routes:
   - name: api-route
     strip_path: false

@@ -20,7 +20,7 @@ tools:
             type: string
             data: |
               from pathlib import Path
-              import os
+              import re
 
               view_name = "{pt.input name}"
               service_name = "{pt.input service}"
@@ -29,7 +29,7 @@ tools:
               template_path = Path("/template/protected-view.tsx.template")
 
               if not template_path.exists():
-                  print(f"❌ Template not found: {template_path}")
+                  print(f"Template not found: {template_path}")
                   exit(1)
 
               template_content = template_path.read_text()
@@ -47,7 +47,63 @@ tools:
               # Write the file
               output_path.write_text(content)
 
-              print(f"✅ Created protected view: services/{service_name}/app/routes/{view_name}.tsx")
+              print(f"Created protected view: services/{service_name}/app/routes/{view_name}.tsx")
+
+              # --- Register route in routes.ts ---
+              routes_path = Path(f"/repo/services/{service_name}/app/routes.ts")
+              if not routes_path.exists():
+                  print(f"routes.ts not found at {routes_path}, skipping route registration")
+                  exit(0)
+
+              routes_content = routes_path.read_text()
+
+              # Ensure 'route' is imported from @react-router/dev/routes
+              if 'route' not in routes_content or not re.search(r'\broute\b', routes_content.split('from')[0] if 'from' in routes_content else ''):
+                  # Check if there's an existing import from @react-router/dev/routes
+                  import_match = re.search(
+                      r'import\s*\{([^}]*)\}\s*from\s*["\']@react-router/dev/routes["\']',
+                      routes_content
+                  )
+                  if import_match:
+                      imports = import_match.group(1)
+                      if 'route' not in imports:
+                          new_imports = imports.rstrip() + ', route'
+                          routes_content = routes_content[:import_match.start(1)] + new_imports + routes_content[import_match.end(1):]
+                          print("Added 'route' to existing @react-router/dev/routes import")
+                  else:
+                      print("Could not find @react-router/dev/routes import, skipping route registration")
+                      exit(0)
+
+              # Check if route already registered
+              route_entry = f'route("{view_name}", "routes/{view_name}.tsx")'
+              if route_entry in routes_content:
+                  print(f"Route '{view_name}' already registered in routes.ts")
+                  exit(0)
+
+              # Find the routes array and append before the closing bracket
+              # Look for the pattern: [...] in the default export
+              # Insert before the last ] in the routes array
+              array_match = re.search(r'(return\s*\[)(.*?)(\])', routes_content, re.DOTALL)
+              if not array_match:
+                  # Try alternative: export default [...] pattern
+                  array_match = re.search(r'(\[)(.*?)(\]\s*;?\s*\})', routes_content, re.DOTALL)
+
+              if array_match:
+                  array_content = array_match.group(2)
+                  # Add comma if there's existing content
+                  if array_content.strip():
+                      new_entry = f',\n    {route_entry}'
+                  else:
+                      new_entry = f'\n    {route_entry}'
+
+                  # Insert before the closing bracket
+                  insert_pos = array_match.end(2)
+                  routes_content = routes_content[:insert_pos] + new_entry + routes_content[insert_pos:]
+
+                  routes_path.write_text(routes_content)
+                  print(f"Registered route '{view_name}' in routes.ts")
+              else:
+                  print("Could not find routes array in routes.ts, skipping route registration")
           mounts:
             - path: /template
               source:
