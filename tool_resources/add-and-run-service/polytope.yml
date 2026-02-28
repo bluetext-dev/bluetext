@@ -230,6 +230,7 @@ tools:
             const kebabKey = k.replace(/([A-Z])/g, "-$1").toLowerCase();
             scaffoldParams[kebabKey] = String(v);
           }
+          pt.log(`scaffold-services: template=${template} name=${name} scaffoldParams=${JSON.stringify(scaffoldParams)}`);
           pt.callModule("polytope/scaffold", {
             "container-id": `scaffold-services-${template}`,
             actions: [{
