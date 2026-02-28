@@ -821,3 +821,14 @@ tools:
           pt.js
           pt.log("Running stack to apply all configuration changes...");
           pt.callModule("stack", {});
+
+      - id: install-web-app-client-deps
+        after: {step: run-stack}
+        code: |-
+          pt.js
+          const webAppService = pt.param("web-app-service");
+          pt.log(`Installing phantom-token-handler client dependencies in ${webAppService}...`);
+          pt.callModule("add-dependency", {
+            service: webAppService,
+            packages: "@curity/token-handler-js-assistant"
+          });
