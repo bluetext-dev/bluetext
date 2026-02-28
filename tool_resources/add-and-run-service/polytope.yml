@@ -214,7 +214,6 @@ tools:
         code: |-
           pt.js
           const templateAndVars = pt.param("template-and-variables");
-          pt.log(`DEBUG templateAndVars type=${typeof templateAndVars} value=${JSON.stringify(templateAndVars)} keys=${JSON.stringify(Object.keys(templateAndVars))}`);
           const rawKey = Object.keys(templateAndVars)[0];
           const template = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
           const nameParam = pt.param("custom-name");
