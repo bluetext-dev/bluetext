@@ -80,7 +80,10 @@ tools:
               exit(0)
 
           # Find the routes array and append before the closing bracket
+          # Try multiple array patterns: return [...], export default [...] satisfies ..., [...];}
           array_match = re.search(r'(return\\s*\\[)(.*?)(\\])', routes_content, re.DOTALL)
+          if not array_match:
+              array_match = re.search(r'(export\\s+default\\s*\\[)(.*?)(\\]\\s*satisfies)', routes_content, re.DOTALL)
           if not array_match:
               array_match = re.search(r'(\\[)(.*?)(\\]\\s*;?\\s*\\})', routes_content, re.DOTALL)
 

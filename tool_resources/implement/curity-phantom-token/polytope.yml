@@ -693,7 +693,10 @@ tools:
               # Register /callback route
               callback_route = 'route("callback", "routes/callback.tsx")'
               if callback_route not in routes_content:
+                  # Try multiple array patterns: return [...], export default [...] satisfies ..., [...];}
                   array_match = re.search(r'(return\\s*\\[)(.*?)(\\])', routes_content, re.DOTALL)
+                  if not array_match:
+                      array_match = re.search(r'(export\\s+default\\s*\\[)(.*?)(\\]\\s*satisfies)', routes_content, re.DOTALL)
                   if not array_match:
                       array_match = re.search(r'(\\[)(.*?)(\\]\\s*;?\\s*\\})', routes_content, re.DOTALL)
                   if array_match:
