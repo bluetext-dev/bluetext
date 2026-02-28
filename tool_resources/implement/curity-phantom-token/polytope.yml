@@ -811,3 +811,13 @@ tools:
             name: viewName,
             service: webAppService
           });
+
+      - id: run-stack
+        after:
+          - step: scaffold-default-protected-view
+          - step: configure-curity-datasource
+          - step: set-generated-secrets-in-runtime
+        code: |-
+          pt.js
+          pt.log("Running stack to apply all configuration changes...");
+          pt.callModule("stack", {});
