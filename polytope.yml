@@ -23,5 +23,6 @@ mcp:
     - stack
     - stack-apply-services
     - load-config
+    - set-runtime-values
     - call-endpoint
     - add-dependency

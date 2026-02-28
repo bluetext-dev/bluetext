@@ -20,11 +20,11 @@ tools:
         args:
           image: pt.input image
           env:
-            - { name: PGHOST, value: "{{ postgres-host }}" }
-            - { name: PGPORT, value: "{{ postgres-port }}" }
-            - { name: PGUSER, value: "{{ postgres-username }}" }
-            - { name: PGDATABASE, value: "{{ postgres-database }}" }
-            - { name: PGPASSWORD, value: "{{ postgres-password }}" }
+            - { name: PGHOST, value: "{= postgres-host =}" }
+            - { name: PGPORT, value: "{= postgres-port =}" }
+            - { name: PGUSER, value: "{= postgres-username =}" }
+            - { name: PGDATABASE, value: "{= postgres-database =}" }
+            - { name: PGPASSWORD, value: "{= postgres-password =}" }
           id: {{ project-name }}
           cmd: |
             pt.clj
