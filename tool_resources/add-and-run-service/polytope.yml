@@ -23,10 +23,7 @@ tools:
               postgres-username: [default, str, "pt.value postgres-server-username"]
               postgres-password: [default, str, "pt.secret postgres-server-password"]
           - curity:
-              postgres-host: [default, str, "pt.value postgres-server-host"]
-              postgres-port: [default, str, "pt.value postgres-server-port"]
-              postgres-username: [default, str, "pt.value postgres-server-username"]
-              postgres-password: [default, str, "pt.secret postgres-server-password"]
+              postgres-service: [default, str, postgres-server]
           - kong: {}
           - couchbase-server: {}
           - python-fast-api: {}
@@ -227,6 +224,23 @@ tools:
           for (const [k, v] of Object.entries(variables)) {
             scaffoldParams[k] = String(v);
           }
+          // Polytope's either type resolves default values but doesn't pass them
+          // through the nested object. Read the template's expected variables from
+          // the module repo and populate scaffoldParams with defaults.
+          try {
+            const depsContent = pt.readRepoFile(
+              `tool_resources/add-and-run-service/${template}/scaffold-inputs.yml`,
+              { repo: pt.moduleRepoRef }
+            );
+            const deps = pt.readYaml(depsContent) || {};
+            for (const [k, defaultVal] of Object.entries(deps)) {
+              if (!(k in scaffoldParams)) {
+                scaffoldParams[k] = String(defaultVal);
+              }
+            }
+          } catch (e) {
+            // No scaffold-inputs.yml — template has no extra variables
+          }
           pt.log(`scaffold-services: template=${template} name=${name} scaffoldParams=${JSON.stringify(scaffoldParams)}`);
           pt.callModule("polytope/scaffold", {
             "container-id": `scaffold-services-${template}`,
@@ -388,13 +402,22 @@ tools:
           const template = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
           const variables = templateAndVars[rawKey] || {};
 
-          // Derive postgres service name from postgres-host variable
-          // e.g. "pt.value postgres-server-host" → "postgres-server"
-          const pgHost = variables.postgresHost || variables["postgres-host"] || "";
-          const pgMatch = pgHost.match(/pt\.(?:value|secret)\s+(.+)-host$/);
-          const postgresService = pgMatch ? pgMatch[1] : null;
+          // Read scaffold-inputs for defaults (Polytope's either type doesn't pass them through)
+          let resolvedVars = Object.assign({}, variables);
+          try {
+            const si = pt.readYaml(pt.readRepoFile(
+              `tool_resources/add-and-run-service/${template}/scaffold-inputs.yml`,
+              { repo: pt.moduleRepoRef }
+            )) || {};
+            for (const [k, v] of Object.entries(si)) {
+              if (!(k in resolvedVars) && !(k.replace(/-([a-z])/g, (_, c) => c.toUpperCase()) in resolvedVars)) {
+                resolvedVars[k] = String(v);
+              }
+            }
+          } catch (e) {}
+          const postgresService = resolvedVars.postgresService || resolvedVars["postgres-service"];
           if (!postgresService) {
-            pt.log("No postgres-host variable set, skipping dependency config copy");
+            pt.log("No postgres-service variable set, skipping dependency config copy");
           } else {
             const script = `
           import shutil
@@ -434,14 +457,25 @@ tools:
           pt.js
           const templateAndVars = pt.param("template-and-variables");
           const rawKey = Object.keys(templateAndVars)[0];
+          const template = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
           const variables = templateAndVars[rawKey] || {};
 
-          // Derive postgres service name from postgres-host variable
-          const pgHost = variables.postgresHost || variables["postgres-host"] || "";
-          const pgMatch = pgHost.match(/pt\.(?:value|secret)\s+(.+)-host$/);
-          const postgresService = pgMatch ? pgMatch[1] : null;
+          // Read scaffold-inputs for defaults (Polytope's either type doesn't pass them through)
+          let resolvedVars = Object.assign({}, variables);
+          try {
+            const si = pt.readYaml(pt.readRepoFile(
+              `tool_resources/add-and-run-service/${template}/scaffold-inputs.yml`,
+              { repo: pt.moduleRepoRef }
+            )) || {};
+            for (const [k, v] of Object.entries(si)) {
+              if (!(k in resolvedVars) && !(k.replace(/-([a-z])/g, (_, c) => c.toUpperCase()) in resolvedVars)) {
+                resolvedVars[k] = String(v);
+              }
+            }
+          } catch (e) {}
+          const postgresService = resolvedVars.postgresService || resolvedVars["postgres-service"];
           if (!postgresService) {
-            pt.log("No postgres-host variable set, skipping SCM registration");
+            pt.log("No postgres-service variable set, skipping SCM registration");
           } else {
             // Check if service-config-manager exists before trying to register
             let scmExists = false;
@@ -501,10 +535,7 @@ tools:
               postgres-username: [default, str, "pt.value postgres-server-username"]
               postgres-password: [default, str, "pt.secret postgres-server-password"]
           - curity:
-              postgres-host: [default, str, "pt.value postgres-server-host"]
-              postgres-port: [default, str, "pt.value postgres-server-port"]
-              postgres-username: [default, str, "pt.value postgres-server-username"]
-              postgres-password: [default, str, "pt.secret postgres-server-password"]
+              postgres-service: [default, str, postgres-server]
           - kong: {}
           - couchbase-server: {}
           - python-fast-api: {}
