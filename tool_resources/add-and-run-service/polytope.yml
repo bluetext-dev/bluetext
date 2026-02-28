@@ -221,12 +221,14 @@ tools:
           const name = (nameParam || template).toLowerCase().replace(/[^a-z0-9_-]/g, "-");
           const addTo = pt.param("add-to");
           const scaffoldParams = {};
+          pt.log("scaffold-services variables: " + JSON.stringify(variables));
           for (const [k, v] of Object.entries(variables)) {
             // Convert camelCase keys back to kebab-case for template substitution
             // (Polytope auto-camelCases kebab-case input keys, but templates use kebab-case)
             const kebabKey = k.replace(/([A-Z])/g, "-$1").toLowerCase();
             scaffoldParams[kebabKey] = String(v);
           }
+          pt.log("scaffold-services scaffoldParams: " + JSON.stringify(scaffoldParams));
           pt.callModule("polytope/scaffold", {
             "container-id": `scaffold-services-${template}`,
             actions: [{
