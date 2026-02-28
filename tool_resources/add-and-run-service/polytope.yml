@@ -23,7 +23,10 @@ tools:
               postgres-username: [default, str, "pt.value postgres-server-username"]
               postgres-password: [default, str, "pt.secret postgres-server-password"]
           - curity:
-              postgres-service: [default, str, postgres-server]
+              postgres-host: [default, str, "pt.value postgres-server-host"]
+              postgres-port: [default, str, "pt.value postgres-server-port"]
+              postgres-username: [default, str, "pt.value postgres-server-username"]
+              postgres-password: [default, str, "pt.secret postgres-server-password"]
           - kong: {}
           - couchbase-server: {}
           - python-fast-api: {}
@@ -221,14 +224,12 @@ tools:
           const name = (nameParam || template).toLowerCase().replace(/[^a-z0-9_-]/g, "-");
           const addTo = pt.param("add-to");
           const scaffoldParams = {};
-          pt.log("scaffold-services variables: " + JSON.stringify(variables));
           for (const [k, v] of Object.entries(variables)) {
             // Convert camelCase keys back to kebab-case for template substitution
             // (Polytope auto-camelCases kebab-case input keys, but templates use kebab-case)
             const kebabKey = k.replace(/([A-Z])/g, "-$1").toLowerCase();
             scaffoldParams[kebabKey] = String(v);
           }
-          pt.log("scaffold-services scaffoldParams: " + JSON.stringify(scaffoldParams));
           pt.callModule("polytope/scaffold", {
             "container-id": `scaffold-services-${template}`,
             actions: [{
@@ -389,9 +390,13 @@ tools:
           const template = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
           const variables = templateAndVars[rawKey] || {};
 
-          const postgresService = variables.postgresService || variables["postgres-service"];
+          // Derive postgres service name from postgres-host variable
+          // e.g. "pt.value postgres-server-host" → "postgres-server"
+          const pgHost = variables.postgresHost || variables["postgres-host"] || "";
+          const pgMatch = pgHost.match(/pt\.(?:value|secret)\s+(.+)-host$/);
+          const postgresService = pgMatch ? pgMatch[1] : null;
           if (!postgresService) {
-            pt.log("No postgres-service variable set, skipping dependency config copy");
+            pt.log("No postgres-host variable set, skipping dependency config copy");
           } else {
             const script = `
           import shutil
@@ -433,9 +438,12 @@ tools:
           const rawKey = Object.keys(templateAndVars)[0];
           const variables = templateAndVars[rawKey] || {};
 
-          const postgresService = variables.postgresService || variables["postgres-service"];
+          // Derive postgres service name from postgres-host variable
+          const pgHost = variables.postgresHost || variables["postgres-host"] || "";
+          const pgMatch = pgHost.match(/pt\.(?:value|secret)\s+(.+)-host$/);
+          const postgresService = pgMatch ? pgMatch[1] : null;
           if (!postgresService) {
-            pt.log("No postgres-service variable set, skipping SCM registration");
+            pt.log("No postgres-host variable set, skipping SCM registration");
           } else {
             // Check if service-config-manager exists before trying to register
             let scmExists = false;
@@ -495,7 +503,10 @@ tools:
               postgres-username: [default, str, "pt.value postgres-server-username"]
               postgres-password: [default, str, "pt.secret postgres-server-password"]
           - curity:
-              postgres-service: [default, str, postgres-server]
+              postgres-host: [default, str, "pt.value postgres-server-host"]
+              postgres-port: [default, str, "pt.value postgres-server-port"]
+              postgres-username: [default, str, "pt.value postgres-server-username"]
+              postgres-password: [default, str, "pt.secret postgres-server-password"]
           - kong: {}
           - couchbase-server: {}
           - python-fast-api: {}

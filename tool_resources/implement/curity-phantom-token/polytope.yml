@@ -93,7 +93,10 @@ tools:
             pt.callModule("add-and-run-service", {
               "template-and-variables": {
                 curity: {
-                  "postgres-service": postgresService
+                  "postgres-host": `pt.value ${postgresService}-host`,
+                  "postgres-port": `pt.value ${postgresService}-port`,
+                  "postgres-username": `pt.value ${postgresService}-username`,
+                  "postgres-password": `pt.secret ${postgresService}-password`
                 }
               },
               "add-to": "stack",
