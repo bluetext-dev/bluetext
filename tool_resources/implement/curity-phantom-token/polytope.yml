@@ -237,28 +237,11 @@ tools:
                       yaml.dump(cm_config, f, default_flow_style=False, sort_keys=False)
                   print("Updated service-config-manager/polytope.yml with new env vars")
 
-              # 3. Create Curity postgres config (creates idsvr database)
-              config_dir = Path(f"/repo/config/{service_name}")
-              config_dir.mkdir(parents=True, exist_ok=True)
-              config_file = config_dir / "postgres.sql"
-              curity_sql = (
-                  "-- Postgres Configuration for Curity Identity Server\n"
-                  "-- Creates the idsvr database required by Curity\n"
-                  "\n"
-                  "SELECT 'CREATE DATABASE idsvr'\n"
-                  "WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'idsvr')\\\\gexec\n"
-              )
-              if not config_file.exists():
-                  with open(config_file, "w") as f:
-                      f.write(curity_sql)
-                  print(f"Created Curity postgres config: {config_file}")
-              else:
-                  # Ensure idsvr database creation is present
-                  existing = config_file.read_text()
-                  if 'idsvr' not in existing:
-                      with open(config_file, "a") as f:
-                          f.write("\n" + curity_sql)
-                      print(f"Appended idsvr database creation to {config_file}")
+              # Note: idsvr database creation and schema application is handled by
+              # the configure-curity-datasource step, which execs into the postgres
+              # container directly. This avoids issues with psql meta-commands (\gexec)
+              # not being supported by the SCM's psycopg2 driver.
+              print("Database initialization deferred to configure-curity-datasource step")
 
       - id: add-python-client
         after:
@@ -860,18 +843,119 @@ tools:
             script: { type: "string", data: script }
           });
 
-      - id: configure-curity-datasource
+      - id: create-idsvr-database
         after:
           - step: run-stack
         code: |-
           pt.js
-          pt.log("Configuring Curity datasource via idsh...");
-          var cmd = 'sh -c \'printf "configure\\nset facilities data-sources data-source default-datasource jdbc connection-string \\"jdbc:postgresql://$POSTGRES_HOST:$POSTGRES_PORT/idsvr\\"\\nset facilities data-sources data-source default-datasource jdbc username $POSTGRES_USERNAME\\nset facilities data-sources data-source default-datasource jdbc password $POSTGRES_PASSWORD\\ncommit\\nexit\\n" | /opt/idsvr/bin/idsh -N -u admin\'';
-          pt.callModule("polytope/container!exec", {
-            container: "curity-idsvr",
-            cmd: cmd
+          // Read the Curity schema SQL from the framework repo
+          var schemaSql = pt.readRepoFile(
+            "tool_resources/add-and-run-service/curity/dependency-config/curity.sql",
+            { repo: pt.moduleRepoRef }
+          );
+
+          // Build a Python script that:
+          // 1. Creates the idsvr database (idempotent)
+          // 2. Applies the Curity schema with IF NOT EXISTS (idempotent)
+          var escapedSql = schemaSql.replace(/\\/g, "\\\\").replace(/"""/g, '\\"\\"\\"');
+          var pgService = pt.param("postgres-service");
+          var script = `
+          import psycopg2
+          import os
+          import re
+          import yaml
+
+          # Read postgres credentials from project config files
+          with open("/repo/config/values.yml") as f:
+              values = yaml.safe_load(f) or {}
+          with open("/repo/config/secrets.yml") as f:
+              secrets = yaml.safe_load(f) or {}
+
+          host = values.get("` + pgService + `-host", "` + pgService + `")
+          user = values.get("` + pgService + `-username", "postgres")
+          password = secrets.get("` + pgService + `-password", "")
+          port = int(values.get("` + pgService + `-port", "5432"))
+
+          # Step 1: Create idsvr database if it doesn't exist
+          conn = psycopg2.connect(host=host, port=port, user=user, password=password, dbname="postgres")
+          conn.autocommit = True
+          cur = conn.cursor()
+          cur.execute("SELECT 1 FROM pg_database WHERE datname = 'idsvr'")
+          if not cur.fetchone():
+              cur.execute("CREATE DATABASE idsvr")
+              print("Created idsvr database")
+          else:
+              print("idsvr database already exists")
+          cur.close()
+          conn.close()
+
+          # Step 2: Apply schema to idsvr database (idempotent)
+          conn = psycopg2.connect(host=host, port=port, user=user, password=password, dbname="idsvr")
+          conn.autocommit = True
+          cur = conn.cursor()
+
+          schema_sql = """` + escapedSql + `"""
+          # Make CREATE statements idempotent
+          schema_sql = re.sub(r"CREATE TABLE ", "CREATE TABLE IF NOT EXISTS ", schema_sql)
+          schema_sql = re.sub(r"CREATE UNIQUE INDEX ", "CREATE UNIQUE INDEX IF NOT EXISTS ", schema_sql)
+          schema_sql = re.sub(r"CREATE INDEX ", "CREATE INDEX IF NOT EXISTS ", schema_sql)
+
+          # Execute each statement separately
+          for stmt in schema_sql.split(";"):
+              stmt = stmt.strip()
+              if stmt and not stmt.startswith("--"):
+                  try:
+                      cur.execute(stmt)
+                  except Exception as e:
+                      print(f"Warning: {e}")
+
+          cur.close()
+          conn.close()
+          print("Curity schema applied to idsvr database")
+          `;
+
+          pt.log("Creating idsvr database and applying Curity schema...");
+          pt.callModule("pt/run-script", {
+            repo: { type: "host", path: "." },
+            language: "python",
+            dependencies: ["psycopg2-binary", "pyyaml"],
+            script: { type: "string", data: script }
           });
-          pt.log("Curity ConfD datasource updated successfully");
+
+      - id: configure-curity-datasource
+        after:
+          - step: create-idsvr-database
+        code: |-
+          pt.clj
+          (pt/log "Waiting for Curity container to start...")
+          (pt/await-started {:type "deployment" :ref "curity-idsvr"})
+          (pt/log "Curity container running, waiting for Identity Server to fully initialize...")
+          (let [cmd (str "sh -c 'printf "
+                         "\"configure\\nset facilities data-sources data-source default-datasource jdbc connection-string "
+                         "\\\"jdbc:postgresql://$POSTGRES_HOST:$POSTGRES_PORT/idsvr\\\""
+                         "\\nset facilities data-sources data-source default-datasource jdbc username $POSTGRES_USERNAME"
+                         "\\nset facilities data-sources data-source default-datasource jdbc password $POSTGRES_PASSWORD"
+                         "\\ncommit\\nexit\\n\""
+                         " | /opt/idsvr/bin/idsh -N -u admin'")
+                max-retries 12
+                retry-delay 10000]
+            (loop [attempt 1]
+              (pt/log (str "Attempt " attempt "/" max-retries ": configuring datasource via idsh..."))
+              (let [result (try
+                             (pt/call-module "polytope/container!exec"
+                               {:container "curity-idsvr" :cmd cmd})
+                             :success
+                             (catch Exception e
+                               (pt/log (str "Attempt " attempt " failed: " (str e)))
+                               :failed))]
+                (if (= result :success)
+                  (pt/log "Curity datasource configured successfully")
+                  (if (< attempt max-retries)
+                    (do
+                      (pt/log (str "Retrying in " (/ retry-delay 1000) " seconds..."))
+                      (pt/sleep retry-delay)
+                      (recur (inc attempt)))
+                    (pt/fail "Failed to configure Curity datasource after all retries"))))))
 
       - id: scaffold-default-protected-view
         after: {step: setup-auth-infrastructure}
