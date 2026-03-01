@@ -863,6 +863,7 @@ tools:
           import psycopg2
           import os
           import re
+          import time
           import yaml
 
           # Read postgres credentials from project config files
@@ -875,6 +876,20 @@ tools:
           user = values.get("` + pgService + `-username", "postgres")
           password = secrets.get("` + pgService + `-password", "")
           port = int(values.get("` + pgService + `-port", "5432"))
+
+          # Wait for postgres to be ready (may still be starting up)
+          for attempt in range(12):
+              try:
+                  conn = psycopg2.connect(host=host, port=port, user=user, password=password, dbname="postgres")
+                  conn.close()
+                  print(f"Postgres ready (attempt {attempt + 1})")
+                  break
+              except Exception as e:
+                  print(f"Attempt {attempt + 1}/12: Postgres not ready - {e}")
+                  if attempt < 11:
+                      time.sleep(5)
+                  else:
+                      raise
 
           # Step 1: Create idsvr database if it doesn't exist
           conn = psycopg2.connect(host=host, port=port, user=user, password=password, dbname="postgres")
