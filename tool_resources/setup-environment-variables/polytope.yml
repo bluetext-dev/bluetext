@@ -91,7 +91,11 @@ tools:
                   # Check if there's an explicit value expression
                   if 'value' in var:
                       # Use the explicit value expression directly
-                      env_entries.append(f'            - {{ name: {name}, value: "{var["value"]}" }}')
+                      val = var['value']
+                      if '"' in val:
+                          env_entries.append(f"            - {{ name: {name}, value: '{val}' }}")
+                      else:
+                          env_entries.append(f'            - {{ name: {name}, value: "{val}" }}')
                   else:
                       # Use key-based lookup
                       key = var['key']
@@ -99,9 +103,9 @@ tools:
 
                       # Reference the value/secret using pt.value or pt.secret
                       if is_secret:
-                          env_entries.append(f'            - {{ name: {name}, value: "pt.clj (pt/secret \\"{key}\\")" }}')
+                          env_entries.append(f'            - {{ name: {name}, value: pt.secret {key} }}')
                       else:
-                          env_entries.append(f'            - {{ name: {name}, value: "pt.clj (pt/value \\"{key}\\")" }}')
+                          env_entries.append(f'            - {{ name: {name}, value: pt.value {key} }}')
 
               env_block = '\n'.join(env_entries)
 

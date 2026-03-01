@@ -6,17 +6,18 @@ tools:
       - tool: polytope/curity
         args:
           image: curity.azurecr.io/curity/idsvr:10.4.0
+          await: false
           config-file: { type: repo, path: /config/{{ project-name }}/config.xml }
           restart: { policy: always }
           create: when-missing
-          password: "{pt.secret {{ project-name }}-password}"
+          password: pt.secret {{ project-name }}-password
           env:
             - { name: ADMIN, value: true }
             - { name: CURITY_BASE_URL, value: "{pt.value {{ project-name }}-external-host}:{pt.value {{ project-name }}-external-port}" }
-            - { name: POSTGRES_HOST, value: "{{ postgres-host }}" }
-            - { name: POSTGRES_PORT, value: "{{ postgres-port }}" }
-            - { name: POSTGRES_USERNAME, value: "{{ postgres-username }}" }
-            - { name: POSTGRES_PASSWORD, value: "{{ postgres-password }}" }
+            - { name: POSTGRES_HOST, value: "pt.value {= postgres-service =}-host" }
+            - { name: POSTGRES_PORT, value: "pt.value {= postgres-service =}-port" }
+            - { name: POSTGRES_USERNAME, value: "pt.value {= postgres-service =}-username" }
+            - { name: POSTGRES_PASSWORD, value: "pt.secret {= postgres-service =}-password" }
           mounts:
             - { path: /opt/idsvr/usr/bin/post-commit-cli-scripts, source: { type: repo, path: /config/{{ project-name }}/post-commit-cli-scripts }}
             - { path: /opt/idsvr/etc/init/curity-users.xml, source: { type: repo, path: /config/{{ project-name }}/users.xml }}

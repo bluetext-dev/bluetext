@@ -17,8 +17,11 @@ export async function onPageLoad(url: string): Promise<SessionResponse> {
     return await oauthAgentClient.onPageLoad(url);
 }
 
-export async function startLogin(options?: LoginOptions): Promise<any> {
-    return await oauthAgentClient.startLogin(options);
+export async function startLogin(options?: LoginOptions): Promise<void> {
+    const response = await oauthAgentClient.startLogin(options);
+    if (response?.authorizationUrl) {
+        window.location.href = response.authorizationUrl;
+    }
 }
 
 export async function logout(): Promise<any> {

@@ -5,6 +5,10 @@ import tsconfigPaths from "vite-tsconfig-paths";
 import path from "path";
 
 export default defineConfig({
+  clearScreen: false,
+  server: {
+    allowedHosts: true,
+  },
   resolve: {
     // Explicit aliases for reliable module resolution in both dev and SSR
     // While tsconfigPaths plugin reads from tsconfig.json, explicit aliases

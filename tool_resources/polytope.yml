@@ -117,6 +117,43 @@ tools:
             pt.log("ℹ️ No config/secrets.yml found or could not be read.");
           }
 
+  set-runtime-values:
+    info: |
+      Reads config/values.yml and config/secrets.yml, converts keys to kebab-case,
+      and sets them as runtime values/secrets in the Polytope context.
+    run:
+      - id: set-runtime-values
+        code: |-
+          pt.js
+          // pt.readYaml converts kebab-case keys to camelCase, so convert back
+          function toKebabCase(s) {
+            return s.replace(/([a-z0-9])([A-Z])/g, "$1-$2").replace(/[_ ]+/g, "-").toLowerCase();
+          }
+
+          // Read from config files and set runtime values/secrets
+          let values = {};
+          let secrets = {};
+          try {
+            values = pt.readYaml(pt.readRepoFile("config/values.yml")) || {};
+          } catch (e) {
+            pt.log("No config/values.yml found, skipping value loading");
+          }
+          try {
+            secrets = pt.readYaml(pt.readRepoFile("config/secrets.yml")) || {};
+          } catch (e) {
+            pt.log("No config/secrets.yml found, skipping secret loading");
+          }
+
+          pt.log(`Setting ${Object.keys(values).length} values and ${Object.keys(secrets).length} secrets`);
+
+          for (const [k, v] of Object.entries(values)) {
+            pt.setProjectValue(toKebabCase(k), String(v));
+          }
+
+          for (const [k, v] of Object.entries(secrets)) {
+            pt.setSecret(toKebabCase(k), String(v));
+          }
+
   initialize-session:
     info: |-
       Initialize **EVERY** session by calling this tool.

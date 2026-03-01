@@ -1,10 +1,13 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { AuthProvider, useAuth } from './AuthContext';
-import { LoadingSpinner } from '../components/LoadingSpinner';
+import { useAuth } from '@clients/clients/phantom-token-handler/AuthContext';
+import { logout } from '@clients/clients/phantom-token-handler/client';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
+import { Button } from '~/components/ui/button';
+import { Badge } from '~/components/ui/badge';
 
 function {{ view_name | capitalize }}View() {
-    const { isLoggedIn, userInfo, isPageLoaded } = useAuth();
+    const { isLoggedIn, userInfo, isPageLoaded, error } = useAuth();
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -13,22 +16,93 @@ function {{ view_name | capitalize }}View() {
         }
     }, [isPageLoaded, isLoggedIn, navigate]);
 
-    if (!isPageLoaded || !isLoggedIn) {
-        return <LoadingSpinner />;
+    if (!isPageLoaded) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+            </div>
+        );
     }
 
+    if (error) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <Card className="w-full max-w-md">
+                    <CardHeader>
+                        <CardTitle>Error</CardTitle>
+                        <CardDescription>{error}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button variant="outline" onClick={() => navigate('/')}>
+                            Go Home
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+
+    if (!isLoggedIn) {
+        return null;
+    }
+
+    const displayName = typeof userInfo?.name === 'object'
+        ? `${userInfo.name.givenName ?? ''} ${userInfo.name.familyName ?? ''}`.trim()
+        : userInfo?.name || 'User';
+
     return (
-        <div>
-            <h1>Welcome, {userInfo.name}</h1>
-            {/* {{ view_name | capitalize }} content */}
+        <div className="container mx-auto p-6 max-w-4xl">
+            <div className="flex items-center justify-between mb-8">
+                <div>
+                    <h1 className="text-3xl font-bold">{{ view_name | capitalize }}</h1>
+                    <p className="text-muted-foreground">Welcome back, {displayName}</p>
+                </div>
+                <div className="flex items-center gap-4">
+                    <Badge variant="secondary">Authenticated</Badge>
+                    <Button variant="outline" onClick={() => logout()}>
+                        Logout
+                    </Button>
+                </div>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Profile</CardTitle>
+                        <CardDescription>Your account information</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <dl className="space-y-2">
+                            <div>
+                                <dt className="text-sm font-medium text-muted-foreground">Name</dt>
+                                <dd>{displayName}</dd>
+                            </div>
+                            {userInfo?.email && (
+                                <div>
+                                    <dt className="text-sm font-medium text-muted-foreground">Email</dt>
+                                    <dd>{userInfo.email}</dd>
+                                </div>
+                            )}
+                        </dl>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Getting Started</CardTitle>
+                        <CardDescription>Build your {{ view_name }} here</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground">
+                            This is your protected {{ view_name }} view. Customize it to fit your needs.
+                        </p>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
     );
 }
 
 export default function {{ view_name | capitalize }}Route() {
-    return (
-        <AuthProvider>
-            <{{ view_name | capitalize }}View />
-        </AuthProvider>
-    );
+    return <{{ view_name | capitalize }}View />;
 }

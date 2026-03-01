@@ -8,6 +8,7 @@ tools:
       - tool: polytope/container
         args:
           image: sosedoff/pgweb:0.15.0
+          await: false
           id: {{ project-name }}
           restart:
             policy: always
@@ -17,5 +18,5 @@ tools:
                 - {protocol: http, port: 8081, expose-as: 8081}
           env:
             - name: PGWEB_DATABASE_URL
-              value: "postgresql://{ {{ postgres-username }} }:{ {{ postgres-password }} }@{ {{ postgres-host }} }:{ {{ postgres-port }} }/{ {{ postgres-database }} }?sslmode=disable"
+              value: "postgresql://{ {= postgres-username =} }:{ {= postgres-password =} }@{ {= postgres-host =} }:{ {= postgres-port =} }/{ {= postgres-database =} }?sslmode=disable"
           create: when-missing

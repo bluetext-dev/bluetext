@@ -17,7 +17,7 @@ class PostgresController:
 
         self.host = self._get_env(f'{self.prefix}_HOST')
         self.database = self._get_env(f'{self.prefix}_DB')
-        self.user = self._get_env(f'{self.prefix}_USER')
+        self.user = self._get_env(f'{self.prefix}_USERNAME')
         self.password = self._get_env(f'{self.prefix}_PASSWORD')
 
     def _get_env(self, key):

@@ -584,15 +584,15 @@
       <data-source>
         <id>default-datasource</id>
         <jdbc xmlns="https://curity.se/ns/ext-conf/jdbc">
-          <connection-string>data:text/plain;aes,v:S.MEpoUkd4dWYzWFAycnViUQ==.ACV_P0hn2PYQJT8qQ207Mw==.67_CS9UINnpnSUfa17rzy66Um14w2HO2vtt0trb9z4XSi1hojZRBk1LM_7YRzQ2Q.tTvY7yriYj6tUyZNIp6X44joQi7kr6NEk-t2_xR-xf0=</connection-string>
+          <connection-string>jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT}/idsvr</connection-string>
           <connection-timeout>30000</connection-timeout>
           <driver>org.postgresql.Driver</driver>
           <idle-timeout>600000</idle-timeout>
           <max-lifetime>1800000</max-lifetime>
           <max-pool-size>20</max-pool-size>
           <min-idle-pool-size>10</min-idle-pool-size>
-          <password>data:text/plain;aes,v:S.UkFIMjQ4dnJ3aWxNazNkMA==.vTkCSQwnNdqInPkFx7dBEw==.X-y5UhxTbnlzU9GJYhFMBg==.ob94LdDv8f3_7kGQbpIszg1h79_HE4I5usi1-U6wfvc=</password>
-          <username>admin</username>
+          <password>${POSTGRES_PASSWORD}</password>
+          <username>${POSTGRES_USERNAME}</username>
         </jdbc>
       </data-source>
     </data-sources>

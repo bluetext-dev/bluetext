@@ -23,11 +23,7 @@ tools:
               postgres-username: [default, str, "pt.value postgres-server-username"]
               postgres-password: [default, str, "pt.secret postgres-server-password"]
           - curity:
-              postgres-host: [default, str, "pt.value postgres-server-host"]
-              postgres-port: [default, str, "pt.value postgres-server-port"]
-              postgres-username: [default, str, "pt.value postgres-server-username"]
-              postgres-password: [default, str, "pt.secret postgres-server-password"]
-              postgres-service: str
+              postgres-service: [default, str, postgres-server]
           - kong: {}
           - couchbase-server: {}
           - python-fast-api: {}
@@ -223,27 +219,88 @@ tools:
           const templateAndVars = pt.param("template-and-variables");
           const rawKey = Object.keys(templateAndVars)[0];
           const template = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
-          const variables = templateAndVars[rawKey] || {};
           const nameParam = pt.param("custom-name");
           const name = (nameParam || template).toLowerCase().replace(/[^a-z0-9_-]/g, "-");
           const addTo = pt.param("add-to");
-          const scaffoldParams = {};
-          for (const [k, v] of Object.entries(variables)) {
-            scaffoldParams[k] = String(v);
-          }
+          pt.log(`scaffold-services: template=${template} name=${name}`);
           pt.callModule("polytope/scaffold", {
             "container-id": `scaffold-services-${template}`,
             actions: [{
               template: { type: "repo", repo: pt.moduleRepoRef, path: `/tool_resources/add-and-run-service/${template}/template` },
               path: `services/${name}`,
               "on-conflict": "skip",
-              inputs: scaffoldParams,
               "add-to-tools": [{ tool: addTo, call: name }]
             }]
           });
 
-      - id: write-service-values-to-config
+      - id: substitute-template-variables
         after: {step: scaffold-services}
+        code: |-
+          pt.js
+          const templateAndVars = pt.param("template-and-variables");
+          const rawKey = Object.keys(templateAndVars)[0];
+          const template = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
+          const variables = templateAndVars[rawKey] || {};
+          const nameParam = pt.param("custom-name");
+          const name = (nameParam || template).toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+
+          // Build substitution map from scaffold-inputs.yml defaults + user overrides
+          const substitutions = {};
+          try {
+            const si = pt.readYaml(pt.readRepoFile(
+              `tool_resources/add-and-run-service/${template}/scaffold-inputs.yml`,
+              { repo: pt.moduleRepoRef }
+            )) || {};
+            for (const [k, v] of Object.entries(si)) {
+              substitutions[k] = String(v);
+            }
+          } catch (e) {
+            // No scaffold-inputs.yml — no custom variables to substitute
+          }
+
+          if (Object.keys(substitutions).length === 0) {
+            pt.log("No template variables to substitute");
+          } else {
+            // Merge user overrides (check both kebab-case and camelCase keys)
+            for (const [k, v] of Object.entries(variables)) {
+              const kebab = k.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
+              if (kebab in substitutions) {
+                substitutions[kebab] = String(v);
+              } else if (k in substitutions) {
+                substitutions[k] = String(v);
+              }
+            }
+
+            const escSubs = JSON.stringify(substitutions).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+            const script = `
+          import json
+          from pathlib import Path
+
+          service_name = "${name}"
+          substitutions = json.loads('${escSubs}')
+
+          target = Path(f'/repo/services/{service_name}/polytope.yml')
+          if not target.exists():
+              print(f"No scaffolded polytope.yml found at {target}")
+          else:
+              content = target.read_text()
+              for var_name, var_value in substitutions.items():
+                  placeholder = "{= " + var_name + " =}"
+                  if placeholder in content:
+                      content = content.replace(placeholder, var_value)
+                      print(f"Substituted {placeholder} -> {var_value}")
+              target.write_text(content)
+          `;
+
+            pt.callModule("pt/run-script", {
+              repo: { type: "host", path: "." },
+              language: "python",
+              script: { type: "string", data: script }
+            });
+          }
+
+      - id: write-service-values-to-config
+        after: {step: substitute-template-variables}
         code: |-
           pt.js
           const templateAndVars = pt.param("template-and-variables");
@@ -335,26 +392,7 @@ tools:
 
       - id: set-runtime-values
         after: {step: write-service-values-to-config}
-        code: |-
-          pt.js
-          // pt.readYaml converts kebab-case keys to camelCase, so convert back
-          function toKebabCase(s) {
-            return s.replace(/([a-z0-9])([A-Z])/g, "$1-$2").replace(/[_ ]+/g, "-").toLowerCase();
-          }
-
-          // Read from config files and set runtime values/secrets
-          const values = pt.readYaml(pt.readRepoFile("config/values.yml")) || {};
-          const secrets = pt.readYaml(pt.readRepoFile("config/secrets.yml")) || {};
-
-          pt.log(`Setting ${Object.keys(values).length} values and ${Object.keys(secrets).length} secrets`);
-
-          for (const [k, v] of Object.entries(values)) {
-            pt.setProjectValue(toKebabCase(k), String(v));
-          }
-
-          for (const [k, v] of Object.entries(secrets)) {
-            pt.setSecret(toKebabCase(k), String(v));
-          }
+        tool: set-runtime-values
 
       - id: copy-config-files
         after: {step: set-runtime-values}
@@ -410,7 +448,20 @@ tools:
           const template = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
           const variables = templateAndVars[rawKey] || {};
 
-          const postgresService = variables.postgresService || variables["postgres-service"];
+          // Read scaffold-inputs for defaults (Polytope's either type doesn't pass them through)
+          let resolvedVars = Object.assign({}, variables);
+          try {
+            const si = pt.readYaml(pt.readRepoFile(
+              `tool_resources/add-and-run-service/${template}/scaffold-inputs.yml`,
+              { repo: pt.moduleRepoRef }
+            )) || {};
+            for (const [k, v] of Object.entries(si)) {
+              if (!(k in resolvedVars) && !(k.replace(/-([a-z])/g, (_, c) => c.toUpperCase()) in resolvedVars)) {
+                resolvedVars[k] = String(v);
+              }
+            }
+          } catch (e) {}
+          const postgresService = resolvedVars.postgresService || resolvedVars["postgres-service"];
           if (!postgresService) {
             pt.log("No postgres-service variable set, skipping dependency config copy");
           } else {
@@ -452,9 +503,23 @@ tools:
           pt.js
           const templateAndVars = pt.param("template-and-variables");
           const rawKey = Object.keys(templateAndVars)[0];
+          const template = rawKey.replace(/([A-Z])/g, "-$1").toLowerCase().replace(/^-/, "");
           const variables = templateAndVars[rawKey] || {};
 
-          const postgresService = variables.postgresService || variables["postgres-service"];
+          // Read scaffold-inputs for defaults (Polytope's either type doesn't pass them through)
+          let resolvedVars = Object.assign({}, variables);
+          try {
+            const si = pt.readYaml(pt.readRepoFile(
+              `tool_resources/add-and-run-service/${template}/scaffold-inputs.yml`,
+              { repo: pt.moduleRepoRef }
+            )) || {};
+            for (const [k, v] of Object.entries(si)) {
+              if (!(k in resolvedVars) && !(k.replace(/-([a-z])/g, (_, c) => c.toUpperCase()) in resolvedVars)) {
+                resolvedVars[k] = String(v);
+              }
+            }
+          } catch (e) {}
+          const postgresService = resolvedVars.postgresService || resolvedVars["postgres-service"];
           if (!postgresService) {
             pt.log("No postgres-service variable set, skipping SCM registration");
           } else {
@@ -516,11 +581,7 @@ tools:
               postgres-username: [default, str, "pt.value postgres-server-username"]
               postgres-password: [default, str, "pt.secret postgres-server-password"]
           - curity:
-              postgres-host: [default, str, "pt.value postgres-server-host"]
-              postgres-port: [default, str, "pt.value postgres-server-port"]
-              postgres-username: [default, str, "pt.value postgres-server-username"]
-              postgres-password: [default, str, "pt.secret postgres-server-password"]
-              postgres-service: str
+              postgres-service: [default, str, postgres-server]
           - kong: {}
           - couchbase-server: {}
           - python-fast-api: {}

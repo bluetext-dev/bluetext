@@ -1,0 +1,5 @@
+postgres-host: "pt.value postgres-server-host"
+postgres-port: "pt.value postgres-server-port"
+postgres-database: "pt.value postgres-server-database"
+postgres-username: "pt.value postgres-server-username"
+postgres-password: "pt.secret postgres-server-password"
