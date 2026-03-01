@@ -938,7 +938,7 @@ tools:
                          "\\ncommit\\nexit\\n\""
                          " | /opt/idsvr/bin/idsh -N -u admin'")
                 max-retries 12
-                retry-delay 10000]
+                retry-delay "10s"]
             (loop [attempt 1]
               (pt/log (str "Attempt " attempt "/" max-retries ": configuring datasource via idsh..."))
               (let [result (try
@@ -952,7 +952,7 @@ tools:
                   (pt/log "Curity datasource configured successfully")
                   (if (< attempt max-retries)
                     (do
-                      (pt/log (str "Retrying in " (/ retry-delay 1000) " seconds..."))
+                      (pt/log (str "Retrying in " retry-delay "..."))
                       (pt/sleep retry-delay)
                       (recur (inc attempt)))
                     (pt/fail "Failed to configure Curity datasource after all retries"))))))
