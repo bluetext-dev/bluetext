@@ -124,6 +124,48 @@ tools:
             });
           }
 
+      - id: ensure-api-exists
+        code: |-
+          pt.js
+          const apiService = pt.param("api-service");
+          let exists = false;
+          try {
+            pt.readRepoFile(`services/${apiService}/polytope.yml`);
+            exists = true;
+          } catch (e) {}
+          if (exists) {
+            pt.log(`API service '${apiService}' already exists, skipping`);
+          } else {
+            pt.log(`API service '${apiService}' not found, adding it`);
+            pt.callModule("add-and-run-service", {
+              "template-and-variables": { "python-fast-api": {} },
+              "custom-name": apiService,
+              "add-to": "stack",
+              run: false
+            });
+          }
+
+      - id: ensure-web-app-exists
+        code: |-
+          pt.js
+          const webAppService = pt.param("web-app-service");
+          let exists = false;
+          try {
+            pt.readRepoFile(`services/${webAppService}/polytope.yml`);
+            exists = true;
+          } catch (e) {}
+          if (exists) {
+            pt.log(`Web app service '${webAppService}' already exists, skipping`);
+          } else {
+            pt.log(`Web app service '${webAppService}' not found, adding it`);
+            pt.callModule("add-and-run-service", {
+              "template-and-variables": { "react-web-app": {} },
+              "custom-name": webAppService,
+              "add-to": "stack",
+              run: false
+            });
+          }
+
       - id: register-postgres-with-scm
         after:
           - step: ensure-scm-exists
@@ -820,37 +862,16 @@ tools:
 
       - id: configure-curity-datasource
         after:
-          - step: setup-kong-env-vars
-          - step: set-generated-secrets-in-runtime
+          - step: run-stack
         code: |-
-          pt.clj
-          ;; Update Curity's persisted ConfD data source config.
-          ;; Curity resolves ${ENV_VARS} in config.xml only on first startup and
-          ;; persists the resolved values. Changing env vars later has no effect.
-          ;; This step execs into the running Curity container via idsh to ensure
-          ;; the JDBC connection details match the actual postgres setup.
-          (let [pg-service (:postgres-service params)
-                pg-host    pg-service
-                pg-port    "5432"
-                pg-db      "idsvr"
-                pg-user    (pt/value (str pg-service "-username"))
-                pg-pass    (pt/secret (str pg-service "-password"))
-                conn-str   (str "jdbc:postgresql://" pg-host ":" pg-port "/" pg-db)
-                idsh-input (str "configure\n"
-                                "set facilities data-sources data-source default-datasource jdbc connection-string \"" conn-str "\"\n"
-                                "set facilities data-sources data-source default-datasource jdbc username " pg-user "\n"
-                                "set facilities data-sources data-source default-datasource jdbc password " pg-pass "\n"
-                                "commit\nexit\n")]
-            (pt/log (str "Updating Curity ConfD datasource: " conn-str " user=" pg-user))
-            (try
-              (let [exec-id (pt/container-exec "curity-idsvr"
-                              {:command (str "printf '" idsh-input "' | /opt/idsvr/bin/idsh -u admin")})
-                    exit-code (pt/await-exec-exit exec-id)]
-                (if (= exit-code 0)
-                  (pt/log "Curity ConfD datasource updated successfully")
-                  (pt/log (str "Warning: Curity ConfD update exited with code " exit-code))))
-              (catch Exception e
-                (pt/log (str "Warning: Could not update Curity ConfD (container may not be running yet): " (str e))))))
+          pt.js
+          pt.log("Configuring Curity datasource via idsh...");
+          var cmd = 'sh -c \'printf "configure\\nset facilities data-sources data-source default-datasource jdbc connection-string \\"jdbc:postgresql://$POSTGRES_HOST:$POSTGRES_PORT/idsvr\\"\\nset facilities data-sources data-source default-datasource jdbc username $POSTGRES_USERNAME\\nset facilities data-sources data-source default-datasource jdbc password $POSTGRES_PASSWORD\\ncommit\\nexit\\n" | /opt/idsvr/bin/idsh -N -u admin\'';
+          pt.callModule("polytope/container!exec", {
+            container: "curity-idsvr",
+            cmd: cmd
+          });
+          pt.log("Curity ConfD datasource updated successfully");
 
       - id: scaffold-default-protected-view
         after: {step: setup-auth-infrastructure}
@@ -867,7 +888,6 @@ tools:
       - id: run-stack
         after:
           - step: scaffold-default-protected-view
-          - step: configure-curity-datasource
           - step: set-generated-secrets-in-runtime
         code: |-
           pt.js
