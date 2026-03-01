@@ -710,51 +710,100 @@ tools:
               if needs_write:
                   routes_path.write_text(routes_content)
 
-          # --- 4. Update home.tsx with link to protected view ---
+          # --- 4. Update home.tsx with auth-aware login/dashboard buttons ---
           home_path = routes_dir / "home.tsx"
           if not home_path.exists():
-              print(f"home.tsx not found, skipping link addition")
+              print(f"home.tsx not found, skipping auth setup")
           else:
               home_content = home_path.read_text()
-              link_text = f'/{default_view}'
 
-              if link_text in home_content:
-                  print(f"Link to {default_view} already exists in home.tsx")
+              if 'startLogin' in home_content:
+                  print(f"Auth already integrated in home.tsx")
               else:
                   needs_write = False
+                  view_capitalized = default_view.capitalize()
 
-                  # Add Link import if missing
+                  # Add required imports
+                  imports_to_add = []
                   if 'Link' not in home_content:
-                      link_import = "import { Link } from 'react-router';"
+                      imports_to_add.append("import { Link } from 'react-router';")
+                  if 'useAuth' not in home_content:
+                      imports_to_add.append("import { useAuth } from '@clients/clients/phantom-token-handler/AuthContext';")
+                  if 'startLogin' not in home_content:
+                      imports_to_add.append("import { startLogin } from '@clients/clients/phantom-token-handler/client';")
+
+                  if imports_to_add:
+                      import_block = '\\n'.join(imports_to_add)
                       import_lines = list(re.finditer(r'^import\\s.*$$', home_content, re.MULTILINE))
                       if import_lines:
                           last_import = import_lines[-1]
-                          home_content = home_content[:last_import.end()] + '\\n' + link_import + home_content[last_import.end():]
+                          home_content = home_content[:last_import.end()] + '\\n' + import_block + home_content[last_import.end():]
                       else:
-                          home_content = link_import + '\\n' + home_content
+                          home_content = import_block + '\\n' + home_content
                       needs_write = True
 
-                  # Find a good place to insert the link
-                  view_capitalized = default_view.capitalize()
-                  link_jsx = f"""
+                  # Build the auth-aware JSX block
+                  auth_jsx = f"""
               <div className="mt-8 text-center">
-                  <Link to="/{default_view}" className="text-blue-600 hover:underline font-medium">
-                      Go to {view_capitalized} &rarr;
-                  </Link>
+                  <AuthButtons defaultView="{default_view}" viewLabel="{view_capitalized}" />
               </div>"""
 
                   # Insert before the outermost closing tag
                   closing_tags = list(re.finditer(r'^\\s*</\\w+>\\s*$$', home_content, re.MULTILINE))
                   if len(closing_tags) >= 1:
                       last_tag = closing_tags[-1]
-                      home_content = home_content[:last_tag.start()] + link_jsx + '\\n' + home_content[last_tag.start():]
+                      home_content = home_content[:last_tag.start()] + auth_jsx + '\\n' + home_content[last_tag.start():]
                       needs_write = True
-                      print(f"Added link to /{default_view} in home.tsx")
+                      print(f"Added auth buttons to home.tsx")
                   else:
                       print(f"Could not find suitable insertion point in home.tsx")
 
+                  # Add the AuthButtons component before the default export
+                  comp_lines = [
+                      'function AuthButtons({ defaultView, viewLabel }: { defaultView: string; viewLabel: string }) {',
+                      '    const { isLoggedIn, isPageLoaded } = useAuth();',
+                      '',
+                      '    if (!isPageLoaded) {',
+                      '        return (',
+                      '            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto" />',
+                      '        );',
+                      '    }',
+                      '',
+                      '    if (isLoggedIn) {',
+                      '        return (',
+                      '            <Link to={"/" + defaultView} className="text-blue-600 hover:underline font-medium">',
+                      '                Go to {viewLabel} &rarr;',
+                      '            </Link>',
+                      '        );',
+                      '    }',
+                      '',
+                      '    return (',
+                      '        <button',
+                      '            onClick={() => startLogin()}',
+                      '            className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"',
+                      '        >',
+                      '            Login',
+                      '        </button>',
+                      '    );',
+                      '}',
+                  ]
+                  auth_buttons_component = '\\n'.join(comp_lines) + '\\n'
+
+                  # Insert the component before the default export function
+                  export_match = re.search(r'^export\\s+default\\s+function', home_content, re.MULTILINE)
+                  if export_match:
+                      home_content = home_content[:export_match.start()] + auth_buttons_component + '\\n' + home_content[export_match.start():]
+                      needs_write = True
+                  else:
+                      # Try 'export default' without function keyword
+                      export_match = re.search(r'^export\\s+default\\s', home_content, re.MULTILINE)
+                      if export_match:
+                          home_content = home_content[:export_match.start()] + auth_buttons_component + '\\n' + home_content[export_match.start():]
+                          needs_write = True
+
                   if needs_write:
                       home_path.write_text(home_content)
+                      print(f"Auth-aware home.tsx setup complete")
 
           print("Auth infrastructure setup complete")
           `;

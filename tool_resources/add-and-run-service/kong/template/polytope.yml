@@ -6,6 +6,7 @@ tools:
         args:
           id: {{ project-name }}
           image: gcr.io/arched-inkwell-420116/kong-oauth-proxy:latest
+          await: false
           config-file: { type: repo, path: /config/{{ project-name }}/kong.yml }
           autoreload: true
           restart: { policy: always }

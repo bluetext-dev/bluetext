@@ -8,6 +8,7 @@ tools:
       - tool: polytope/postgres
         args:
           image: postgres:16.2
+          await: false
           env:
             - { name: POSTGRES_DB, value: pt.value {{ project-name }}-database }
             - { name: POSTGRES_USER, value: pt.value {{ project-name }}-username }

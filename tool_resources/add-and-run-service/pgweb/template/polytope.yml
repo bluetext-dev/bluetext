@@ -8,6 +8,7 @@ tools:
       - tool: polytope/container
         args:
           image: sosedoff/pgweb:0.15.0
+          await: false
           id: {{ project-name }}
           restart:
             policy: always
