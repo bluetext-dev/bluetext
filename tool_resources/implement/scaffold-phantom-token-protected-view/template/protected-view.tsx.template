@@ -80,7 +80,7 @@ function {{ view_name | capitalize }}View() {
                             {userInfo?.email && (
                                 <div>
                                     <dt className="text-sm font-medium text-muted-foreground">Email</dt>
-                                    <dd>{userInfo.email}</dd>
+                                    <dd>{typeof userInfo.email === 'object' ? userInfo.email.value : userInfo.email}</dd>
                                 </div>
                             )}
                         </dl>

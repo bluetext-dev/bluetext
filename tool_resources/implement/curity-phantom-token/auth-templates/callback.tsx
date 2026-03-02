@@ -1,4 +1,17 @@
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router';
+import { useAuth } from '@clients/clients/phantom-token-handler/AuthContext';
+
 export default function Callback() {
+    const { isPageLoaded, isLoggedIn } = useAuth();
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        if (isPageLoaded) {
+            navigate('/', { replace: true });
+        }
+    }, [isPageLoaded, navigate]);
+
     return (
         <div className="flex items-center justify-center min-h-screen">
             <div className="text-center">
