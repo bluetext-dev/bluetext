@@ -8,6 +8,8 @@ tools:
       Environment variables from config/values.yml and config/secrets.yml are exported
       automatically (kebab-case keys become UPPER_SNAKE_CASE).
       PYTHONPATH includes clients/<lang> and models/<lang>, so you can import clients and models directly.
+      Optional args are passed to the script as sys.argv[1:], useful for selective test runs
+      (e.g. args: ["yellow"] to seed only the yellow team's data).
     inputs:
       language:
         info: Language of the test
@@ -19,6 +21,9 @@ tools:
       script:
         info: Override auto-detection with a specific script filename (e.g. "seed.py")
         type: [maybe, str]
+      args:
+        info: Arguments passed to the test script via sys.argv[1:].
+        type: [maybe, [list, str]]
     run:
       - id: run-tests
         code: |-
@@ -26,6 +31,7 @@ tools:
           const lang = pt.param("language");
           const testName = pt.param("test");
           const scriptOverride = pt.param("script");
+          const scriptArgs = pt.param("args") || [];
 
           // ── 1. Build env dict from config/values.yml + config/secrets.yml ──
           function toUpperSnake(s) {
@@ -100,7 +106,7 @@ tools:
             pt.log("RUN  " + t + "/" + entryScript);
 
             // Read requirements.txt if present to add as dependencies
-            let deps = ["pyyaml"];
+            let deps = [];
             try {
               const reqContent = pt.readRepoFile(testDir + "/requirements.txt");
               const extraDeps = reqContent.trim().split("\n").filter(Boolean).filter(l => !l.startsWith("#"));
@@ -117,6 +123,8 @@ tools:
             envSetup += "sys.path.insert(0, '/test')\n";
             envSetup += "os.chdir('/test')\n";
             envSetup += "__file__ = '/test/" + entryScript + "'\n";
+            envSetup += "sys.argv = ['/test/" + entryScript + "'" +
+              scriptArgs.map(a => ", " + JSON.stringify(a)).join("") + "]\n";
             envSetup += "exec(compile(open('/test/" + entryScript + "').read(), '/test/" + entryScript + "', 'exec'))\n";
 
             pt.callModule("pt/run-script", {
