@@ -1,0 +1,135 @@
+tools:
+  run-tests:
+    info: |
+      Runs self-contained test scripts from test/<language>/<name>/.
+      Each test directory is independent and may contain:
+        - An entry point script: auto-detected as seed.py > test.py > main.py > run.py (or override with script input)
+        - A requirements.txt: pip dependencies installed before the script runs (e.g. "couchbase")
+      Environment variables from config/values.yml and config/secrets.yml are exported
+      automatically (kebab-case keys become UPPER_SNAKE_CASE).
+      PYTHONPATH includes clients/<lang> and models/<lang>, so you can import clients and models directly.
+    inputs:
+      language:
+        info: Language of the test
+        type: [enum, python]
+      test:
+        info: |
+          Test directory name under test/<language>/, or "all" to discover and run every test.
+        type: str
+      script:
+        info: Override auto-detection with a specific script filename (e.g. "seed.py")
+        type: [maybe, str]
+    run:
+      - id: run-tests
+        code: |-
+          pt.js
+          const lang = pt.param("language");
+          const testName = pt.param("test");
+          const scriptOverride = pt.param("script");
+
+          // ── 1. Build env dict from config/values.yml + config/secrets.yml ──
+          function toUpperSnake(s) {
+            return s.replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+                    .replace(/[-. ]+/g, "_")
+                    .toUpperCase();
+          }
+
+          const envMap = {};
+          try {
+            const vals = pt.readYaml(pt.readRepoFile("config/values.yml")) || {};
+            for (const [k, v] of Object.entries(vals)) {
+              envMap[toUpperSnake(k)] = String(v);
+            }
+          } catch (e) { /* no values.yml */ }
+          try {
+            const secs = pt.readYaml(pt.readRepoFile("config/secrets.yml")) || {};
+            for (const [k, v] of Object.entries(secs)) {
+              envMap[toUpperSnake(k)] = String(v);
+            }
+          } catch (e) { /* no secrets.yml */ }
+
+          // ── 2. Determine which tests to run ──
+          let tests = [];
+          if (testName === "all") {
+            // Discover test dirs via a helper script
+            pt.callModule("pt/run-script", {
+              repo: { type: "host", path: "." },
+              language: "bash",
+              script: { type: "string", data: "#!/bin/sh\nls -1 /repo/test/" + lang + "/ 2>/dev/null > /repo/.test-dirs.tmp || true" }
+            });
+            try {
+              const listing = pt.readRepoFile(".test-dirs.tmp");
+              tests = listing.trim().split("\n").filter(Boolean);
+            } catch (e) { /* empty */ }
+            // Clean up temp file
+            pt.callModule("pt/run-script", {
+              repo: { type: "host", path: "." },
+              language: "bash",
+              script: { type: "string", data: "#!/bin/sh\nrm -f /repo/.test-dirs.tmp" }
+            });
+            if (tests.length === 0) {
+              pt.log("No test directories found under test/" + lang + "/");
+            }
+          } else {
+            tests = [testName];
+          }
+
+          // ── 3. Run each test ──
+          const scriptCandidates = scriptOverride
+            ? [scriptOverride]
+            : ["seed.py", "test.py", "main.py", "run.py"];
+
+          for (const t of tests) {
+            const testDir = "test/" + lang + "/" + t;
+
+            // Auto-detect entry point
+            let entryScript = null;
+            for (const candidate of scriptCandidates) {
+              try {
+                pt.readRepoFile(testDir + "/" + candidate);
+                entryScript = candidate;
+                break;
+              } catch (e) { /* not found */ }
+            }
+
+            if (!entryScript) {
+              pt.log("SKIP " + t + ": no entry point found (tried: " + scriptCandidates.join(", ") + ")");
+              continue;
+            }
+
+            pt.log("RUN  " + t + "/" + entryScript);
+
+            // Read requirements.txt if present to add as dependencies
+            let deps = ["pyyaml"];
+            try {
+              const reqContent = pt.readRepoFile(testDir + "/requirements.txt");
+              const extraDeps = reqContent.trim().split("\n").filter(Boolean).filter(l => !l.startsWith("#"));
+              deps = deps.concat(extraDeps);
+            } catch (e) { /* no requirements.txt */ }
+
+            // Build Python env setup lines
+            let envSetup = "import os, sys\n";
+            for (const [ek, ev] of Object.entries(envMap)) {
+              envSetup += "os.environ[" + JSON.stringify(ek) + "] = " + JSON.stringify(ev) + "\n";
+            }
+            envSetup += "sys.path.insert(0, '/clients')\n";
+            envSetup += "sys.path.insert(0, '/models')\n";
+            envSetup += "sys.path.insert(0, '/test')\n";
+            envSetup += "os.chdir('/test')\n";
+            envSetup += "__file__ = '/test/" + entryScript + "'\n";
+            envSetup += "exec(compile(open('/test/" + entryScript + "').read(), '/test/" + entryScript + "', 'exec'))\n";
+
+            pt.callModule("pt/run-script", {
+              repo: { type: "host", path: "." },
+              language: "python",
+              dependencies: deps,
+              mounts: [
+                { path: "/test",    source: { type: "host", path: testDir } },
+                { path: "/clients", source: { type: "host", path: "clients/" + lang } },
+                { path: "/models",  source: { type: "host", path: "models/" + lang } }
+              ],
+              script: { type: "string", data: envSetup }
+            });
+
+            pt.log("PASS " + t);
+          }

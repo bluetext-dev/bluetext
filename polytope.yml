@@ -26,3 +26,5 @@ mcp:
     - set-runtime-values
     - call-endpoint
     - add-dependency
+    - run-tests
+    - add-operation-test

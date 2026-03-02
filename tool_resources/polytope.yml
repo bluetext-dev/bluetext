@@ -14,6 +14,7 @@ include:
   - add-to-managed-services/polytope.yml
   - call-endpoint/polytope.yml
   - add-dependency/polytope.yml
+  - run-tests/polytope.yml
 
 tools:
 
@@ -225,7 +226,7 @@ tools:
           pt.js
           pt.callModule("polytope/scaffold", {
             "container-id": "scaffold-base-structure",
-            actions: ["clients", "models", "services", "config"].map(dir => ({
+            actions: ["clients", "models", "services", "config", "test"].map(dir => ({
               template: { type: "repo", repo: pt.moduleRepoRef, path: `tool_resources/setup-project-structure/base/${dir}` },
               path: dir,
               "on-conflict": "skip"
@@ -652,7 +653,7 @@ tools:
           pt.js
           pt.callModule("polytope/scaffold", {
             "container-id": "scaffold-base-structure",
-            actions: ["clients", "models", "services", "config"].map(dir => ({
+            actions: ["clients", "models", "services", "config", "test"].map(dir => ({
               template: { type: "repo", repo: pt.moduleRepoRef, path: `/tool_resources/setup-project-structure/base/${dir}` },
               path: dir,
               "on-conflict": "skip"
@@ -1041,6 +1042,71 @@ tools:
               }]
             });
           }
+
+  add-operation-test:
+    info: |
+      Scaffolds a minimal test stub for an operation.
+      Creates test/<language>/<name>/test.py with a placeholder that imports the operation.
+      The AI fills in the actual test logic afterwards.
+      Add a requirements.txt to the test directory for pip dependencies (e.g. "couchbase").
+      Run with: run-tests(language: "python", test: "<name>")
+    inputs:
+      language:
+        info: Language for the test
+        type: [enum, python]
+      operation:
+        info: Operation name (e.g. "mortgage_preapproval_application")
+        type: str
+      name:
+        info: Test directory name. Defaults to the operation name.
+        type: [maybe, str]
+    run:
+      - id: scaffold-test-dir
+        code: |-
+          pt.js
+          pt.callModule("polytope/scaffold", {
+            "container-id": "scaffold-test-base",
+            actions: [{
+              template: { type: "repo", repo: pt.moduleRepoRef, path: "/tool_resources/setup-project-structure/base/test" },
+              path: "test",
+              "on-conflict": "skip"
+            }]
+          });
+
+      - id: write-test-stub
+        after: {step: scaffold-test-dir}
+        code: |-
+          pt.js
+          const lang = pt.param("language");
+          const operation = pt.param("operation");
+          const name = pt.param("name") || operation;
+
+          const stub = [
+            '"""Test for ' + operation + ' operation."""',
+            'from models.operations.' + operation + ' import *  # noqa: F403',
+            '',
+            '',
+            '# TODO: implement test',
+            ''
+          ].join("\n");
+
+          const script = `
+          from pathlib import Path
+          test_dir = Path("/repo/test/${lang}/${name}")
+          test_dir.mkdir(parents=True, exist_ok=True)
+          test_file = test_dir / "test.py"
+          if test_file.exists():
+              print(f"test.py already exists at {test_file}, skipping")
+          else:
+              test_file.write_text('''${stub}''')
+              print(f"Created {test_file}")
+          `;
+
+          pt.callModule("pt/run-script", {
+            repo: { type: "host", path: "." },
+            language: "python",
+            script: { type: "string", data: script }
+          });
 
   # Internal tools for dependency handling (called by read-dependencies)
   _scaffold-deps:

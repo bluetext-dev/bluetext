@@ -50,7 +50,7 @@ tools:
           pt.js
           pt.callModule("polytope/scaffold", {
             "container-id": "scaffold-base-structure",
-            actions: ["clients", "models", "services", "config"].map(dir => ({
+            actions: ["clients", "models", "services", "config", "test"].map(dir => ({
               template: { type: "repo", repo: pt.moduleRepoRef, path: `/tool_resources/setup-project-structure/base/${dir}` },
               path: dir,
               "on-conflict": "skip"

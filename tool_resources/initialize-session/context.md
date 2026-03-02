@@ -33,7 +33,12 @@ project/
 │   └── python/
 │       └── clients/
 │           └── couchbase/
-└── config/           # Values and secrets
+├── config/           # Values and secrets
+└── test/             # Self-contained test scripts
+    └── python/
+        └── my-test/
+            ├── test.py
+            └── requirements.txt
 ```
 
 ## Architecture
@@ -111,6 +116,15 @@ add-entity(...)                                      # Entity only (no types/ope
 ### 5. Customize
 Customize the generated operations, types, or routes as needed for your business logic.
 
+### 6. Test
+Scaffold a test stub and run it:
+```
+add-operation-test(language: "python", operation: "my_operation")
+run-tests(language: "python", test: "my_operation")
+```
+Tests live in `test/<language>/<name>/`. Each directory is self-contained with its own entry point and optional `requirements.txt`. The `run-tests` tool auto-detects the script (`seed.py > test.py > main.py > run.py`), installs dependencies, injects config values/secrets as environment variables, and sets `PYTHONPATH` to include `clients/` and `models/`.
+Run all tests: `run-tests(language: "python", test: "all")`
+
 ## Secrets & Environment Variables
 
 Tools scaffolding logic using values/secrets also scaffold those values/secrets with defaults.
@@ -136,6 +150,10 @@ env:
 *   `add-endpoint(client, language, entity-singular, entity-plural, fields, service)` - Add a full endpoint (entity + types + operations + routes)
 *   `add-entity(client, language, entity-singular, entity-plural, fields)` - Add an entity only
 *   `setup-service-for-client(service, client)` - Configure env vars
+
+### Testing
+*   `add-operation-test(language, operation, name?)` - Scaffold a test stub for an operation
+*   `run-tests(language, test, script?)` - Run a test (`test: "all"` to run all)
 
 ### Get Context
 *   `get-dev-context(scope: "models")` - Models architecture
