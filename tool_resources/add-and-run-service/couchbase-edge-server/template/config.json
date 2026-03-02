@@ -1,0 +1,29 @@
+{
+  "interface": "0.0.0.0:59840",
+  "enable_anonymous_users": true,
+  "databases": {
+    "main": {
+      "path": "/tmp/main.cblite2",
+      "create": true,
+      "enable_client_sync": "bidirectional",
+      "enable_client_writes": true
+    }
+  },
+  "replications": [
+    {
+      "source": "ws://sync-gateway:4984/main",
+      "target": "main",
+      "bidirectional": true,
+      "continuous": true,
+      "collections": {
+        "_default._default": {}
+      }
+    }
+  ],
+  "logging": {
+    "console": {
+      "enabled": true,
+      "log_level": "info"
+    }
+  }
+}

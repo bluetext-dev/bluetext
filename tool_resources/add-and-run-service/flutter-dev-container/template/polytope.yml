@@ -1,0 +1,25 @@
+tools:
+  {{ project-name }}:
+    info: Flutter dev container with Android/iOS support and Couchbase Lite P2P
+    inputs:
+      restart-policy:
+        info: Restart policy for the container
+        type: [default, [enum, always, on-failure, never], always]
+    run:
+      - tool: polytope/python
+        args:
+          id: {{ project-name }}
+          image: ghcr.io/cirruslabs/flutter:stable
+          code: { type: repo, path: . }
+          cmd: ./bin/run
+          restart:
+            policy: pt.input restart-policy
+          services:
+            - id: {{ project-name }}
+              ports:
+                - { protocol: tcp, port: pt.value {{ project-name }}-web-port, expose-as: pt.value {{ project-name }}-web-port }
+          env:
+            - { name: CHOKIDAR_USEPOLLING, value: "true" }
+            - { name: SYNC_GATEWAY_URL, value: pt.value {{ project-name }}-sync-gateway-url }
+          mounts:
+            - { path: /root/.pub-cache, source: { type: volume, scope: project, id: {{ project-name | kebab_case }}-pub-cache }}

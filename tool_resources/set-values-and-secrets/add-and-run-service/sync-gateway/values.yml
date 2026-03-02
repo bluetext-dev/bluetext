@@ -1,0 +1,5 @@
+"{name}-public-port": "4984"
+"{name}-admin-port": "4985"
+"{name}-couchbase-host": "couchbase"
+"{name}-bucket": "main"
+"{name}-username": "asdf"
