@@ -2,29 +2,73 @@ tools:
   add-dependency:
     info: |
       Adds packages to a running service's dependencies.
-      Executes the install command inside the service's container.
+      Spawns a dedicated container with the service's image, code, and cache volumes,
+      then runs the service's bin/add-dependencies script.
       Supports API services (uv add) and frontend services (bun add).
     inputs:
       service:
-        info: The service container to add dependencies to (e.g., python-fast-api, react-web-app)
+        info: The service name (e.g., python-fast-api, react-web-app). Used to resolve the code path and cache volumes.
         type: str
       packages:
         info: Packages to add (space separated, e.g., "requests pydantic")
         type: str
+      type:
+        info: The service type. Determines the container image and mount layout.
+        type: [enum, python, node]
     run:
       - id: add-deps
         code: |-
           pt.js
           const service = pt.param("service");
           const packages = pt.param("packages");
-          const cmd = `./bin/add-dependencies ${packages}`;
+          const svcType = pt.param("type");
+          const cid = `add-dep-${service}`;
 
-          pt.log(`Installing packages in ${service}: ${packages}`);
-          const execId = pt.containerExec(service, cmd);
-          const exitCode = pt.awaitExecExit(execId);
+          const image = svcType === "python"
+            ? "astral/uv:python3.13-bookworm-slim"
+            : "oven/bun:alpine";
 
-          if (exitCode === 0) {
-            pt.log(`Successfully added packages to ${service}`);
-          } else {
-            pt.fail(`Failed to add packages to ${service} (exit code: ${exitCode})`);
+          const codeMount = {
+            path: "/app",
+            source: { type: "repo", path: `/services/${service}` }
+          };
+
+          const mounts = svcType === "python"
+            ? [
+                codeMount,
+                { path: "/root/.cache/", source: { type: "volume", scope: "project", id: `${service}-dependency-cache` } },
+                { path: "/clients/python", source: { type: "repo", path: "/clients/python" } },
+                { path: "/models/python", source: { type: "repo", path: "/models/python" } }
+              ]
+            : [
+                codeMount,
+                { path: "/root/.cache/", source: { type: "volume", scope: "project", id: `${service}-home-cache` } },
+                { path: "/root/.bun/", source: { type: "volume", scope: "project", id: `${service}-bun-cache` } },
+                { path: "/app/node_modules/", source: { type: "volume", scope: "project", id: `${service}-node-modules` } },
+                { path: "/app/clients", source: { type: "repo", path: "/clients/typescript" } }
+              ];
+
+          pt.log(`Spawning container to install packages in ${service}: ${packages}`);
+
+          const containerId = pt.spawn({
+            image,
+            id: cid,
+            restart: { policy: "never" },
+            mounts,
+            cmd: "sleep 300"
+          });
+
+          pt.awaitStarted({ type: "deployment", ref: containerId });
+
+          try {
+            const execId = pt.containerExec(containerId, `sh -c 'cd /app && ./bin/add-dependencies ${packages}'`);
+            const exitCode = pt.awaitExecExit(execId);
+
+            if (exitCode === 0) {
+              pt.log(`Successfully added packages to ${service}`);
+            } else {
+              pt.fail(`Failed to add packages to ${service} (exit code: ${exitCode})`);
+            }
+          } finally {
+            pt.stop({ type: "container", ref: containerId });
           }

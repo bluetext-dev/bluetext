@@ -87,7 +87,7 @@ export function usePhantomTokenHandlerAuth() {
         isPageLoaded,
         isLoggedIn,
         userInfo,
-        pageLoadError,
+        error: pageLoadError,
         sessionResponse,
         onLoggedOut
     };

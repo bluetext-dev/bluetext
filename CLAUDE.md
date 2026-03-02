@@ -547,6 +547,8 @@ Accept the duplication until Polytope adds proper step-to-step data passing.
 
 **`pt/await-container-exited` does not exist**: Despite being listed in documentation, `pt/await-container-exited` is not a resolved symbol. For waiting on containers, use the spawn + `pt/await-started` + `pt/container-exec` + `pt/await-exec-exit` pattern, or use `pt/call-module "pt/run-script"` which handles the full container lifecycle.
 
+**`pt/container-exec` API format is unknown/unreliable**: Multiple calling conventions were tried (string arg, map arg, vector arg) — all failed silently or with errors. **Use `pt/call-module "polytope/container!exec"` instead.** Note the `!` separator (not `.`). Parameters: `:container` (string, container ID) and `:cmd` (string, the command). Pipes require `sh -c` wrapping: `{:container "my-container" :cmd "sh -c 'cat /file | cmd'"}`. The `pt/write-container-file` binding works fine for writing files to containers before exec.
+
 **Workaround for HTTP requests with bodies**: Use `pt/call-module "pt/run-script"` to spawn a Python container inside the sandbox network, make the request with `urllib.request`, and write the result to a file. Read the file back with `pt/read-repo-file`. This is the approach used by the `call-endpoint` tool. The Python container can reach services by hostname (e.g., `http://python-fast-api:3030/`) since it runs inside the sandbox network.
 
 **Polytope bug**: `pt/write-json` (Clojure) also fails on HttpResponse objects with the same reflection error. Use `pr-str` as a fallback for serializing response bodies/headers (outputs EDN format instead of JSON).

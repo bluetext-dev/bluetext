@@ -124,6 +124,48 @@ tools:
             });
           }
 
+      - id: ensure-api-exists
+        code: |-
+          pt.js
+          const apiService = pt.param("api-service");
+          let exists = false;
+          try {
+            pt.readRepoFile(`services/${apiService}/polytope.yml`);
+            exists = true;
+          } catch (e) {}
+          if (exists) {
+            pt.log(`API service '${apiService}' already exists, skipping`);
+          } else {
+            pt.log(`API service '${apiService}' not found, adding it`);
+            pt.callModule("add-and-run-service", {
+              "template-and-variables": { "python-fast-api": {} },
+              "custom-name": apiService,
+              "add-to": "stack",
+              run: false
+            });
+          }
+
+      - id: ensure-web-app-exists
+        code: |-
+          pt.js
+          const webAppService = pt.param("web-app-service");
+          let exists = false;
+          try {
+            pt.readRepoFile(`services/${webAppService}/polytope.yml`);
+            exists = true;
+          } catch (e) {}
+          if (exists) {
+            pt.log(`Web app service '${webAppService}' already exists, skipping`);
+          } else {
+            pt.log(`Web app service '${webAppService}' not found, adding it`);
+            pt.callModule("add-and-run-service", {
+              "template-and-variables": { "react-web-app": {} },
+              "custom-name": webAppService,
+              "add-to": "stack",
+              run: false
+            });
+          }
+
       - id: register-postgres-with-scm
         after:
           - step: ensure-scm-exists
@@ -195,28 +237,11 @@ tools:
                       yaml.dump(cm_config, f, default_flow_style=False, sort_keys=False)
                   print("Updated service-config-manager/polytope.yml with new env vars")
 
-              # 3. Create Curity postgres config (creates idsvr database)
-              config_dir = Path(f"/repo/config/{service_name}")
-              config_dir.mkdir(parents=True, exist_ok=True)
-              config_file = config_dir / "postgres.sql"
-              curity_sql = (
-                  "-- Postgres Configuration for Curity Identity Server\n"
-                  "-- Creates the idsvr database required by Curity\n"
-                  "\n"
-                  "SELECT 'CREATE DATABASE idsvr'\n"
-                  "WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'idsvr')\\\\gexec\n"
-              )
-              if not config_file.exists():
-                  with open(config_file, "w") as f:
-                      f.write(curity_sql)
-                  print(f"Created Curity postgres config: {config_file}")
-              else:
-                  # Ensure idsvr database creation is present
-                  existing = config_file.read_text()
-                  if 'idsvr' not in existing:
-                      with open(config_file, "a") as f:
-                          f.write("\n" + curity_sql)
-                      print(f"Appended idsvr database creation to {config_file}")
+              # Note: idsvr database creation and schema application is handled by
+              # the configure-curity-datasource step, which execs into the postgres
+              # container directly. This avoids issues with psql meta-commands (\gexec)
+              # not being supported by the SCM's psycopg2 driver.
+              print("Database initialization deferred to configure-curity-datasource step")
 
       - id: add-python-client
         after:
@@ -379,13 +404,12 @@ tools:
                   return pem.decode('utf-8')
 
               def pem_to_escaped(pem_str):
-                  """Convert a PEM string with real newlines to escaped \\n format.
-                  The PEM gets substituted into a double-quoted YAML string in kong.yml
-                  (cookie_key: "${OAUTH_PROXY_COOKIE_KEY_PEM}"). Real newlines get folded
-                  to spaces by YAML. Escaped \\n in single quotes stays literal through
-                  env var injection, then YAML double-quote parsing converts them to
-                  real newlines."""
-                  return pem_str.strip().replace('\n', '\\n')
+                  """Keep the PEM as-is with real newlines.
+                  The PEM is stored in secrets.yml and injected via pt.secret into
+                  the Kong env var. Kong's declarative config substitution replaces
+                  ${VAR} with the env var value. Real newlines in the value are needed
+                  for OpenSSL to parse the PEM correctly."""
+                  return pem_str.strip()
 
               secrets_path = Path("/repo/config/secrets.yml")
 
@@ -420,19 +444,13 @@ tools:
                   # Merge into existing
                   existing_secrets.update(new_secrets)
 
-                  # Write secrets.yml manually to ensure PEM uses single-quoted YAML
-                  # (yaml.dump would use block scalars which break env var substitution)
+                  # Write secrets.yml using yaml.dump which handles multiline PEM
+                  # values as block scalars automatically
                   with open(secrets_path, 'w') as f:
                       f.write('# Configuration secrets\n')
                       f.write('# Add this file to .gitignore\n')
                       f.write('# Generated and managed by Bluetext tools\n\n')
-                      for k in sorted(existing_secrets.keys()):
-                          v = existing_secrets[k]
-                          if '\\n' in str(v) or '-----BEGIN' in str(v):
-                              # PEM keys: use single quotes to preserve escaped newlines
-                              f.write(f"{k}: '{v}'\n")
-                          else:
-                              f.write(f"{k}: {v}\n")
+                      yaml.dump(existing_secrets, f, default_flow_style=False, sort_keys=True)
 
                   print(f"Generated and saved {len(new_secrets)} missing secrets.")
               else:
@@ -454,13 +472,15 @@ tools:
           }
 
       - id: update-kong-config
-        after: {step: set-secrets}
+        after: {step: set-generated-secrets-in-runtime}
         code: |-
           pt.js
           const kongService = pt.param("kong-service");
 
           const script = `
           import yaml
+          import os
+          import re
           from pathlib import Path
 
           kong_service = "${kongService}"
@@ -476,6 +496,42 @@ tools:
           if "services" not in existing_data:
               existing_data["services"] = []
 
+          # Load secrets to resolve PEM and cookie key directly into kong.yml
+          # (env var substitution can't handle multiline PEM values in YAML)
+          secrets = {}
+          secrets_path = Path("/repo/config/secrets.yml")
+          if secrets_path.exists():
+              with open(secrets_path) as f:
+                  secrets = yaml.safe_load(f) or {}
+
+          values = {}
+          values_path = Path("/repo/config/values.yml")
+          if values_path.exists():
+              with open(values_path) as f:
+                  values = yaml.safe_load(f) or {}
+
+          # Map of env var name -> resolved value (for inline resolution)
+          env_map = {
+              "OAUTH_PROXY_COOKIE_KEY_PEM": secrets.get("oauth-proxy-cookie-key-pem", ""),
+              "KONG_OAUTH_PROXY_COOKIE_KEY": secrets.get("kong-oauth-proxy-cookie-key", ""),
+              "CURITY_PHANTOM_TOKEN_CLIENT_SECRET": secrets.get("curity-phantom-token-client-secret", ""),
+              "CURITY_PORT": str(values.get("curity-port", "8443")),
+              "WEB_APP_URL": values.get("web-app-url", "http://localhost:8000"),
+          }
+
+          def resolve_env_vars(obj):
+              """Recursively resolve dollar-brace placeholders in strings."""
+              if isinstance(obj, str):
+                  def replacer(m):
+                      var = m.group(1)
+                      return env_map.get(var, m.group(0))
+                  return re.sub(r'[$]{([^}]+)}', replacer, obj)
+              elif isinstance(obj, dict):
+                  return {k: resolve_env_vars(v) for k, v in obj.items()}
+              elif isinstance(obj, list):
+                  return [resolve_env_vars(item) for item in obj]
+              return obj
+
           existing_services = existing_data["services"]
           existing_names = {s.get("name") for s in existing_services if "name" in s}
 
@@ -490,6 +546,9 @@ tools:
               snippet_services = snippet_data.get("services", [])
               if not snippet_services:
                   continue
+
+              # Resolve env var placeholders with actual values
+              snippet_services = resolve_env_vars(snippet_services)
 
               for service in snippet_services:
                   name = service.get("name")
@@ -818,39 +877,134 @@ tools:
             script: { type: "string", data: script }
           });
 
+      - id: create-idsvr-database
+        after:
+          - step: run-stack
+        code: |-
+          pt.js
+          // Read the Curity schema SQL from the framework repo
+          var schemaSql = pt.readRepoFile(
+            "tool_resources/add-and-run-service/curity/dependency-config/curity.sql",
+            { repo: pt.moduleRepoRef }
+          );
+
+          // Build a Python script that:
+          // 1. Creates the idsvr database (idempotent)
+          // 2. Applies the Curity schema with IF NOT EXISTS (idempotent)
+          var escapedSql = schemaSql.replace(/\\/g, "\\\\").replace(/"""/g, '\\"\\"\\"');
+          var pgService = pt.param("postgres-service");
+          var script = `
+          import psycopg2
+          import os
+          import re
+          import time
+          import yaml
+
+          # Read postgres credentials from project config files
+          with open("/repo/config/values.yml") as f:
+              values = yaml.safe_load(f) or {}
+          with open("/repo/config/secrets.yml") as f:
+              secrets = yaml.safe_load(f) or {}
+
+          host = values.get("` + pgService + `-host", "` + pgService + `")
+          user = values.get("` + pgService + `-username", "postgres")
+          password = secrets.get("` + pgService + `-password", "")
+          port = int(values.get("` + pgService + `-port", "5432"))
+
+          # Wait for postgres to be ready (may still be starting up)
+          for attempt in range(12):
+              try:
+                  conn = psycopg2.connect(host=host, port=port, user=user, password=password, dbname="postgres")
+                  conn.close()
+                  print(f"Postgres ready (attempt {attempt + 1})")
+                  break
+              except Exception as e:
+                  print(f"Attempt {attempt + 1}/12: Postgres not ready - {e}")
+                  if attempt < 11:
+                      time.sleep(5)
+                  else:
+                      raise
+
+          # Step 1: Create idsvr database if it doesn't exist
+          conn = psycopg2.connect(host=host, port=port, user=user, password=password, dbname="postgres")
+          conn.autocommit = True
+          cur = conn.cursor()
+          cur.execute("SELECT 1 FROM pg_database WHERE datname = 'idsvr'")
+          if not cur.fetchone():
+              cur.execute("CREATE DATABASE idsvr")
+              print("Created idsvr database")
+          else:
+              print("idsvr database already exists")
+          cur.close()
+          conn.close()
+
+          # Step 2: Apply schema to idsvr database (idempotent)
+          conn = psycopg2.connect(host=host, port=port, user=user, password=password, dbname="idsvr")
+          conn.autocommit = True
+          cur = conn.cursor()
+
+          schema_sql = """` + escapedSql + `"""
+          # Make CREATE statements idempotent
+          schema_sql = re.sub(r"CREATE TABLE ", "CREATE TABLE IF NOT EXISTS ", schema_sql)
+          schema_sql = re.sub(r"CREATE UNIQUE INDEX ", "CREATE UNIQUE INDEX IF NOT EXISTS ", schema_sql)
+          schema_sql = re.sub(r"CREATE INDEX ", "CREATE INDEX IF NOT EXISTS ", schema_sql)
+
+          # Execute each statement separately
+          for stmt in schema_sql.split(";"):
+              stmt = stmt.strip()
+              if stmt and not stmt.startswith("--"):
+                  try:
+                      cur.execute(stmt)
+                  except Exception as e:
+                      print(f"Warning: {e}")
+
+          cur.close()
+          conn.close()
+          print("Curity schema applied to idsvr database")
+          `;
+
+          pt.log("Creating idsvr database and applying Curity schema...");
+          pt.callModule("pt/run-script", {
+            repo: { type: "host", path: "." },
+            language: "python",
+            dependencies: ["psycopg2-binary", "pyyaml"],
+            script: { type: "string", data: script }
+          });
+
       - id: configure-curity-datasource
         after:
-          - step: setup-kong-env-vars
-          - step: set-generated-secrets-in-runtime
+          - step: create-idsvr-database
         code: |-
           pt.clj
-          ;; Update Curity's persisted ConfD data source config.
-          ;; Curity resolves ${ENV_VARS} in config.xml only on first startup and
-          ;; persists the resolved values. Changing env vars later has no effect.
-          ;; This step execs into the running Curity container via idsh to ensure
-          ;; the JDBC connection details match the actual postgres setup.
-          (let [pg-service (:postgres-service params)
-                pg-host    pg-service
-                pg-port    "5432"
-                pg-db      "idsvr"
-                pg-user    (pt/value (str pg-service "-username"))
-                pg-pass    (pt/secret (str pg-service "-password"))
-                conn-str   (str "jdbc:postgresql://" pg-host ":" pg-port "/" pg-db)
-                idsh-input (str "configure\n"
-                                "set facilities data-sources data-source default-datasource jdbc connection-string \"" conn-str "\"\n"
-                                "set facilities data-sources data-source default-datasource jdbc username " pg-user "\n"
-                                "set facilities data-sources data-source default-datasource jdbc password " pg-pass "\n"
-                                "commit\nexit\n")]
-            (pt/log (str "Updating Curity ConfD datasource: " conn-str " user=" pg-user))
-            (try
-              (let [exec-id (pt/container-exec "curity-idsvr"
-                              {:command (str "printf '" idsh-input "' | /opt/idsvr/bin/idsh -u admin")})
-                    exit-code (pt/await-exec-exit exec-id)]
-                (if (= exit-code 0)
-                  (pt/log "Curity ConfD datasource updated successfully")
-                  (pt/log (str "Warning: Curity ConfD update exited with code " exit-code))))
-              (catch Exception e
-                (pt/log (str "Warning: Could not update Curity ConfD (container may not be running yet): " (str e))))))
+          (pt/log "Waiting for Curity container to start...")
+          (pt/await-started {:type "deployment" :ref "curity-idsvr"})
+          (pt/log "Curity container running, waiting for Identity Server to fully initialize...")
+          (let [cmd (str "sh -c 'printf "
+                         "\"configure\\nset facilities data-sources data-source default-datasource jdbc connection-string "
+                         "\\\"jdbc:postgresql://$POSTGRES_HOST:$POSTGRES_PORT/idsvr\\\""
+                         "\\nset facilities data-sources data-source default-datasource jdbc username $POSTGRES_USERNAME"
+                         "\\nset facilities data-sources data-source default-datasource jdbc password $POSTGRES_PASSWORD"
+                         "\\ncommit\\nexit\\n\""
+                         " | /opt/idsvr/bin/idsh -N -u admin'")
+                max-retries 12
+                retry-delay "10s"]
+            (loop [attempt 1]
+              (pt/log (str "Attempt " attempt "/" max-retries ": configuring datasource via idsh..."))
+              (let [result (try
+                             (pt/call-module "polytope/container!exec"
+                               {:container "curity-idsvr" :cmd cmd})
+                             :success
+                             (catch Exception e
+                               (pt/log (str "Attempt " attempt " failed: " (str e)))
+                               :failed))]
+                (if (= result :success)
+                  (pt/log "Curity datasource configured successfully")
+                  (if (< attempt max-retries)
+                    (do
+                      (pt/log (str "Retrying in " retry-delay "..."))
+                      (pt/sleep retry-delay)
+                      (recur (inc attempt)))
+                    (pt/fail "Failed to configure Curity datasource after all retries"))))))
 
       - id: scaffold-default-protected-view
         after: {step: setup-auth-infrastructure}
@@ -867,7 +1021,6 @@ tools:
       - id: run-stack
         after:
           - step: scaffold-default-protected-view
-          - step: configure-curity-datasource
           - step: set-generated-secrets-in-runtime
         code: |-
           pt.js
@@ -882,5 +1035,6 @@ tools:
           pt.log(`Installing phantom-token-handler client dependencies in ${webAppService}...`);
           pt.callModule("add-dependency", {
             service: webAppService,
-            packages: "@curity/token-handler-js-assistant"
+            packages: "@curity/token-handler-js-assistant",
+            type: "node"
           });
