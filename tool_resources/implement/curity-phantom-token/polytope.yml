@@ -472,7 +472,7 @@ tools:
           }
 
       - id: update-kong-config
-        after: {step: set-secrets}
+        after: {step: set-generated-secrets-in-runtime}
         code: |-
           pt.js
           const kongService = pt.param("kong-service");
@@ -520,12 +520,12 @@ tools:
           }
 
           def resolve_env_vars(obj):
-              """Recursively resolve \\${VAR} placeholders in strings."""
+              """Recursively resolve dollar-brace placeholders in strings."""
               if isinstance(obj, str):
                   def replacer(m):
                       var = m.group(1)
                       return env_map.get(var, m.group(0))
-                  return re.sub(r'\\$\\{([^}]+)\\}', replacer, obj)
+                  return re.sub(r'[$]{([^}]+)}', replacer, obj)
               elif isinstance(obj, dict):
                   return {k: resolve_env_vars(v) for k, v in obj.items()}
               elif isinstance(obj, list):
@@ -1035,5 +1035,6 @@ tools:
           pt.log(`Installing phantom-token-handler client dependencies in ${webAppService}...`);
           pt.callModule("add-dependency", {
             service: webAppService,
-            packages: "@curity/token-handler-js-assistant"
+            packages: "@curity/token-handler-js-assistant",
+            type: "node"
           });

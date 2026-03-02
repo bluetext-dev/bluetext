@@ -31,6 +31,12 @@ services:
         credentials: true
         preflight_continue: false
 
+    - name: oauth-proxy
+      config:
+        cookie_prefix: th-
+        cookie_key: "${OAUTH_PROXY_COOKIE_KEY_PEM}"
+        cookie_key_pass: "${KONG_OAUTH_PROXY_COOKIE_KEY}"
+
 - name: curity-proxied
   url: "http://curity:${CURITY_PORT}/oauth/v2/oauth-userinfo"
   routes:
