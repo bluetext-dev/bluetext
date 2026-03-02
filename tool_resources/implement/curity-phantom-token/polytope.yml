@@ -404,13 +404,12 @@ tools:
                   return pem.decode('utf-8')
 
               def pem_to_escaped(pem_str):
-                  """Convert a PEM string with real newlines to escaped \\n format.
-                  The PEM gets substituted into a double-quoted YAML string in kong.yml
-                  (cookie_key: "${OAUTH_PROXY_COOKIE_KEY_PEM}"). Real newlines get folded
-                  to spaces by YAML. Escaped \\n in single quotes stays literal through
-                  env var injection, then YAML double-quote parsing converts them to
-                  real newlines."""
-                  return pem_str.strip().replace('\n', '\\n')
+                  """Keep the PEM as-is with real newlines.
+                  The PEM is stored in secrets.yml and injected via pt.secret into
+                  the Kong env var. Kong's declarative config substitution replaces
+                  ${VAR} with the env var value. Real newlines in the value are needed
+                  for OpenSSL to parse the PEM correctly."""
+                  return pem_str.strip()
 
               secrets_path = Path("/repo/config/secrets.yml")
 
@@ -445,19 +444,13 @@ tools:
                   # Merge into existing
                   existing_secrets.update(new_secrets)
 
-                  # Write secrets.yml manually to ensure PEM uses single-quoted YAML
-                  # (yaml.dump would use block scalars which break env var substitution)
+                  # Write secrets.yml using yaml.dump which handles multiline PEM
+                  # values as block scalars automatically
                   with open(secrets_path, 'w') as f:
                       f.write('# Configuration secrets\n')
                       f.write('# Add this file to .gitignore\n')
                       f.write('# Generated and managed by Bluetext tools\n\n')
-                      for k in sorted(existing_secrets.keys()):
-                          v = existing_secrets[k]
-                          if '\\n' in str(v) or '-----BEGIN' in str(v):
-                              # PEM keys: use single quotes to preserve escaped newlines
-                              f.write(f"{k}: '{v}'\n")
-                          else:
-                              f.write(f"{k}: {v}\n")
+                      yaml.dump(existing_secrets, f, default_flow_style=False, sort_keys=True)
 
                   print(f"Generated and saved {len(new_secrets)} missing secrets.")
               else:
@@ -486,6 +479,8 @@ tools:
 
           const script = `
           import yaml
+          import os
+          import re
           from pathlib import Path
 
           kong_service = "${kongService}"
@@ -501,6 +496,42 @@ tools:
           if "services" not in existing_data:
               existing_data["services"] = []
 
+          # Load secrets to resolve PEM and cookie key directly into kong.yml
+          # (env var substitution can't handle multiline PEM values in YAML)
+          secrets = {}
+          secrets_path = Path("/repo/config/secrets.yml")
+          if secrets_path.exists():
+              with open(secrets_path) as f:
+                  secrets = yaml.safe_load(f) or {}
+
+          values = {}
+          values_path = Path("/repo/config/values.yml")
+          if values_path.exists():
+              with open(values_path) as f:
+                  values = yaml.safe_load(f) or {}
+
+          # Map of env var name -> resolved value (for inline resolution)
+          env_map = {
+              "OAUTH_PROXY_COOKIE_KEY_PEM": secrets.get("oauth-proxy-cookie-key-pem", ""),
+              "KONG_OAUTH_PROXY_COOKIE_KEY": secrets.get("kong-oauth-proxy-cookie-key", ""),
+              "CURITY_PHANTOM_TOKEN_CLIENT_SECRET": secrets.get("curity-phantom-token-client-secret", ""),
+              "CURITY_PORT": str(values.get("curity-port", "8443")),
+              "WEB_APP_URL": values.get("web-app-url", "http://localhost:8000"),
+          }
+
+          def resolve_env_vars(obj):
+              """Recursively resolve \\${VAR} placeholders in strings."""
+              if isinstance(obj, str):
+                  def replacer(m):
+                      var = m.group(1)
+                      return env_map.get(var, m.group(0))
+                  return re.sub(r'\\$\\{([^}]+)\\}', replacer, obj)
+              elif isinstance(obj, dict):
+                  return {k: resolve_env_vars(v) for k, v in obj.items()}
+              elif isinstance(obj, list):
+                  return [resolve_env_vars(item) for item in obj]
+              return obj
+
           existing_services = existing_data["services"]
           existing_names = {s.get("name") for s in existing_services if "name" in s}
 
@@ -515,6 +546,9 @@ tools:
               snippet_services = snippet_data.get("services", [])
               if not snippet_services:
                   continue
+
+              # Resolve env var placeholders with actual values
+              snippet_services = resolve_env_vars(snippet_services)
 
               for service in snippet_services:
                   name = service.get("name")
