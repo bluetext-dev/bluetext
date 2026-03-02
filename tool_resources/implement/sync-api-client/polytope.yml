@@ -26,6 +26,10 @@ tools:
               import yaml
               from pathlib import Path
 
+              def to_camel_case(s):
+                  parts = s.split("-")
+                  return parts[0] + "".join(p.capitalize() for p in parts[1:])
+
               target = "{pt.param target}"
 
               # Read port from config/values.yml
@@ -298,7 +302,7 @@ tools:
 
               for group_name, endpoints in sorted(groups.items()):
                   ep_lines.append("")
-                  ep_lines.append(f"export const {group_name} = {{")
+                  ep_lines.append(f"export const {to_camel_case(group_name)} = {{")
                   fn_entries = []
                   for ep in endpoints:
                       path_params = extract_path_params(ep["path"])
