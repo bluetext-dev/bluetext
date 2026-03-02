@@ -23,7 +23,7 @@ tools:
         type: [maybe, str]
       args:
         info: Arguments passed to the test script via sys.argv[1:].
-        type: [maybe, [list, str]]
+        type: [default, any, []]
     run:
       - id: run-tests
         code: |-
