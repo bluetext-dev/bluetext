@@ -700,10 +700,13 @@ tools:
 
           client = "${client}"
           language = "${lang}"
-          entity_singular = "${entitySingular}"
-          entity_plural = "${entityPlural}"
+          entity_singular_raw = "${entitySingular}"
+          entity_plural_raw = "${entityPlural}"
+          entity_singular = entity_singular_raw.replace("-", "_")
+          entity_plural = entity_plural_raw.replace("-", "_")
           service_instance = "${serviceInstance}"
           fields = json.loads('${fieldsJson}')
+          cap = "".join(p.capitalize() for p in entity_singular_raw.split("-"))
 
           # Build fields block
           if fields:
@@ -721,8 +724,9 @@ tools:
           template_content = template_path.read_text()
 
           # Replace template variables
-          content = template_content.replace("{{ entity_singular | capitalize }}", entity_singular.capitalize())
+          content = template_content.replace("{{ entity_singular | capitalize }}", cap)
           content = content.replace("{{ entity_singular }}", entity_singular)
+          content = content.replace("{{ entity_plural_raw }}", entity_plural_raw)
           content = content.replace("{{ entity_plural }}", entity_plural)
           content = content.replace("{{ service_instance }}", service_instance)
           content = content.replace("{{ fields }}", fields_block)
@@ -873,11 +877,13 @@ tools:
           import json
           from pathlib import Path
 
-          entity_singular = "${entitySingular}"
-          entity_plural = "${entityPlural}"
+          entity_singular_raw = "${entitySingular}"
+          entity_plural_raw = "${entityPlural}"
+          entity_singular = entity_singular_raw.replace("-", "_")
+          entity_plural = entity_plural_raw.replace("-", "_")
           fields = json.loads('${fieldsJson}')
 
-          cap = entity_singular.capitalize()
+          cap = "".join(p.capitalize() for p in entity_singular_raw.split("-"))
 
           # Build fields for types
           if fields:
@@ -958,15 +964,19 @@ tools:
           from pathlib import Path
           import re
 
-          entity_singular = "${entitySingular}"
-          entity_plural = "${entityPlural}"
+          entity_singular_raw = "${entitySingular}"
+          entity_plural_raw = "${entityPlural}"
+          entity_singular = entity_singular_raw.replace("-", "_")
+          entity_plural = entity_plural_raw.replace("-", "_")
+          entity_plural_url = entity_plural_raw
           service = "${service}"
-          cap = entity_singular.capitalize()
+          cap = "".join(p.capitalize() for p in entity_singular_raw.split("-"))
 
           # --- Routes ---
           routes_template = Path("/template/routes.py").read_text()
           routes_content = routes_template.replace("{{ entity_singular | capitalize }}", cap)
           routes_content = routes_content.replace("{{ entity_singular }}", entity_singular)
+          routes_content = routes_content.replace("{{ entity_plural_url }}", entity_plural_url)
           routes_content = routes_content.replace("{{ entity_plural }}", entity_plural)
 
           routes_path = Path(f"/repo/services/{service}/src/routes/{entity_plural}.py")

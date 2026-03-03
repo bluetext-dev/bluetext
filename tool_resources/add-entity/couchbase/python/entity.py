@@ -7,5 +7,5 @@ class {{ entity_singular | capitalize }}Data(BaseModel):
 
 
 class {{ entity_singular | capitalize }}(BaseModelCouchbase[{{ entity_singular | capitalize }}Data]):
-    _collection_name = "{{ entity_plural }}"
+    _collection_name = "{{ entity_plural_raw }}"
     _service_instance = "{{ service_instance }}"

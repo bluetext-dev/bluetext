@@ -10,7 +10,7 @@ from models.operations.{{ entity_plural }} import (
 from models.types.{{ entity_plural }} import Create{{ entity_singular | capitalize }}Request, Update{{ entity_singular | capitalize }}Request
 from models.entities.{{ entity_plural }} import {{ entity_singular | capitalize }}
 
-{{ entity_plural }}_router = APIRouter(prefix="/{{ entity_plural }}", tags=["{{ entity_plural }}"])
+{{ entity_plural }}_router = APIRouter(prefix="/{{ entity_plural_url }}", tags=["{{ entity_plural_url }}"])
 
 
 @{{ entity_plural }}_router.post("/", response_model={{ entity_singular | capitalize }})
