@@ -66,9 +66,14 @@ tools:
 
               # ---- Type generation ----
 
+              def sanitize_type_name(name):
+                  """Remove hyphens from a schema name, capitalizing the following letter."""
+                  parts = name.split("-")
+                  return parts[0] + "".join(p.capitalize() for p in parts[1:])
+
               def resolve_ref(ref_str):
                   """Extract schema name from $ref string."""
-                  return ref_str.split("/")[-1]
+                  return sanitize_type_name(ref_str.split("/")[-1])
 
               def schema_to_ts(schema, indent=0):
                   """Convert an OpenAPI schema to a TypeScript type string."""
@@ -187,8 +192,9 @@ tools:
                   # Skip FastAPI internal schemas
                   if schema_name in ("HTTPValidationError", "ValidationError"):
                       continue
-                  types_lines.append(generate_interface(schema_name, schema_def))
-                  generated_types.add(schema_name)
+                  safe_name = sanitize_type_name(schema_name)
+                  types_lines.append(generate_interface(safe_name, schema_def))
+                  generated_types.add(safe_name)
 
               if not generated_types:
                   types_lines.append("export {};")
