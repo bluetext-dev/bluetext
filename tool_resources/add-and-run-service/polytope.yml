@@ -33,6 +33,8 @@ tools:
           - flutter-dev-container: {}
           - sync-gateway: {}
           - couchbase-edge-server: {}
+          - redroid:
+              phone-model: [default, str, pixel-7]
       custom-name:
         info: Custom service name. Defaults to the template name.
         type: [maybe, str]
@@ -591,6 +593,8 @@ tools:
           - flutter-dev-container: {}
           - sync-gateway: {}
           - couchbase-edge-server: {}
+          - redroid:
+              phone-model: [default, str, pixel-7]
       custom-name:
         info: Custom service name. Defaults to the template name.
         type: [maybe, str]

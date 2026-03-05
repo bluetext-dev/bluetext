@@ -1,3 +1,4 @@
 "{name}-web-port": "8082"
 "{name}-sync-gateway-url": "ws://sync-gateway:4984/main"
+"{name}-adb-target": "host.docker.internal:5555"
 "{name}-log-level": "info"

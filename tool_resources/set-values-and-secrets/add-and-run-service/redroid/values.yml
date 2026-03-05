@@ -1,0 +1,5 @@
+"{name}-novnc-port": "8000"
+"{name}-adb-port": "5555"
+"{name}-phone-model": "pixel-7"
+"{name}-host": "{name}"
+"{name}-android-version": "14.0.0-latest"

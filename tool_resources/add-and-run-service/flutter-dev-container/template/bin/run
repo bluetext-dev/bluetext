@@ -41,15 +41,16 @@ yes | flutter doctor --android-licenses
 echo "Starting socat for iOS..."
 sudo socat UNIX-LISTEN:/var/run/usbmuxd,fork,reuseaddr,unlink-early TCP:host.docker.internal:2345 &
 
-# Connect to Android Emulator
-echo "Connecting to Android Emulator..."
-adb connect host.docker.internal:5555 || echo "Failed to connect to emulator, please check if it is running."
+# Connect to Android device (Redroid or host emulator)
+ADB_TARGET="${ADB_TARGET:-host.docker.internal:5555}"
+echo "Connecting to Android device at $ADB_TARGET..."
+adb connect "$ADB_TARGET" || echo "Failed to connect to device at $ADB_TARGET, please check if it is running."
 
 # Wait for device authorization
 echo "Waiting for device authorization..."
-echo "Please check the Android Emulator and accept the debugging authorization dialog."
+echo "Please check the Android device and accept the debugging authorization dialog."
 while true; do
-    status=$(adb devices | grep "host.docker.internal:5555" | awk '{print $2}')
+    status=$(adb devices | grep "$ADB_TARGET" | awk '{print $2}')
     if [ "$status" = "device" ]; then
         echo "Device authorized and connected!"
         break
@@ -80,4 +81,4 @@ echo "----------------------------------------------------------------"
 
 # Launch Flutter app
 echo "Launching Flutter app..."
-flutter run -d host.docker.internal:5555
+flutter run -d "$ADB_TARGET"

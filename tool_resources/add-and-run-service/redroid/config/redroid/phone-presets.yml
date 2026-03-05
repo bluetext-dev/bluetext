@@ -1,0 +1,63 @@
+# Phone model presets for Redroid Android emulation
+# Used by bin/run to configure device properties via ADB
+
+presets:
+  pixel-7:
+    brand: google
+    manufacturer: Google
+    model: Pixel 7
+    device: panther
+    name: Pixel 7
+    width: 1080
+    height: 2400
+    dpi: 420
+
+  pixel-8-pro:
+    brand: google
+    manufacturer: Google
+    model: Pixel 8 Pro
+    device: husky
+    name: Pixel 8 Pro
+    width: 1344
+    height: 2992
+    dpi: 480
+
+  samsung-galaxy-s23:
+    brand: samsung
+    manufacturer: Samsung
+    model: SM-S911B
+    device: dm1q
+    name: Galaxy S23
+    width: 1080
+    height: 2340
+    dpi: 425
+
+  samsung-galaxy-s24-ultra:
+    brand: samsung
+    manufacturer: Samsung
+    model: SM-S928B
+    device: dm3q
+    name: Galaxy S24 Ultra
+    width: 1440
+    height: 3120
+    dpi: 505
+
+  oneplus-12:
+    brand: OnePlus
+    manufacturer: OnePlus
+    model: CPH2583
+    device: aston
+    name: OnePlus 12
+    width: 1440
+    height: 3168
+    dpi: 525
+
+  generic-tablet:
+    brand: generic
+    manufacturer: Generic
+    model: Tablet
+    device: generic_tablet
+    name: Generic Tablet
+    width: 1600
+    height: 2560
+    dpi: 320

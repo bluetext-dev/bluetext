@@ -1,0 +1,77 @@
+tools:
+  {{ project-name }}:
+    info: |
+      Runs Android 14 via Redroid with browser display access.
+      ADB exposed on port 5555 for Flutter connectivity.
+      scrcpy-web display sidecar for browser-based screen mirroring.
+      Requires Linux host with binder/ashmem kernel modules:
+        sudo modprobe binder_linux devices="binder,hwbinder,vndbinder"
+        sudo modprobe ashmem_linux
+      Does NOT work on macOS (Docker Desktop lacks required kernel modules).
+    inputs:
+      restart-policy:
+        type: [default, [enum, always, on-failure, never], always]
+    run:
+      # Step 1: Start the Redroid Android container with phone model properties
+      - id: android
+        code: |-
+          pt.js
+          const values = pt.readYaml(pt.readRepoFile("config/values.yml")) || {};
+          const model = values["{{ project-name }}-phone-model"] || "pixel-7";
+          const adbPort = values["{{ project-name }}-adb-port"] || "5555";
+
+          const presetsYml = pt.readRepoFile("config/{{ project-name }}/phone-presets.yml");
+          const presets = pt.readYaml(presetsYml);
+          const preset = (presets.presets || {})[model] || (presets.presets || {})["pixel-7"] || {};
+
+          const width = String(preset.width || 1080);
+          const height = String(preset.height || 2400);
+          const dpi = String(preset.dpi || 420);
+          const brand = preset.brand || "google";
+          const manufacturer = preset.manufacturer || "Google";
+          const modelName = preset.model || "Pixel 7";
+          const device = preset.device || "panther";
+          const productName = preset.name || "Pixel 7";
+
+          const cmd = [
+            `androidboot.redroid_width=${width}`,
+            `androidboot.redroid_height=${height}`,
+            `androidboot.redroid_dpi=${dpi}`,
+            "androidboot.redroid_fps=60",
+            `ro.product.brand=${brand}`,
+            `ro.product.manufacturer=${manufacturer}`,
+            `ro.product.model=${modelName}`,
+            `ro.product.device=${device}`,
+            `ro.product.name=${productName}`
+          ];
+
+          pt.log(`Starting Redroid as ${productName} (${model}) at ${width}x${height} @${dpi}dpi`);
+
+          pt.callModule("polytope/container", {
+            id: "{{ project-name }}",
+            image: "redroid/redroid:14.0.0-latest",
+            await: false,
+            create: "when-missing",
+            restart: { policy: pt.param("restart-policy") },
+            cmd: cmd,
+            services: [{ id: "{{ project-name }}", ports: [{ protocol: "tcp", port: 5555, "expose-as": adbPort }] }],
+            mounts: [{ path: "/data", source: { type: "volume", scope: "project", id: "{{ project-name }}-data" } }]
+          });
+
+      # Step 2: Start scrcpy-web display sidecar
+      - id: display
+        tool: polytope/container
+        args:
+          id: {{ project-name }}-display
+          image: emptysuns/scrcpy-web:v0.1
+          await: false
+          create: when-missing
+          restart:
+            policy: pt.input restart-policy
+          services:
+            - id: {{ project-name }}-display
+              ports:
+                - { protocol: http, port: 8000, expose-as: pt.value {{ project-name }}-novnc-port }
+          env:
+            - { name: ANDROID_ADB_HOST, value: "{{ project-name }}" }
+            - { name: ANDROID_ADB_PORT, value: "5555" }
