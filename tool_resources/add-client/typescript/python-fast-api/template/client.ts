@@ -26,6 +26,7 @@ async function request<T>(
   method: string,
   path: string,
   data?: unknown,
+  params?: Record<string, unknown>,
 ): Promise<T> {
   const headers: Record<string, string> = {
     accept: "application/json",
@@ -35,7 +36,14 @@ async function request<T>(
     headers["content-type"] = "application/json";
   }
 
-  const response = await fetch(`${BASE_URL}${path}`, {
+  const url = new URL(`${BASE_URL}${path}`);
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
+    }
+  }
+
+  const response = await fetch(url.toString(), {
     method,
     headers,
     credentials: "include",
@@ -66,7 +74,7 @@ async function request<T>(
 }
 
 export const api = {
-  get: <T>(path: string) => request<T>("GET", path),
+  get: <T>(path: string, params?: Record<string, unknown>) => request<T>("GET", path, undefined, params),
   post: <T>(path: string, data?: unknown) => request<T>("POST", path, data),
   put: <T>(path: string, data?: unknown) => request<T>("PUT", path, data),
   patch: <T>(path: string, data?: unknown) => request<T>("PATCH", path, data),

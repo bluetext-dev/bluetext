@@ -15,6 +15,16 @@ tools:
         code: |-
           pt.js
           const target = pt.param("target");
+          let clientTsTemplate = "";
+          try {
+            clientTsTemplate = pt.readRepoFile(
+              "tool_resources/add-client/typescript/python-fast-api/template/client.ts",
+              { repo: pt.moduleRepoRef }
+            );
+          } catch (e) {
+            pt.log("Warning: Could not read client.ts template: " + e);
+          }
+          const escapedTemplate = clientTsTemplate.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, "\\n");
           const script = `
           import json
           import re
@@ -235,6 +245,20 @@ tools:
                   return schema_to_ts(body_schema)
               return None
 
+          def get_query_params(operation):
+              """Extract query parameters from an operation."""
+              params = []
+              for param in operation.get("parameters", []):
+                  if param.get("in") == "query":
+                      param_schema = param.get("schema", {})
+                      ts_type = schema_to_ts(param_schema)
+                      params.append({
+                          "name": param["name"],
+                          "type": ts_type,
+                          "required": param.get("required", False),
+                      })
+              return params
+
           def extract_path_params(path):
               """Extract path parameter names from a path template."""
               return re.findall(r"\\{(\\w+)\\}", path)
@@ -278,7 +302,7 @@ tools:
           def collect_types_from_ts(ts_str):
               """Find generated type references in a TS type string."""
               for t in generated_types:
-                  if t in ts_str:
+                  if re.search(rf'\\b{re.escape(t)}\\b', ts_str):
                       used_types.add(t)
 
           # Pre-pass: collect used types
@@ -289,6 +313,8 @@ tools:
                   body_type = get_request_body_type(ep["operation"])
                   if body_type:
                       collect_types_from_ts(body_type)
+                  for qp in get_query_params(ep["operation"]):
+                      collect_types_from_ts(qp["type"])
 
           # Generate endpoints.ts
           ep_lines = [
@@ -321,6 +347,14 @@ tools:
                   if body_type:
                       params.append(f"data: {body_type}")
 
+                  query_params = get_query_params(ep["operation"])
+                  if query_params:
+                      qp_fields = []
+                      for qp in query_params:
+                          opt = "" if qp["required"] else "?"
+                          qp_fields.append(f"{qp['name']}{opt}: {qp['type']}")
+                      params.append(f"params?: {{ {'; '.join(qp_fields)} }}")
+
                   resp_type = get_response_type(ep["operation"])
 
                   # Build path expression
@@ -332,7 +366,10 @@ tools:
                   # Build function body
                   param_str = ", ".join(params)
                   if ep["method"] == "get":
-                      fn_entries.append(f"  {fn_name}: ({param_str}) => api.get<{resp_type}>({path_expr}),")
+                      if query_params:
+                          fn_entries.append(f"  {fn_name}: ({param_str}) => api.get<{resp_type}>({path_expr}, params),")
+                      else:
+                          fn_entries.append(f"  {fn_name}: ({param_str}) => api.get<{resp_type}>({path_expr}),")
                   elif ep["method"] == "delete":
                       fn_entries.append(f"  {fn_name}: ({param_str}) => api.del<{resp_type}>({path_expr}),")
                   elif body_type:
@@ -358,6 +395,7 @@ tools:
 
           types_path = client_dir / "types.ts"
           endpoints_path = client_dir / "endpoints.ts"
+          client_ts_path = client_dir / "client.ts"
 
           types_path.write_text(types_content)
           print(f"Wrote {len(generated_types)} types to {types_path}")
@@ -365,6 +403,23 @@ tools:
           endpoints_path.write_text(endpoints_content)
           fn_count = sum(len(eps) for eps in groups.values())
           print(f"Wrote {len(groups)} endpoint groups ({fn_count} functions) to {endpoints_path}")
+
+          # Regenerate client.ts from template
+          client_ts_template = '${escapedTemplate}'
+          if client_ts_template:
+              # Extract project-name from existing client.ts if it exists
+              project_name = target
+              if client_ts_path.exists():
+                  existing = client_ts_path.read_text()
+                  m = re.search(r'const CLIENT_ID = "([^"]+)"', existing)
+                  if m:
+                      project_name = m.group(1)
+
+              client_content = client_ts_template.replace("{{ project-name }}", project_name)
+              client_ts_path.write_text(client_content)
+              print(f"Regenerated {client_ts_path}")
+          else:
+              print("Client.ts template not available, skipping client.ts regeneration")
 
           print("Sync complete.")
           `;
