@@ -27,7 +27,7 @@ if [ -f /etc/os-release ]; then
     rm /tmp/watchexec.deb
   fi
 
-  exec watchexec --watch pyproject.toml --restart --shell=none -- $CMD
+  exec watchexec --watch pyproject.toml --watch /models/python --watch /clients/python --restart --shell=none -- $CMD
 else
   exec $CMD
 fi

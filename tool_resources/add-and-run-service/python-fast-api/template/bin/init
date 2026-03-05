@@ -6,6 +6,5 @@ cd "$(dirname "$0")/.."
 
 export VIRTUAL_ENV="$HOME/.cache/venvs/api"
 export UV_NO_PROGRESS=true
-export UV_LINK_MODE=copy
 
 uv sync --active
