@@ -5,16 +5,35 @@ echo "Initializing Flutter dev container..."
 
 DEPS_CACHE="/opt/deps-cache"
 DEPS_SNAPSHOT="$DEPS_CACHE/system-deps.tar.gz"
+CACHE_VERSION_FILE="$DEPS_CACHE/cache-version"
+CACHE_VERSION="2"
 
+CACHE_VALID=false
 if [ -f "$DEPS_SNAPSHOT" ]; then
-    echo "Restoring cached system dependencies..."
-    sudo tar xzf "$DEPS_SNAPSHOT" -C /
-    # Restore dpkg state so apt knows what's installed
-    if [ -f "$DEPS_CACHE/dpkg-status" ]; then
-        sudo cp "$DEPS_CACHE/dpkg-status" /var/lib/dpkg/status
+    STORED_VERSION=""
+    if [ -f "$CACHE_VERSION_FILE" ]; then
+        STORED_VERSION=$(cat "$CACHE_VERSION_FILE")
     fi
-    echo "System dependencies restored from cache."
-else
+    if [ "$STORED_VERSION" != "$CACHE_VERSION" ]; then
+        echo "Cache version mismatch (have: ${STORED_VERSION:-none}, need: $CACHE_VERSION), rebuilding..."
+        rm -f "$DEPS_SNAPSHOT" "$DEPS_CACHE/dpkg-status"
+    else
+        echo "Restoring cached system dependencies..."
+        if sudo tar xzf "$DEPS_SNAPSHOT" -C /; then
+            # Restore dpkg state so apt knows what's installed
+            if [ -f "$DEPS_CACHE/dpkg-status" ]; then
+                sudo cp "$DEPS_CACHE/dpkg-status" /var/lib/dpkg/status
+            fi
+            echo "System dependencies restored from cache."
+            CACHE_VALID=true
+        else
+            echo "Cache is corrupted, removing and installing fresh..."
+            rm -f "$DEPS_SNAPSHOT" "$DEPS_CACHE/dpkg-status"
+        fi
+    fi
+fi
+
+if [ "$CACHE_VALID" = false ]; then
     # Install system dependencies
     echo "Installing system dependencies (first run)..."
     sudo apt-get update
@@ -45,11 +64,21 @@ else
     echo "Caching system dependencies for future runs..."
     sudo tar czf "$DEPS_SNAPSHOT" \
         /usr/bin /usr/lib /usr/share /usr/include \
+        /lib64 /lib/x86_64-linux-gnu \
         /etc/apt/sources.list /etc/apt/sources.list.d \
         /var/lib/dpkg/info \
         2>/dev/null || true
     sudo cp /var/lib/dpkg/status "$DEPS_CACHE/dpkg-status"
-    echo "System dependencies cached."
+    echo "$CACHE_VERSION" > "$CACHE_VERSION_FILE"
+    echo "System dependencies cached (version $CACHE_VERSION)."
+fi
+
+# Ensure x86-64 dynamic linker is reachable via /lib64 symlink chain
+# /lib64 -> /usr/lib64, so we need the loader in /usr/lib64
+if [ ! -f /lib64/ld-linux-x86-64.so.2 ] && [ -f /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 ]; then
+    echo "Fixing x86-64 dynamic linker path..."
+    sudo mkdir -p /usr/lib64
+    sudo ln -sf /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 /usr/lib64/ld-linux-x86-64.so.2
 fi
 
 # Configure Flutter

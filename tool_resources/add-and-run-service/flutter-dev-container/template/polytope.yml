@@ -27,3 +27,8 @@ tools:
             - { path: /root/.pub-cache, source: { type: volume, scope: project, id: {{ project-name | kebab_case }}-pub-cache }}
             - { path: /root/.gradle, source: { type: volume, scope: project, id: {{ project-name | kebab_case }}-gradle-cache }}
             - { path: /opt/deps-cache, source: { type: volume, scope: project, id: {{ project-name | kebab_case }}-deps-cache }}
+            - { path: /opt/android-sdk-linux/ndk, source: { type: volume, scope: project, id: {{ project-name | kebab_case }}-android-ndk }}
+            - { path: /opt/android-sdk-linux/build-tools, source: { type: volume, scope: project, id: {{ project-name | kebab_case }}-android-build-tools }}
+            - { path: /opt/android-sdk-linux/platforms, source: { type: volume, scope: project, id: {{ project-name | kebab_case }}-android-platforms }}
+            - { path: /opt/android-sdk-linux/cmake, source: { type: volume, scope: project, id: {{ project-name | kebab_case }}-android-cmake }}
+            - { path: /app/build, source: { type: volume, scope: project, id: {{ project-name | kebab_case }}-build-output }}
