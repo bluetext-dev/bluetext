@@ -1,41 +1,7 @@
 #!/bin/sh
 set -e
 
-echo "Starting Flutter dev container..."
-
-# Install initial dependencies
-echo "Installing dependencies..."
-sudo apt-get update
-sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev chromium adb libimobiledevice6 libimobiledevice-utils usbmuxd ideviceinstaller socat
-
-# Add amd64 architecture (for ARM64 hosts running Android SDK)
-echo "Adding amd64 architecture..."
-sudo dpkg --add-architecture amd64
-
-# Fix sources.list for multi-arch (ARM64 host, AMD64 libs)
-echo "Configuring apt sources for multi-arch..."
-sudo mv /etc/apt/sources.list.d/ubuntu.sources /etc/apt/sources.list.d/ubuntu.sources.bak || true
-
-# Create new sources.list
-echo 'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble main restricted universe multiverse' | sudo tee /etc/apt/sources.list
-echo 'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-updates main restricted universe multiverse' | sudo tee -a /etc/apt/sources.list
-echo 'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-backports main restricted universe multiverse' | sudo tee -a /etc/apt/sources.list
-echo 'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-security main restricted universe multiverse' | sudo tee -a /etc/apt/sources.list
-
-echo 'deb [arch=amd64] http://archive.ubuntu.com/ubuntu/ noble main restricted universe multiverse' | sudo tee -a /etc/apt/sources.list
-echo 'deb [arch=amd64] http://archive.ubuntu.com/ubuntu/ noble-updates main restricted universe multiverse' | sudo tee -a /etc/apt/sources.list
-echo 'deb [arch=amd64] http://archive.ubuntu.com/ubuntu/ noble-security main restricted universe multiverse' | sudo tee -a /etc/apt/sources.list
-
-# Update and install amd64 libraries
-echo "Installing amd64 libraries..."
-sudo apt-get update
-sudo apt-get install -y libc6:amd64 libstdc++6:amd64 zlib1g:amd64
-
-# Configure Flutter
-echo "Configuring Flutter..."
-flutter config --enable-web
-flutter config --enable-android
-yes | flutter doctor --android-licenses
+. "$(dirname "$0")/init"
 
 # Start socat for iOS (if needed)
 echo "Starting socat for iOS..."
@@ -59,17 +25,6 @@ while true; do
     sleep 2
 done
 
-# Run flutter doctor
-echo "Running flutter doctor..."
-flutter doctor
-
-# Get dependencies
-echo "Fetching Flutter dependencies..."
-flutter pub get
-
-echo "Setup complete. Container is ready."
-
-# Print iOS instructions
 echo "----------------------------------------------------------------"
 echo "Android build starting on emulator..."
 echo ""
@@ -79,6 +34,16 @@ echo "   2. Navigate to this project directory."
 echo "   3. Run: flutter run -d <your_iphone_device_id>"
 echo "----------------------------------------------------------------"
 
-# Launch Flutter app
+# Create a FIFO for sending hot reload commands to flutter run's stdin
+FLUTTER_FIFO="/tmp/flutter_stdin"
+rm -f "$FLUTTER_FIFO"
+mkfifo "$FLUTTER_FIFO"
+
+# Start file watcher that triggers hot reload on .dart file changes
+echo "Starting hot reload file watcher..."
+"$(dirname "$0")/watch-reload" &
+
+# Launch Flutter app with stdin from the FIFO.
+# 'tail -f' keeps the FIFO open so multiple writes don't close stdin.
 echo "Launching Flutter app..."
-flutter run -d "$ADB_TARGET"
+exec tail -f "$FLUTTER_FIFO" | flutter run -d "$ADB_TARGET"

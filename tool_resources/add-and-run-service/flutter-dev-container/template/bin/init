@@ -1,0 +1,97 @@
+#!/bin/sh
+set -e
+
+echo "Initializing Flutter dev container..."
+
+DEPS_CACHE="/opt/deps-cache"
+DEPS_SNAPSHOT="$DEPS_CACHE/system-deps.tar.gz"
+CACHE_VERSION_FILE="$DEPS_CACHE/cache-version"
+CACHE_VERSION="2"
+
+CACHE_VALID=false
+if [ -f "$DEPS_SNAPSHOT" ]; then
+    STORED_VERSION=""
+    if [ -f "$CACHE_VERSION_FILE" ]; then
+        STORED_VERSION=$(cat "$CACHE_VERSION_FILE")
+    fi
+    if [ "$STORED_VERSION" != "$CACHE_VERSION" ]; then
+        echo "Cache version mismatch (have: ${STORED_VERSION:-none}, need: $CACHE_VERSION), rebuilding..."
+        rm -f "$DEPS_SNAPSHOT" "$DEPS_CACHE/dpkg-status"
+    else
+        echo "Restoring cached system dependencies..."
+        if sudo tar xzf "$DEPS_SNAPSHOT" -C /; then
+            # Restore dpkg state so apt knows what's installed
+            if [ -f "$DEPS_CACHE/dpkg-status" ]; then
+                sudo cp "$DEPS_CACHE/dpkg-status" /var/lib/dpkg/status
+            fi
+            echo "System dependencies restored from cache."
+            CACHE_VALID=true
+        else
+            echo "Cache is corrupted, removing and installing fresh..."
+            rm -f "$DEPS_SNAPSHOT" "$DEPS_CACHE/dpkg-status"
+        fi
+    fi
+fi
+
+if [ "$CACHE_VALID" = false ]; then
+    # Install system dependencies
+    echo "Installing system dependencies (first run)..."
+    sudo apt-get update
+    sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev chromium adb libimobiledevice6 libimobiledevice-utils usbmuxd ideviceinstaller socat
+
+    # Add amd64 architecture (for ARM64 hosts running Android SDK)
+    echo "Adding amd64 architecture..."
+    sudo dpkg --add-architecture amd64
+
+    # Fix sources.list for multi-arch (ARM64 host, AMD64 libs)
+    echo "Configuring apt sources for multi-arch..."
+    sudo mv /etc/apt/sources.list.d/ubuntu.sources /etc/apt/sources.list.d/ubuntu.sources.bak || true
+
+    echo 'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble main restricted universe multiverse' | sudo tee /etc/apt/sources.list
+    echo 'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-updates main restricted universe multiverse' | sudo tee -a /etc/apt/sources.list
+    echo 'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-backports main restricted universe multiverse' | sudo tee -a /etc/apt/sources.list
+    echo 'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-security main restricted universe multiverse' | sudo tee -a /etc/apt/sources.list
+
+    echo 'deb [arch=amd64] http://archive.ubuntu.com/ubuntu/ noble main restricted universe multiverse' | sudo tee -a /etc/apt/sources.list
+    echo 'deb [arch=amd64] http://archive.ubuntu.com/ubuntu/ noble-updates main restricted universe multiverse' | sudo tee -a /etc/apt/sources.list
+    echo 'deb [arch=amd64] http://archive.ubuntu.com/ubuntu/ noble-security main restricted universe multiverse' | sudo tee -a /etc/apt/sources.list
+
+    echo "Installing amd64 libraries..."
+    sudo apt-get update
+    sudo apt-get install -y libc6:amd64 libstdc++6:amd64 zlib1g:amd64
+
+    # Snapshot installed files into the persistent volume
+    echo "Caching system dependencies for future runs..."
+    sudo tar czf "$DEPS_SNAPSHOT" \
+        /usr/bin /usr/lib /usr/share /usr/include \
+        /lib64 /lib/x86_64-linux-gnu \
+        /etc/apt/sources.list /etc/apt/sources.list.d \
+        /var/lib/dpkg/info \
+        2>/dev/null || true
+    sudo cp /var/lib/dpkg/status "$DEPS_CACHE/dpkg-status"
+    echo "$CACHE_VERSION" > "$CACHE_VERSION_FILE"
+    echo "System dependencies cached (version $CACHE_VERSION)."
+fi
+
+# Ensure x86-64 dynamic linker is reachable via /lib64 symlink chain
+# /lib64 -> /usr/lib64, so we need the loader in /usr/lib64
+if [ ! -f /lib64/ld-linux-x86-64.so.2 ] && [ -f /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 ]; then
+    echo "Fixing x86-64 dynamic linker path..."
+    sudo mkdir -p /usr/lib64
+    sudo ln -sf /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 /usr/lib64/ld-linux-x86-64.so.2
+fi
+
+# Configure Flutter
+echo "Configuring Flutter..."
+flutter config --enable-web
+flutter config --enable-android
+yes | flutter doctor --android-licenses
+
+# Run flutter doctor once
+flutter doctor
+
+# Get dependencies
+echo "Fetching Flutter dependencies..."
+flutter pub get
+
+echo "Initialization complete."

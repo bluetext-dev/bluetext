@@ -1,0 +1,29 @@
+#!/bin/sh
+# Watches for .dart file changes and sends 'r' to Flutter's stdin FIFO to trigger hot reload.
+# Uses polling since filesystem events don't propagate reliably into Docker volumes.
+
+WATCH_DIR="/code/lib"
+INTERVAL=2
+HASH_FILE="/tmp/dart_hash"
+FLUTTER_FIFO="/tmp/flutter_stdin"
+
+get_hash() {
+  find "$WATCH_DIR" -name '*.dart' -exec md5sum {} \; 2>/dev/null | sort | md5sum
+}
+
+get_hash > "$HASH_FILE"
+
+echo "Watching $WATCH_DIR for .dart changes (polling every ${INTERVAL}s)..."
+
+while true; do
+  sleep "$INTERVAL"
+  NEW_HASH=$(get_hash)
+  OLD_HASH=$(cat "$HASH_FILE")
+  if [ "$NEW_HASH" != "$OLD_HASH" ]; then
+    echo "$NEW_HASH" > "$HASH_FILE"
+    if [ -p "$FLUTTER_FIFO" ]; then
+      echo "[watch-reload] Dart file change detected, triggering hot reload..."
+      echo "r" > "$FLUTTER_FIFO"
+    fi
+  fi
+done
