@@ -46,7 +46,6 @@ async function request<T>(
   const response = await fetch(url.toString(), {
     method,
     headers,
-    credentials: "include",
     body: data !== undefined ? JSON.stringify(data) : undefined,
   });
 
