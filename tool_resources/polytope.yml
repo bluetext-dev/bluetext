@@ -892,7 +892,18 @@ tools:
           entity_plural_raw = "${entityPlural}"
           entity_singular = entity_singular_raw.replace("-", "_")
           entity_plural = entity_plural_raw.replace("-", "_")
-          fields = json.loads('${fieldsJson}')
+          fields_raw = json.loads('${fieldsJson}')
+          # Normalize fields: accept dicts, "name:type" strings, or plain "name" strings
+          fields = []
+          for f in fields_raw:
+              if isinstance(f, dict):
+                  fields.append(f)
+              elif isinstance(f, str):
+                  if ":" in f:
+                      name, typ = f.split(":", 1)
+                      fields.append({"name": name.strip(), "type": typ.strip()})
+                  else:
+                      fields.append({"name": f.strip(), "type": "str"})
 
           cap = "".join(p.capitalize() for p in entity_singular_raw.split("-"))
 
